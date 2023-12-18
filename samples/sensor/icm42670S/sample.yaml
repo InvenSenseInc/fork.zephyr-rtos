@@ -22,19 +22,21 @@ tests:
     harness_config:
       type: one_line
       regex:
-        - "temp: (.*); press: (.*); humidity: (.*)"
+        - "accel x:[-.0-9]* ms/2 y:[-.0-9]* ms/2 z:[-.0-9]* ms/2"
+        - "gyro x:[-.0-9]* rad/s y:[-.0-9]* rad/s z:[-.0-9]* rad/s"
       fixture: fixture_spi_icm42670S
     tags: sensors
   sample.sensor.icm42670S.i2c:
     harness: console
     tags: sensors
     depends_on:
-      - spi
+      - i2c
       - icm42670S
     extra_args: "DTC_OVERLAY_FILE=arduino_i2c.overlay"
     harness_config:
       type: one_line
       regex:
-        - "temp: (.*); press: (.*); humidity: (.*)"
+        - "accel x:[-.0-9]* ms/2 y:[-.0-9]* ms/2 z:[-.0-9]* ms/2"
+        - "gyro x:[-.0-9]* rad/s y:[-.0-9]* rad/s z:[-.0-9]* rad/s"
       fixture: fixture_i2c_icm42670S
     tags: sensors
