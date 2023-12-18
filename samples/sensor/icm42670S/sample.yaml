@@ -1,0 +1,40 @@
+#
+# Copyright (c) 2020 TDK Invensense
+#
+# SPDX-License-Identifier: Apache-2.0
+#
+
+sample:
+  name: ICM42670S Sensor Sample
+tests:
+  sample.sensor.icm42670S:
+    build_only: true
+    platform_allow: nrf52dk_nrf52832
+    integration_platforms:
+      - nrf52dk_nrf52832
+  sample.sensor.icm42670S.spi:
+    harness: console
+    tags: sensors
+    depends_on:
+      - spi
+      - icm42670S
+    extra_args: "DTC_OVERLAY_FILE=arduino_spi.overlay"
+    harness_config:
+      type: one_line
+      regex:
+        - "temp: (.*); press: (.*); humidity: (.*)"
+      fixture: fixture_spi_icm42670S
+    tags: sensors
+  sample.sensor.icm42670S.i2c:
+    harness: console
+    tags: sensors
+    depends_on:
+      - spi
+      - icm42670S
+    extra_args: "DTC_OVERLAY_FILE=arduino_i2c.overlay"
+    harness_config:
+      type: one_line
+      regex:
+        - "temp: (.*); press: (.*); humidity: (.*)"
+      fixture: fixture_i2c_icm42670S
+    tags: sensors
