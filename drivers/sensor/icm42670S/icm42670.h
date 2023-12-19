@@ -20,10 +20,10 @@
 #define ICM42670S_BUS_I2C DT_ANY_INST_ON_BUS_STATUS_OKAY(i2c)
 
 union icm42670S_config {
-#if BME280_BUS_SPI
+#if ICM42670S_BUS_SPI
 	struct spi_dt_spec spi;
 #endif
-#if BME280_BUS_I2C
+#if ICM42670S_BUS_SPI_BUS_I2C
 	struct i2c_dt_spec i2c;
 #endif
 	struct gpio_dt_spec gpio_int;
