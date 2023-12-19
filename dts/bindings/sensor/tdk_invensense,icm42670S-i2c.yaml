@@ -1,0 +1,8 @@
+# Copyright (c) 2019, Linaro Limited
+# SPDX-License-Identifier: Apache-2.0
+
+description: ICM42670S integrated environmental sensor
+
+compatible: "tdk_invensense,icm42670S"
+
+include: [sensor-device.yaml, i2c-device.yaml]

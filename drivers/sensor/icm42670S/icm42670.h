@@ -8,10 +8,26 @@
 #ifndef ZEPHYR_DRIVERS_SENSOR_ICM42670_H_
 #define ZEPHYR_DRIVERS_SENSOR_ICM42670_H_
 
-#include <zephyr/drivers/gpio.h>
-#include <zephyr/drivers/sensor.h>
+#include <zephyr/types.h>
+#include <zephyr/device.h>
+#include <zephyr/devicetree.h>
 #include <zephyr/drivers/spi.h>
-#include <zephyr/kernel.h>
+#include <zephyr/drivers/i2c.h>
+
+#define DT_DRV_COMPAT tdk_invensense_icm42670S
+
+#define ICM42670S_BUS_SPI DT_ANY_INST_ON_BUS_STATUS_OKAY(spi)
+#define ICM42670S_BUS_I2C DT_ANY_INST_ON_BUS_STATUS_OKAY(i2c)
+
+union icm42670S_config {
+#if BME280_BUS_SPI
+	struct spi_dt_spec spi;
+#endif
+#if BME280_BUS_I2C
+	struct i2c_dt_spec i2c;
+#endif
+	struct gpio_dt_spec gpio_int;
+};
 
 struct icm42670_data {
 	int16_t accel_x;
@@ -44,9 +60,5 @@ struct icm42670_data {
 #endif
 };
 
-struct icm42670_config {
-	struct spi_dt_spec spi;
-	struct gpio_dt_spec gpio_int;
-};
 
 #endif /* ZEPHYR_DRIVERS_SENSOR_ICM42670_H_ */

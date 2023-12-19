@@ -10,6 +10,32 @@
 #include <zephyr/drivers/sensor.h>
 #include <stdio.h>
 
+/*
+ * Get a device structure from a devicetree node with compatible
+ * "bosch,bme280". (If there are multiple, just pick one.)
+ */
+static const struct device *get_icm42670S_device(void)
+{
+	const struct device *const dev = DEVICE_DT_GET_ANY(tdk_invensense_icm42670S);
+
+	if (dev == NULL) {
+		/* No such node, or the node does not have status "okay". */
+		printk("\nError: no device found.\n");
+		return NULL;
+	}
+
+	if (!device_is_ready(dev)) {
+		printk("\nError: Device \"%s\" is not ready; "
+		       "check the driver initialization logs for errors.\n",
+		       dev->name);
+		return NULL;
+	}
+
+	printk("Found device \"%s\", getting sensor data\n", dev->name);
+	return dev;
+}
+
+
 static const char *now_str(void)
 {
 	static char buf[16]; /* ...HH:MM:SS.MMM */
@@ -99,10 +125,9 @@ static void handle_icm42670S_double_tap(const struct device *dev,
 
 int main(void)
 {
-	const struct device *const icm42670S = DEVICE_DT_GET_ONE(invensense_icm42670S);
+	const struct device *dev = get_icm42670S_device();
 
-	if (!device_is_ready(icm42670S)) {
-		printk("sensor: device not ready.\n");
+	if (dev == NULL) {
 		return 0;
 	}
 
@@ -111,7 +136,7 @@ int main(void)
 		.chan = SENSOR_CHAN_ALL,
 	};
 
-	if (sensor_trigger_set(icm42670S, &tap_trigger,
+	if (sensor_trigger_set(dev, &tap_trigger,
 			       handle_icm42670S_tap) < 0) {
 		printf("Cannot configure tap trigger!!!\n");
 		return 0;
@@ -122,7 +147,7 @@ int main(void)
 		.chan = SENSOR_CHAN_ALL,
 	};
 
-	if (sensor_trigger_set(icm42670S, &double_tap_trigger,
+	if (sensor_trigger_set(dev, &double_tap_trigger,
 			       handle_icm42670S_double_tap) < 0) {
 		printf("Cannot configure double tap trigger!!!\n");
 		return 0;
@@ -133,7 +158,7 @@ int main(void)
 		.chan = SENSOR_CHAN_ALL,
 	};
 
-	if (sensor_trigger_set(icm42670S, &data_trigger,
+	if (sensor_trigger_set(dev, &data_trigger,
 			       handle_icm42670S_drdy) < 0) {
 		printf("Cannot configure data trigger!!!\n");
 		return 0;
