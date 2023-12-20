@@ -12,7 +12,7 @@
 
 /*
  * Get a device structure from a devicetree node with compatible
- * "bosch,bme280". (If there are multiple, just pick one.)
+ * "tdk_invensense_icm42670S". (If there are multiple, just pick one.)
  */
 static const struct device *get_icm42670S_device(void)
 {

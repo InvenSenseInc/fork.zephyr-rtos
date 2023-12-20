@@ -321,3 +321,14 @@ test_spi_lis2du12: lis2du12@28 {
 	int2-gpios = <&test_gpio 0 0>;
 	status = "okay";
 };
+
+test_spi_icm42670S: icm42670S@29 {
+	compatible = "tdk_invensense,icm42670S";
+	reg = <0x18>;
+	spi-max-frequency = <0>;
+	int-gpios = <&test_gpio 0 0>;
+	accel-hz = <800>;
+	accel-fs = <16>;
+	gyro-hz = <800>;
+	gyro-fs = <2000>;
+};

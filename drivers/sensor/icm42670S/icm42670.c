@@ -5,7 +5,6 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-#define DT_DRV_COMPAT invensense_icm42670
 
 #include <zephyr/drivers/sensor.h>
 #include <zephyr/drivers/spi.h>
@@ -31,7 +30,7 @@ static const uint16_t icm42670_gyro_sensitivity_x10[] = {
 
 static int icm42670_set_accel_fs(const struct device *dev, uint16_t fs)
 {
-	const struct icm42670_config *cfg = dev->config;
+	const struct icm42670S_config *cfg = dev->config;
 	struct icm42670_data *data = dev->data;
 	uint8_t temp;
 
@@ -58,7 +57,7 @@ static int icm42670_set_accel_fs(const struct device *dev, uint16_t fs)
 
 static int icm42670_set_gyro_fs(const struct device *dev, uint16_t fs)
 {
-	const struct icm42670_config *cfg = dev->config;
+	const struct icm42670S_config *cfg = dev->config;
 	struct icm42670_data *data = dev->data;
 	uint8_t temp;
 
@@ -85,7 +84,7 @@ static int icm42670_set_gyro_fs(const struct device *dev, uint16_t fs)
 
 static int icm42670_set_accel_odr(const struct device *dev, uint16_t rate)
 {
-	const struct icm42670_config *cfg = dev->config;
+	const struct icm42670S_config *cfg = dev->config;
 	uint8_t temp;
 
 	if ((rate > 1600) || (rate < 1)) {
@@ -123,7 +122,7 @@ static int icm42670_set_accel_odr(const struct device *dev, uint16_t rate)
 
 static int icm42670_set_gyro_odr(const struct device *dev, uint16_t rate)
 {
-	const struct icm42670_config *cfg = dev->config;
+	const struct icm42670S_config *cfg = dev->config;
 	uint8_t temp;
 
 	if ((rate > 1600) || (rate < 12)) {
@@ -155,7 +154,7 @@ static int icm42670_set_gyro_odr(const struct device *dev, uint16_t rate)
 
 static int icm42670_enable_mclk(const struct device *dev)
 {
-	const struct icm42670_config *cfg = dev->config;
+	const struct icm42670S_config *cfg = dev->config;
 
 	/* switch on MCLK by setting the IDLE bit */
 	int res = icm42670_spi_single_write(&cfg->spi, REG_PWR_MGMT0, BIT_IDLE);
@@ -187,7 +186,7 @@ static int icm42670_sensor_init(const struct device *dev)
 {
 	int res;
 	uint8_t value;
-	const struct icm42670_config *cfg = dev->config;
+	const struct icm42670S_config *cfg = dev->config;
 
 	/* start up time for register read/write after POR is 1ms and supply ramp time is 3ms */
 	k_msleep(3);
@@ -256,7 +255,7 @@ static int icm42670_sensor_init(const struct device *dev)
 static int icm42670_turn_on_sensor(const struct device *dev)
 {
 	struct icm42670_data *data = dev->data;
-	const struct icm42670_config *cfg = dev->config;
+	const struct icm42670S_config *cfg = dev->config;
 	uint8_t value;
 	int res;
 
@@ -390,7 +389,7 @@ static int icm42670_channel_get(const struct device *dev, enum sensor_channel ch
 
 static int icm42670_sample_fetch_accel(const struct device *dev)
 {
-	const struct icm42670_config *cfg = dev->config;
+	const struct icm42670S_config *cfg = dev->config;
 	struct icm42670_data *data = dev->data;
 	uint8_t buffer[ACCEL_DATA_SIZE];
 
@@ -409,7 +408,7 @@ static int icm42670_sample_fetch_accel(const struct device *dev)
 
 static int icm42670_sample_fetch_gyro(const struct device *dev)
 {
-	const struct icm42670_config *cfg = dev->config;
+	const struct icm42670S_config *cfg = dev->config;
 	struct icm42670_data *data = dev->data;
 	uint8_t buffer[GYRO_DATA_SIZE];
 
@@ -428,7 +427,7 @@ static int icm42670_sample_fetch_gyro(const struct device *dev)
 
 static int icm42670_sample_fetch_temp(const struct device *dev)
 {
-	const struct icm42670_config *cfg = dev->config;
+	const struct icm42670S_config *cfg = dev->config;
 	struct icm42670_data *data = dev->data;
 	uint8_t buffer[TEMP_DATA_SIZE];
 
@@ -446,7 +445,7 @@ static int icm42670_sample_fetch_temp(const struct device *dev)
 static int icm42670_sample_fetch(const struct device *dev, enum sensor_channel chan)
 {
 	uint8_t status;
-	const struct icm42670_config *cfg = dev->config;
+	const struct icm42670S_config *cfg = dev->config;
 
 	icm42670_lock(dev);
 
@@ -619,7 +618,7 @@ static int icm42670_attr_get(const struct device *dev, enum sensor_channel chan,
 static int icm42670_init(const struct device *dev)
 {
 	struct icm42670_data *data = dev->data;
-	const struct icm42670_config *cfg = dev->config;
+	const struct icm42670S_config *cfg = dev->config;
 
 	if (!spi_is_ready_dt(&cfg->spi)) {
 		LOG_ERR("SPI bus is not ready");
@@ -694,13 +693,13 @@ static const struct sensor_driver_api icm42670_driver_api = {
 		.gyro_fs = DT_INST_PROP(inst, gyro_fs),                                            \
 	};                                                                                         \
 												   \
-	static const struct icm42670_config icm42670_cfg_##inst = {                                \
-		.spi = SPI_DT_SPEC_INST_GET(inst, ICM42670_SPI_CFG, 0U),                           \
-		.gpio_int = GPIO_DT_SPEC_INST_GET_OR(inst, int_gpios, { 0 }),                      \
-	};                                                                                         \
+	static const struct icm42670S_config icm42670S_config_##inst =	\
+		COND_CODE_1(DT_INST_ON_BUS(inst, spi),			\
+			    (ICM42670S_CONFIG_SPI(inst)),			\
+			    (ICM42670S_CONFIG_I2C(inst)));			\
 												   \
 	SENSOR_DEVICE_DT_INST_DEFINE(inst, icm42670_init, NULL, &icm42670_driver_##inst,           \
-			      &icm42670_cfg_##inst, POST_KERNEL, CONFIG_SENSOR_INIT_PRIORITY,      \
+			      &icm42670_config_##inst, POST_KERNEL, CONFIG_SENSOR_INIT_PRIORITY,      \
 			      &icm42670_driver_api);
 
 DT_INST_FOREACH_STATUS_OKAY(ICM42670_INIT)

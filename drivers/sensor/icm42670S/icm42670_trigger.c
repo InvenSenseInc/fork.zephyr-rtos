@@ -34,7 +34,7 @@ static void icm42670_gpio_callback(const struct device *dev, struct gpio_callbac
 static void icm42670_thread_cb(const struct device *dev)
 {
 	struct icm42670_data *data = dev->data;
-	const struct icm42670_config *cfg = dev->config;
+	const struct icm42670S_config *cfg = dev->config;
 
 	icm42670_lock(dev);
 	gpio_pin_interrupt_configure_dt(&cfg->gpio_int, GPIO_INT_DISABLE);
@@ -78,7 +78,7 @@ int icm42670_trigger_set(const struct device *dev, const struct sensor_trigger *
 {
 	int res = 0;
 	struct icm42670_data *data = dev->data;
-	const struct icm42670_config *cfg = dev->config;
+	const struct icm42670S_config *cfg = dev->config;
 
 	if (!handler) {
 		return -EINVAL;
@@ -106,7 +106,7 @@ int icm42670_trigger_set(const struct device *dev, const struct sensor_trigger *
 int icm42670_trigger_init(const struct device *dev)
 {
 	struct icm42670_data *data = dev->data;
-	const struct icm42670_config *cfg = dev->config;
+	const struct icm42670S_config *cfg = dev->config;
 	int res = 0;
 
 	if (!cfg->gpio_int.port) {
@@ -146,7 +146,7 @@ int icm42670_trigger_init(const struct device *dev)
 int icm42670_trigger_enable_interrupt(const struct device *dev)
 {
 	int res;
-	const struct icm42670_config *cfg = dev->config;
+	const struct icm42670S_config *cfg = dev->config;
 
 	/* pulse-mode (auto clearing), push-pull and active-high */
 	res = icm42670_spi_single_write(&cfg->spi, REG_INT_CONFIG,
