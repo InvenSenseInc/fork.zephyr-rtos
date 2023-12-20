@@ -3,6 +3,6 @@
 
 description: ICM42670S integrated environmental sensor
 
-compatible: "tdk_invensense,icm42670S"
+compatible: "invensense,icm42670S"
 
 include: [sensor-device.yaml, spi-device.yaml]

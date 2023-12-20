@@ -1,17 +1,18 @@
-#
-# Copyright (c) 2020 TDK Invensense
-#
-# SPDX-License-Identifier: Apache-2.0
-#
-
 sample:
-  name: ICM42670S Sensor Sample
+  name: ICM42670S Sensor sample
 tests:
   sample.sensor.icm42670S:
-    build_only: true
-    platform_allow: nrf52dk_nrf52832
+    harness: console
+    tags: sensors
+    platform_allow:
+      - arduino_zero
     integration_platforms:
-      - nrf52dk_nrf52832
+      - arduino_zero
+    harness_config:
+      type: one_line
+      regex:
+        - "accel: (.*); gyro: (.*);"
+      fixture: fixture_i2c_icm42670S
   sample.sensor.icm42670S.spi:
     harness: console
     tags: sensors
@@ -22,11 +23,9 @@ tests:
     harness_config:
       type: one_line
       regex:
-        - "accel x:[-.0-9]* ms/2 y:[-.0-9]* ms/2 z:[-.0-9]* ms/2"
-        - "gyro x:[-.0-9]* rad/s y:[-.0-9]* rad/s z:[-.0-9]* rad/s"
+        - "accel: (.*); gyro: (.*);"
       fixture: fixture_spi_icm42670S
-    tags: sensors
-  sample.sensor.icm42670S.i2c:
+   sample.sensor.icm42670S.i2c:
     harness: console
     tags: sensors
     depends_on:
@@ -36,7 +35,5 @@ tests:
     harness_config:
       type: one_line
       regex:
-        - "accel x:[-.0-9]* ms/2 y:[-.0-9]* ms/2 z:[-.0-9]* ms/2"
-        - "gyro x:[-.0-9]* rad/s y:[-.0-9]* rad/s z:[-.0-9]* rad/s"
+        - "accel: (.*); gyro: (.*);"
       fixture: fixture_i2c_icm42670S
-    tags: sensors

@@ -13,7 +13,7 @@
 &arduino_i2c {
 	status = "okay";
 	icm42670S@68 {
-		compatible = "tdk_invensense,icm42670S";
+		compatible = "invensense,icm42670S";
 		reg = <0x68>;
 	};
 };
