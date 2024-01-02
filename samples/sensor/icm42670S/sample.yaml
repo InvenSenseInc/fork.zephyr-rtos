@@ -6,8 +6,10 @@ tests:
     tags: sensors
     platform_allow:
       - arduino_zero
+      - nrf52dk_nrf52832
     integration_platforms:
       - arduino_zero
+      - nrf52dk_nrf52832
     harness_config:
       type: one_line
       regex:
