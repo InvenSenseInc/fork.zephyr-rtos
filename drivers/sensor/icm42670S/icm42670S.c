@@ -114,20 +114,25 @@ static int icm42670S_chip_init(const struct device *dev)
 {
 	struct icm42670S_data *data = dev->data;
 	int err;
-
+	
 	err = icm42670S_bus_check(dev);
 	if (err < 0) {
 		LOG_DBG("bus check failed: %d", err);
 		return err;
 	}
+	
+	icm42670S_reg_write(dev, 0x79, 0x00);
+	icm42670S_reg_write(dev, 0x7C, 0x00);
+	icm42670S_reg_write(dev, 0x02, 0x10);
+	k_sleep(K_SECONDS(1));
 
-	err = icm42670S_reg_read(dev, 0x55, &data->chip_id, 1);
+	err = icm42670S_reg_read(dev, 0x75, &data->chip_id, 1);
 	if (err < 0) {
 		LOG_DBG("ID read failed: %d", err);
 		return err;
 	}
 
-	if (data->chip_id == 0x55) {
+	if (data->chip_id == 0x69) {
 		LOG_DBG("ID OK");
 	} else {
 		LOG_DBG("bad chip id 0x%x", data->chip_id);
@@ -178,6 +183,35 @@ static int icm42670S_chip_init(const struct device *dev)
 	return 0;
 }
 
+#ifdef CONFIG_PM_DEVICE
+static int icm42670S_pm_action(const struct device *dev,
+			    enum pm_device_action action)
+{
+	int ret = 0;
+
+	switch (action) {
+	case PM_DEVICE_ACTION_RESUME:
+		/* Re-initialize the chip */
+		ret = icm42670S_chip_init(dev);
+		break;
+	case PM_DEVICE_ACTION_SUSPEND:
+		/* Put the chip into sleep mode */
+		ret = icm42670S_reg_write(dev,
+			0x00,//BME280_REG_CTRL_MEAS,
+			0x00,//BME280_CTRL_MEAS_OFF_VAL);
+
+		if (ret < 0) {
+			LOG_DBG("CTRL_MEAS write failed: %d", ret);
+		}
+		break;
+	default:
+		return -ENOTSUP;
+	}
+
+	return ret;
+}
+#endif /* CONFIG_PM_DEVICE */
+
 /* Initializes a struct icm42670S_config for an instance on a SPI bus. */
 #define ICM42670S_CONFIG_SPI(inst)				\
 	{						\
@@ -204,6 +238,7 @@ static int icm42670S_chip_init(const struct device *dev)
 			    (ICM42670S_CONFIG_SPI(inst)),			\
 			    (ICM42670S_CONFIG_I2C(inst)));			\
 									\
+	PM_DEVICE_DT_INST_DEFINE(inst, icm42670S_pm_action);		\
 									\
 	SENSOR_DEVICE_DT_INST_DEFINE(inst,				\
 			 icm42670S_chip_init,				\
