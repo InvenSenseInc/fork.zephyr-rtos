@@ -13,7 +13,7 @@
 #include <zephyr/drivers/spi.h>
 #include <zephyr/drivers/i2c.h>
 
-#define DT_DRV_COMPAT invensense_icm42670S
+#define DT_DRV_COMPAT invensense_icm42670s
 
 #define ICM42670S_BUS_SPI DT_ANY_INST_ON_BUS_STATUS_OKAY(spi)
 #define ICM42670S_BUS_I2C DT_ANY_INST_ON_BUS_STATUS_OKAY(i2c)

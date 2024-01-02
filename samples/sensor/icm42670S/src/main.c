@@ -12,11 +12,11 @@
 
 /*
  * Get a device structure from a devicetree node with compatible
- * "invensense_icm42670S". (If there are multiple, just pick one.)
+ * "invensense,icm42670S". (If there are multiple, just pick one.)
  */
 static const struct device *get_icm42670S_device(void)
 {
-	const struct device *const dev = DEVICE_DT_GET_ANY(invensense_icm42670S);
+	const struct device *const dev = DEVICE_DT_GET_ANY(invensense_icm42670s);
 
 	if (dev == NULL) {
 		/* No such node, or the node does not have status "okay". */
