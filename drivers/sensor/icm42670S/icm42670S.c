@@ -22,17 +22,7 @@ LOG_MODULE_REGISTER(ICM42670S, CONFIG_SENSOR_LOG_LEVEL);
 #warning "ICM42670S driver enabled without any devices"
 #endif
 
-struct icm42670S_data {
-	int32_t accel[3];
-	int32_t gyro[3];
-	uint32_t comp_humidity;
-	uint8_t chip_id;
-};
 
-struct icm42670S_config {
-	union icm42670S_bus bus;
-	const struct icm42670S_bus_io *bus_io;
-};
 
 static inline int icm42670S_bus_check(const struct device *dev)
 {
@@ -61,10 +51,7 @@ static int icm42670S_sample_fetch(const struct device *dev,
 			       enum sensor_channel chan)
 {
 	struct icm42670S_data *data = dev->data;
-	uint8_t buf[8];
-	int32_t adc_press, adc_temp, adc_humidity;
 	int size = 6;
-	int ret;
 
 	__ASSERT_NO_MSG(chan == SENSOR_CHAN_ALL);
 
@@ -76,17 +63,9 @@ static int icm42670S_sample_fetch(const struct device *dev,
 		return -EIO;
 #endif
 
-#ifdef CONFIG_BME280_MODE_FORCED
-	ret = icm42670S_reg_write(dev, BME280_REG_CTRL_MEAS, BME280_CTRL_MEAS_VAL);
-	if (ret < 0) {
-		return ret;
-	}
-#endif
-
 	if (data->chip_id == 0x55) {
 		size = 8;
 	}
-
 	return 0;
 }
 
@@ -94,13 +73,56 @@ static int icm42670S_channel_get(const struct device *dev,
 			      enum sensor_channel chan,
 			      struct sensor_value *val)
 {
-	struct icm42670S_data *data = dev->data;
+	//TBD struct icm42670S_data *data = dev->data;
 
 	switch (chan) {
 
 	default:
 		return -ENOTSUP;
 	}
+
+	return 0;
+}
+
+int icm42670S_tap_fetch(const struct device *dev)
+{
+	/*int result = 0;
+	struct icm42605_data *drv_data = dev->data;
+	const struct icm42605_config *cfg = dev->config;
+
+	if (drv_data->tap_en &&
+	    (drv_data->tap_handler || drv_data->double_tap_handler)) {
+		result = inv_spi_read(&cfg->spi, REG_INT_STATUS3, drv_data->fifo_data, 1);
+		if (drv_data->fifo_data[0] & BIT_INT_STATUS_TAP_DET) {
+			result = inv_spi_read(&cfg->spi, REG_APEX_DATA4,
+					      drv_data->fifo_data, 1);
+			if (drv_data->fifo_data[0] & APEX_TAP) {
+				if (drv_data->tap_trigger->type ==
+				    SENSOR_TRIG_TAP) {
+					if (drv_data->tap_handler) {
+						LOG_DBG("Single Tap detected");
+						drv_data->tap_handler(dev
+						      , drv_data->tap_trigger);
+					}
+				} else {
+					LOG_ERR("Trigger type is mismatched");
+				}
+			} else if (drv_data->fifo_data[0] & APEX_DOUBLE_TAP) {
+				if (drv_data->double_tap_trigger->type ==
+				    SENSOR_TRIG_DOUBLE_TAP) {
+					if (drv_data->double_tap_handler) {
+						LOG_DBG("Double Tap detected");
+						drv_data->double_tap_handler(dev
+						     , drv_data->tap_trigger);
+					}
+				} else {
+					LOG_ERR("Trigger type is mismatched");
+				}
+			} else {
+				LOG_DBG("Not supported tap event");
+			}
+		}
+	}*/
 
 	return 0;
 }
@@ -113,18 +135,38 @@ static const struct sensor_driver_api icm42670S_api_funcs = {
 static int icm42670S_chip_init(const struct device *dev)
 {
 	struct icm42670S_data *data = dev->data;
+	//TBD const struct icm42670S_config *cfg = dev->config;
 	int err;
+	uint8_t ReadData;
 	
 	err = icm42670S_bus_check(dev);
 	if (err < 0) {
 		LOG_DBG("bus check failed: %d", err);
 		return err;
 	}
-	
+	k_sleep(K_SECONDS(0.3));
 	icm42670S_reg_write(dev, 0x79, 0x00);
 	icm42670S_reg_write(dev, 0x7C, 0x00);
+	// Configure SPI 4 Wire Mode 3
+	//icm42670S_reg_write(dev, 0x01, 0x04);
+	// Reset
 	icm42670S_reg_write(dev, 0x02, 0x10);
 	k_sleep(K_SECONDS(1));
+
+	icm42670S_reg_write(dev, 0x79, 0x00);
+	icm42670S_reg_write(dev, 0x7C, 0x00);
+	// Configure SPI 4 Wire Mode 3
+	//icm42670S_reg_write(dev, 0x01, 0x04);
+	
+	// Clear Interrupt Status RESET_DONE
+	icm42670S_reg_read(dev, 0x3A,&ReadData,1);
+	if (ReadData != 0x10)
+		LOG_DBG("Reset failed: 0x%x", ReadData);
+	
+	// Test Register Access
+	//icm42670S_reg_write(dev, 0x75, 0x55);
+	//icm42670S_reg_read(dev, 0x75,&ReadData,1);
+	//LOG_DBG("Read Data: 0x%x", ReadData);
 
 	err = icm42670S_reg_read(dev, 0x75, &data->chip_id, 1);
 	if (err < 0) {
@@ -218,6 +260,11 @@ static int icm42670S_pm_action(const struct device *dev,
 		.bus.spi = SPI_DT_SPEC_INST_GET(	\
 			inst, ICM42670S_SPI_OPERATION, 0),	\
 		.bus_io = &icm42670S_bus_io_spi,		\
+		.gpio_int = GPIO_DT_SPEC_INST_GET(inst, int_gpios),    \
+		.accel_hz = DT_INST_PROP(inst, accel_hz),		\
+		.gyro_hz = DT_INST_PROP(inst, gyro_hz),		\
+		.accel_fs = DT_INST_ENUM_IDX(inst, accel_fs),		\
+		.gyro_fs = DT_INST_ENUM_IDX(inst, gyro_fs),		\
 	}
 
 /* Initializes a struct icm42670S_config for an instance on an I2C bus. */
@@ -225,6 +272,11 @@ static int icm42670S_pm_action(const struct device *dev,
 	{					       \
 		.bus.i2c = I2C_DT_SPEC_INST_GET(inst), \
 		.bus_io = &icm42670S_bus_io_i2c,	       \
+		.gpio_int = GPIO_DT_SPEC_INST_GET(inst, int_gpios),    \
+		.accel_hz = DT_INST_PROP(inst, accel_hz),		\
+		.gyro_hz = DT_INST_PROP(inst, gyro_hz),		\
+		.accel_fs = DT_INST_ENUM_IDX(inst, accel_fs),		\
+		.gyro_fs = DT_INST_ENUM_IDX(inst, gyro_fs),		\
 	}
 
 /*
