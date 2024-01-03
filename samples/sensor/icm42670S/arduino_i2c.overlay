@@ -7,7 +7,7 @@
 /*
  * Example configuration of a ICM42670S device on an Arduino I2C bus.
  *
- * Device address 0x77 is assumed. Your device may have a different
+ * Device address 0x68 is assumed. Your device may have a different
  * address; check your device documentation if unsure.
  */
 &arduino_i2c {
