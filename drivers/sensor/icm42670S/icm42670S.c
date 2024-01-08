@@ -32,19 +32,42 @@ static inline int icm42670S_bus_check(const struct device *dev)
 }
 
 static inline int icm42670S_reg_read(const struct device *dev,
-				  uint8_t start, uint8_t *buf, int size)
+				  uint8_t reg, uint8_t *buf, uint32_t size)
 {
 	const struct icm42670S_config *cfg = dev->config;
 
-	return cfg->bus_io->read(&cfg->bus, start, buf, size);
+	return cfg->bus_io->read(&cfg->bus, reg, buf, size);
 }
 
-static inline int icm42670S_reg_write(const struct device *dev, uint8_t reg,
-				   uint8_t val)
+static inline int inv_io_hal_read_reg(struct inv_imu_serif *serif, 
+				uint8_t reg, uint8_t *rbuffer, uint32_t rlen)
+{
+	return icm42670S_reg_read(serif->context, reg, rbuffer, rlen);
+}
+
+static inline int icm42670S_reg_write(const struct device *dev,
+				   uint8_t reg, uint8_t *buf, uint32_t size)
 {
 	const struct icm42670S_config *cfg = dev->config;
 
-	return cfg->bus_io->write(&cfg->bus, reg, val);
+	return cfg->bus_io->write(&cfg->bus, reg, buf, size);
+}
+
+static inline int inv_io_hal_write_reg(struct inv_imu_serif *serif, uint8_t reg, 
+                         const uint8_t *wbuffer, uint32_t wlen)
+{
+	return icm42670S_reg_write(serif->context, reg, wbuffer, wlen);
+}
+
+void inv_imu_sleep_us(uint32_t us)
+{
+	k_sleep(K_USEC(us));
+}
+
+uint64_t inv_imu_get_time_us(void)
+{
+	// returns the elapsed time since the system booted, in milliseconds
+	return k_uptime_get() * 1000;
 }
 
 static int icm42670S_sample_fetch(const struct device *dev,
@@ -136,39 +159,24 @@ static int icm42670S_chip_init(const struct device *dev)
 {
 	struct icm42670S_data *data = dev->data;
 	//TBD const struct icm42670S_config *cfg = dev->config;
-	int err;
-	uint8_t ReadData;
 	
-	err = icm42670S_bus_check(dev);
+	int err = icm42670S_bus_check(dev);
 	if (err < 0) {
 		LOG_DBG("bus check failed: %d", err);
 		return err;
 	}
 	k_sleep(K_SECONDS(0.3));
-	icm42670S_reg_write(dev, 0x79, 0x00);
-	icm42670S_reg_write(dev, 0x7C, 0x00);
-	// Configure SPI 4 Wire Mode 3
-	//icm42670S_reg_write(dev, 0x01, 0x04);
-	// Reset
-	icm42670S_reg_write(dev, 0x02, 0x10);
-	k_sleep(K_SECONDS(1));
 
-	icm42670S_reg_write(dev, 0x79, 0x00);
-	icm42670S_reg_write(dev, 0x7C, 0x00);
-	// Configure SPI 4 Wire Mode 3
-	//icm42670S_reg_write(dev, 0x01, 0x04);
+	// Initialize serial interface and device
+	data->serif.context = dev;
+	data->serif.read_reg = inv_io_hal_read_reg;
+	data->serif.write_reg = inv_io_hal_write_reg;
+	data->serif.max_read = 1024 * 32;
+	data->serif.max_write = 1024 * 32;
+	data->serif.serif_type = UI_I2C;
+	err = inv_imu_init(&data->driver, &data->serif, NULL);
 	
-	// Clear Interrupt Status RESET_DONE
-	icm42670S_reg_read(dev, 0x3A,&ReadData,1);
-	if (ReadData != 0x10)
-		LOG_DBG("Reset failed: 0x%x", ReadData);
-	
-	// Test Register Access
-	//icm42670S_reg_write(dev, 0x75, 0x55);
-	//icm42670S_reg_read(dev, 0x75,&ReadData,1);
-	//LOG_DBG("Read Data: 0x%x", ReadData);
-
-	err = icm42670S_reg_read(dev, 0x75, &data->chip_id, 1);
+	err = inv_imu_get_who_am_i(&data->driver, &data->chip_id);
 	if (err < 0) {
 		LOG_DBG("ID read failed: %d", err);
 		return err;
@@ -181,44 +189,6 @@ static int icm42670S_chip_init(const struct device *dev)
 		return -ENOTSUP;
 	}
 
-	/*err = bme280_reg_write(dev, BME280_REG_RESET, BME280_CMD_SOFT_RESET);
-	if (err < 0) {
-		LOG_DBG("Soft-reset failed: %d", err);
-	}
-
-	err = bme280_wait_until_ready(dev);
-	if (err < 0) {
-		return err;
-	}
-
-	err = bme280_read_compensation(dev);
-	if (err < 0) {
-		return err;
-	}
-
-	if (data->chip_id == BME280_CHIP_ID) {
-		err = bme280_reg_write(dev, BME280_REG_CTRL_HUM,
-				       BME280_HUMIDITY_OVER);
-		if (err < 0) {
-			LOG_DBG("CTRL_HUM write failed: %d", err);
-			return err;
-		}
-	}
-
-	err = bme280_reg_write(dev, BME280_REG_CTRL_MEAS,
-			       BME280_CTRL_MEAS_VAL);
-	if (err < 0) {
-		LOG_DBG("CTRL_MEAS write failed: %d", err);
-		return err;
-	}
-
-	err = bme280_reg_write(dev, BME280_REG_CONFIG,
-			       BME280_CONFIG_VAL);
-	if (err < 0) {
-		LOG_DBG("CONFIG write failed: %d", err);
-		return err;
-	}
-	*/
 	k_sleep(K_MSEC(1));
 
 	LOG_DBG("\"%s\" OK", dev->name);

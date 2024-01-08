@@ -20,7 +20,10 @@ if not exist tmp\invn.firmware.emd-mcu.icm42670s_examples-atmel.arm-gnu-toolchai
   %seven_zip% -y x tmp\invn.firmware.emd-mcu.icm42670s_examples-atmel.arm-gnu-toolchain-cm4-fpu-%__xian_drivers_version_%.tar -otmp\Rep
   
   :: copy icm42670S drivers
-  xcopy /S /I /Y tmp\Rep\sources\drivers\imu .\
+  xcopy /S /I /Y tmp\Rep\sources\drivers\imu .\imu
+  rmdir Invn
+  mkdir Invn
+  copy tmp\Rep\sources\common\Invn\InvError.h .\Invn\InvError.h
 
   rmdir /S /Q tmp
 )
