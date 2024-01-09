@@ -31,7 +31,6 @@ int icm42670S_trigger_set(const struct device *dev,
 	gpio_pin_interrupt_configure_dt(&cfg->gpio_int, GPIO_INT_DISABLE);
 
 	if (handler == NULL) {
-		// TBD icm42670S_turn_off_sensor(dev);
 		return 0;
 	}
 
@@ -51,8 +50,6 @@ int icm42670S_trigger_set(const struct device *dev,
 	}
 
 	gpio_pin_interrupt_configure_dt(&cfg->gpio_int, GPIO_INT_EDGE_TO_ACTIVE);
-
-	// TBD icm42670S_turn_on_sensor(dev);
 
 	return 0;
 }

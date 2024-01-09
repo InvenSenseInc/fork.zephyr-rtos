@@ -86,9 +86,6 @@ static int icm42670S_sample_fetch(const struct device *dev,
 		return -EIO;
 #endif
 
-	if (data->chip_id == 0x55) {
-		size = 8;
-	}
 	return 0;
 }
 
@@ -99,7 +96,16 @@ static int icm42670S_channel_get(const struct device *dev,
 	//TBD struct icm42670S_data *data = dev->data;
 
 	switch (chan) {
-
+	case SENSOR_CHAN_ACCEL_X:
+	case SENSOR_CHAN_ACCEL_Y:
+	case SENSOR_CHAN_ACCEL_Z:
+	case SENSOR_CHAN_ACCEL_XYZ:
+		break;
+	case SENSOR_CHAN_GYRO_X:
+	case SENSOR_CHAN_GYRO_Y:
+	case SENSOR_CHAN_GYRO_Z:
+	case SENSOR_CHAN_GYRO_XYZ:
+		break;
 	default:
 		return -ENOTSUP;
 	}
@@ -153,6 +159,7 @@ int icm42670S_tap_fetch(const struct device *dev)
 static const struct sensor_driver_api icm42670S_api_funcs = {
 	.sample_fetch = icm42670S_sample_fetch,
 	.channel_get = icm42670S_channel_get,
+	.trigger_set = icm42670S_trigger_set,
 };
 
 static int icm42670S_chip_init(const struct device *dev)
@@ -175,6 +182,10 @@ static int icm42670S_chip_init(const struct device *dev)
 	data->serif.max_write = 1024 * 32;
 	data->serif.serif_type = UI_I2C;
 	err = inv_imu_init(&data->driver, &data->serif, NULL);
+	if (err < 0) {
+		LOG_DBG("Init failed: %d", err);
+		return err;
+	}
 	
 	err = inv_imu_get_who_am_i(&data->driver, &data->chip_id);
 	if (err < 0) {
@@ -182,13 +193,28 @@ static int icm42670S_chip_init(const struct device *dev)
 		return err;
 	}
 
-	if (data->chip_id == 0x69) {
+	if (data->chip_id == ICM42670S_WHOAMI) {
 		LOG_DBG("ID OK");
 	} else {
 		LOG_DBG("bad chip id 0x%x", data->chip_id);
 		return -ENOTSUP;
 	}
-
+	
+	err = icm42670S_init_interrupt(dev);
+	if (err < 0) {
+		LOG_ERR("Failed to initialize interrupt.");
+		return err;
+	}
+	
+	err = inv_imu_enable_accel_low_noise_mode(&data->driver);
+	
+	err |= inv_imu_enable_gyro_low_noise_mode(&data->driver);
+	
+	if (err < 0) {
+		LOG_DBG("Start sensor failed: %d", err);
+		return err;
+	}
+	
 	k_sleep(K_MSEC(1));
 
 	LOG_DBG("\"%s\" OK", dev->name);
