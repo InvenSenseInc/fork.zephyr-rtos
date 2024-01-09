@@ -193,7 +193,7 @@ static int icm42670S_chip_init(const struct device *dev)
 		return err;
 	}
 
-	if (data->chip_id == ICM42670S_WHOAMI) {
+	if (data->chip_id == INV_IMU_WHOAMI) {
 		LOG_DBG("ID OK");
 	} else {
 		LOG_DBG("bad chip id 0x%x", data->chip_id);

@@ -15,17 +15,34 @@
  *
  */
 
-#ifndef _INV_IMU_VERSION_H_
-#define _INV_IMU_VERSION_H_
+#ifndef _INV_IMU_H_
+#define _INV_IMU_H_
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-#define INV_IMU_VERSION_STRING "3.0.0-dev1"
+/** @defgroup IMU IMU
+ *  @brief Describes IMU
+ *  @{
+ */
+
+/** @file inv_imu.h */
+
+
+/* Device ID */
+#define ICM42670S
+
+/* Device description */
+#define INV_IMU_STRING_ID         "ICM42670S"
+#define INV_IMU_WHOAMI            0x69
+#define INV_IMU_REV               INV_IMU_REV_A
+#define INV_IMU_IS_GYRO_SUPPORTED 1
 
 #ifdef __cplusplus
 }
 #endif
 
-#endif /* _INV_IMU_VERSION_H_ */
+#endif /* #ifndef _INV_IMU_H_ */
+
+/** @} */
