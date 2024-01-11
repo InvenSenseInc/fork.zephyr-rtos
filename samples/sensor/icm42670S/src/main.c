@@ -10,6 +10,10 @@
 #include <zephyr/drivers/sensor.h>
 #include <stdio.h>
 
+struct sensor_value accel[3];
+struct sensor_value gyro[3];
+struct sensor_value temperature;
+
 /*
  * Get a device structure from a devicetree node with compatible
  * "invensense,icm42670S". (If there are multiple, just pick one.)
@@ -59,11 +63,8 @@ static const char *now_str(void)
 
 static int process_icm42670S(const struct device *dev)
 {
-	struct sensor_value temperature;
-	struct sensor_value accel[3];
-	struct sensor_value gyro[3];
 	int rc = sensor_sample_fetch(dev);
-
+	
 	if (rc == 0) {
 		rc = sensor_channel_get(dev, SENSOR_CHAN_ACCEL_XYZ,
 					accel);
@@ -76,19 +77,8 @@ static int process_icm42670S(const struct device *dev)
 		rc = sensor_channel_get(dev, SENSOR_CHAN_DIE_TEMP,
 					&temperature);
 	}
-	if (rc == 0) {
-		printf("[%s]:% g Cel\n"
-		       "  accel % f % f % f m/s/s\n"
-		       "  gyro  % f % f % f rad/s\n",
-		       now_str(),
-		       sensor_value_to_double(&temperature),
-		       sensor_value_to_double(&accel[0]),
-		       sensor_value_to_double(&accel[1]),
-		       sensor_value_to_double(&accel[2]),
-		       sensor_value_to_double(&gyro[0]),
-		       sensor_value_to_double(&gyro[1]),
-		       sensor_value_to_double(&gyro[2]));
-	} else {
+	
+	if (rc != 0) { 
 		printf("sample fetch/get failed: %d\n", rc);
 	}
 
@@ -165,5 +155,19 @@ int main(void)
 	}
 
 	printf("Configured for triggered sampling.\n");
-	return 0;
+	
+	while (1) {
+		
+		printf("[%s]: ACC m/s/s: %d.%06d %d.%06d %d.%06d "
+		             "GYR rad/s: %d.%06d %d.%06d %d.%06d "
+					 "TEMP degC: %d.%06d\n",
+			   now_str(),
+		       accel[0].val1, accel[0].val2,
+		       accel[1].val1, accel[1].val2,
+		       accel[2].val1, accel[2].val2,
+		       gyro[0].val1, gyro[0].val2,
+		       gyro[1].val1, gyro[1].val2,
+		       gyro[2].val1, gyro[2].val2,
+			   temperature.val1, temperature.val2);
+	}
 }

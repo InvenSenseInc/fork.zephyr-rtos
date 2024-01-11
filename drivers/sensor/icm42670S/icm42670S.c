@@ -75,7 +75,12 @@ static int icm42670S_sample_fetch(const struct device *dev,
 {
 	struct icm42670S_data *data = dev->data;
 	int size = 6;
-
+	int      status = 0;
+	uint8_t  int_status;
+	uint16_t total_packet_count = 0;
+	uint16_t packet_size        = FIFO_HEADER_SIZE + FIFO_ACCEL_DATA_SIZE + FIFO_GYRO_DATA_SIZE +
+	                       FIFO_TEMP_DATA_SIZE + FIFO_TS_FSYNC_SIZE;
+	
 	__ASSERT_NO_MSG(chan == SENSOR_CHAN_ALL);
 
 #ifdef CONFIG_PM_DEVICE
@@ -86,25 +91,156 @@ static int icm42670S_sample_fetch(const struct device *dev,
 		return -EIO;
 #endif
 
+	/* Ensure data ready status bit is set */
+	if (status |= inv_imu_read_reg(&data->driver, INT_STATUS, 1, &int_status))
+		return status;
+
+	if ((int_status & INT_STATUS_FIFO_THS_INT_MASK) ||
+	    (int_status & INT_STATUS_FIFO_FULL_INT_MASK)) {
+		uint8_t  f_data[2];
+		uint16_t packet_count;
+
+/*
+		 * Make sure RCOSC is enabled to guarrantee FIFO read */
+		status |= inv_imu_switch_on_mclk(&data->driver);
+		
+		/* FIFO record mode configured at driver init, so we read packet number, not byte count */
+		if ((status |= inv_imu_read_reg(&data->driver, FIFO_COUNTH, 2, &f_data[0])) != INV_ERROR_SUCCESS) {
+			return status;
+		}
+
+		total_packet_count = (uint16_t)(f_data[0] | (f_data[1] << 8));
+		packet_count       = total_packet_count;
+		while (packet_count > 0) {
+			uint16_t invalid_frame_cnt = 0;
+			/* Read FIFO only when data is expected in FIFO */
+			/* fifo_idx type variable must be large enough to parse the FIFO_MIRRORING_SIZE */
+			uint16_t fifo_idx = 0;
+
+			if (status |=
+			    inv_imu_read_reg(&data->driver, FIFO_DATA, packet_size * packet_count, &data->driver.fifo_data)) {
+				/* 
+				 * Sensor data is in FIFO according to FIFO_COUNT but failed to read FIFO,
+				 * reset FIFO and try next chance 
+				 */
+				status |= inv_imu_reset_fifo(&data->driver);
+				status |= inv_imu_switch_off_mclk(&data->driver);
+				return status;
+			}
+
+			for (uint16_t i = 0; i < packet_count; i++) {
+				const fifo_header_t *  header;
+
+				header            = (fifo_header_t *)&data->driver.fifo_data[fifo_idx];
+				fifo_idx += FIFO_HEADER_SIZE;
+
+				/* Decode invalid frame */
+				if (header->Byte == 0x80) {
+					uint8_t is_invalid_frame = 1;
+					/* Check N-FIFO_HEADER_SIZE remaining bytes are all 0 to be invalid frame */
+					for (uint8_t j = 0; j < (packet_size - FIFO_HEADER_SIZE); j++) {
+						if (data->driver.fifo_data[fifo_idx + j]) {
+							is_invalid_frame = 0;
+							break;
+						}
+					}
+					/* In case of invalid frame read FIFO will be retried for this packet */
+					invalid_frame_cnt += is_invalid_frame;
+					fifo_idx += packet_size - FIFO_HEADER_SIZE;
+				} else {
+					/* Decode packet */
+					if (header->bits.msg_bit) {
+						/* MSG BIT set in FIFO header, Resetting FIFO */
+						status |= inv_imu_reset_fifo(&data->driver);
+						status |= inv_imu_switch_off_mclk(&data->driver);
+						return status < 0 ? status : INV_ERROR;
+					}
+
+					if (header->bits.accel_bit) {
+						data->accel[0] = (int16_t)((data->driver.fifo_data[0 + fifo_idx] << 8) | data->driver.fifo_data[1 + fifo_idx]);
+						data->accel[1] = (int16_t)((data->driver.fifo_data[2 + fifo_idx] << 8) | data->driver.fifo_data[3 + fifo_idx]);
+						data->accel[2] = (int16_t)((data->driver.fifo_data[4 + fifo_idx] << 8) | data->driver.fifo_data[5 + fifo_idx]);
+						fifo_idx += FIFO_ACCEL_DATA_SIZE;
+					}
+
+					if (header->bits.gyro_bit) {
+						data->gyro[0] = (int16_t)((data->driver.fifo_data[0 + fifo_idx] << 8) | data->driver.fifo_data[1 + fifo_idx]);
+						data->gyro[1] = (int16_t)((data->driver.fifo_data[2 + fifo_idx] << 8) | data->driver.fifo_data[3 + fifo_idx]);
+						data->gyro[2] = (int16_t)((data->driver.fifo_data[4 + fifo_idx] << 8) | data->driver.fifo_data[5 + fifo_idx]);
+						fifo_idx += FIFO_GYRO_DATA_SIZE;
+					}
+
+					/* 
+					 * The coarse temperature (8B FIFO packet format) 
+					 * range is ± 64 degrees with 0.5°C resolution.
+					 */
+					/* cast to int8_t since FIFO is in 16 bits mode (temperature on 8 bits) */
+					data->temperature = (int8_t)data->driver.fifo_data[0 + fifo_idx];
+					fifo_idx += FIFO_TEMP_DATA_SIZE;
+
+				} /* end of else invalid frame */
+			} /* end of FIFO read for loop */
+			packet_count = invalid_frame_cnt;
+		} /*end of while: packet_count > 0*/
+
+		status |= inv_imu_switch_off_mclk(&data->driver);
+		if (status < 0)
+			return status;
+
+	} /*else: FIFO threshold was not reached and FIFO was not full*/
+
 	return 0;
+}
+
+static void icm42670S_accel_convert(struct sensor_value *val, int raw_val)
+{
+	int64_t conv_val;
+
+	/* For 16G => sensitivity shift 2^(15-4) */
+	conv_val = ((int64_t)raw_val * SENSOR_G) >> 11;
+	val->val1 = conv_val / 1000000;
+	val->val2 = conv_val % 1000000;
+
+}
+
+static void icm42670S_gyro_convert(struct sensor_value *val, int16_t raw_val)
+{
+	int64_t conv_val;
+
+	conv_val = ((int64_t)raw_val * SENSOR_PI * 10) /
+		   (2000 * 10 * 180U);
+	val->val1 = conv_val / 1000000;
+	val->val2 = conv_val % 1000000;
+}
+
+static void icm42670S_temp_convert(struct sensor_value *val, int16_t raw_val)
+{
+	int64_t conv_val;
+
+	conv_val = 25 * 1000000 + ((int64_t)raw_val * 1000000 / 2);
+	val->val1 = conv_val / 1000000;
+	val->val2 = conv_val % 1000000;
 }
 
 static int icm42670S_channel_get(const struct device *dev,
 			      enum sensor_channel chan,
 			      struct sensor_value *val)
 {
-	//TBD struct icm42670S_data *data = dev->data;
+	struct icm42670S_data *data = dev->data;
 
 	switch (chan) {
-	case SENSOR_CHAN_ACCEL_X:
-	case SENSOR_CHAN_ACCEL_Y:
-	case SENSOR_CHAN_ACCEL_Z:
 	case SENSOR_CHAN_ACCEL_XYZ:
+		icm42670S_accel_convert(val, data->accel[0]);
+		icm42670S_accel_convert(val + 1, data->accel[1]);
+		icm42670S_accel_convert(val + 2, data->accel[2]);
 		break;
-	case SENSOR_CHAN_GYRO_X:
-	case SENSOR_CHAN_GYRO_Y:
-	case SENSOR_CHAN_GYRO_Z:
 	case SENSOR_CHAN_GYRO_XYZ:
+		icm42670S_gyro_convert(val, data->gyro[0]);
+		icm42670S_gyro_convert(val + 1, data->gyro[1]);
+		icm42670S_gyro_convert(val + 2, data->gyro[2]);
+		break;
+	case SENSOR_CHAN_DIE_TEMP:
+		icm42670S_temp_convert(val, data->temperature);
 		break;
 	default:
 		return -ENOTSUP;
@@ -206,10 +342,13 @@ static int icm42670S_chip_init(const struct device *dev)
 		return err;
 	}
 	
+	// TODO with attr_set API
+	err |= inv_imu_set_accel_frequency(&data->driver, ACCEL_CONFIG0_ODR_100_HZ);
+	err |= inv_imu_set_gyro_frequency(&data->driver, GYRO_CONFIG0_ODR_100_HZ);
+	
 	err = inv_imu_enable_accel_low_noise_mode(&data->driver);
-	
 	err |= inv_imu_enable_gyro_low_noise_mode(&data->driver);
-	
+			
 	if (err < 0) {
 		LOG_DBG("Start sensor failed: %d", err);
 		return err;

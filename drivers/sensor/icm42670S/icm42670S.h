@@ -61,6 +61,7 @@ struct icm42670S_data {
 	uint8_t chip_id;
 	int32_t accel[3];
 	int32_t gyro[3];
+	int32_t temperature;
 	
 	bool accel_en;
 	bool gyro_en;
