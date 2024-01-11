@@ -22,9 +22,7 @@ int icm42670S_trigger_set(const struct device *dev,
 	struct icm42670S_data *drv_data = dev->data;
 	const struct icm42670S_config *cfg = dev->config;
 
-	if (trig->type != SENSOR_TRIG_DATA_READY
-	    && trig->type != SENSOR_TRIG_TAP
-	    && trig->type != SENSOR_TRIG_DOUBLE_TAP) {
+	if (trig->type != SENSOR_TRIG_DATA_READY) {
 		return -ENOTSUP;
 	}
 
@@ -37,14 +35,6 @@ int icm42670S_trigger_set(const struct device *dev,
 	if (trig->type == SENSOR_TRIG_DATA_READY) {
 		drv_data->data_ready_handler = handler;
 		drv_data->data_ready_trigger = trig;
-	} else if (trig->type == SENSOR_TRIG_TAP) {
-		drv_data->tap_handler = handler;
-		drv_data->tap_trigger = trig;
-		drv_data->tap_en = true;
-	} else if (trig->type == SENSOR_TRIG_DOUBLE_TAP) {
-		drv_data->double_tap_handler = handler;
-		drv_data->double_tap_trigger = trig;
-		drv_data->tap_en = true;
 	} else {
 		return -ENOTSUP;
 	}
@@ -76,11 +66,6 @@ static void icm42670S_thread_cb(const struct device *dev)
 	if (drv_data->data_ready_handler != NULL) {
 		drv_data->data_ready_handler(dev,
 					     drv_data->data_ready_trigger);
-	}
-
-	if (drv_data->tap_handler != NULL ||
-	    drv_data->double_tap_handler != NULL) {
-		icm42670S_tap_fetch(dev);
 	}
 
 	gpio_pin_interrupt_configure_dt(&cfg->gpio_int, GPIO_INT_EDGE_TO_ACTIVE);

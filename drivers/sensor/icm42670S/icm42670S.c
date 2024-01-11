@@ -46,7 +46,7 @@ static inline int inv_io_hal_read_reg(struct inv_imu_serif *serif,
 }
 
 static inline int icm42670S_reg_write(const struct device *dev,
-				   uint8_t reg, uint8_t *buf, uint32_t size)
+				   uint8_t reg, const uint8_t *buf, uint32_t size)
 {
 	const struct icm42670S_config *cfg = dev->config;
 
@@ -74,7 +74,6 @@ static int icm42670S_sample_fetch(const struct device *dev,
 			       enum sensor_channel chan)
 {
 	struct icm42670S_data *data = dev->data;
-	int size = 6;
 	int      status = 0;
 	uint8_t  int_status;
 	uint16_t total_packet_count = 0;
@@ -245,49 +244,6 @@ static int icm42670S_channel_get(const struct device *dev,
 	default:
 		return -ENOTSUP;
 	}
-
-	return 0;
-}
-
-int icm42670S_tap_fetch(const struct device *dev)
-{
-	/*int result = 0;
-	struct icm42605_data *drv_data = dev->data;
-	const struct icm42605_config *cfg = dev->config;
-
-	if (drv_data->tap_en &&
-	    (drv_data->tap_handler || drv_data->double_tap_handler)) {
-		result = inv_spi_read(&cfg->spi, REG_INT_STATUS3, drv_data->fifo_data, 1);
-		if (drv_data->fifo_data[0] & BIT_INT_STATUS_TAP_DET) {
-			result = inv_spi_read(&cfg->spi, REG_APEX_DATA4,
-					      drv_data->fifo_data, 1);
-			if (drv_data->fifo_data[0] & APEX_TAP) {
-				if (drv_data->tap_trigger->type ==
-				    SENSOR_TRIG_TAP) {
-					if (drv_data->tap_handler) {
-						LOG_DBG("Single Tap detected");
-						drv_data->tap_handler(dev
-						      , drv_data->tap_trigger);
-					}
-				} else {
-					LOG_ERR("Trigger type is mismatched");
-				}
-			} else if (drv_data->fifo_data[0] & APEX_DOUBLE_TAP) {
-				if (drv_data->double_tap_trigger->type ==
-				    SENSOR_TRIG_DOUBLE_TAP) {
-					if (drv_data->double_tap_handler) {
-						LOG_DBG("Double Tap detected");
-						drv_data->double_tap_handler(dev
-						     , drv_data->tap_trigger);
-					}
-				} else {
-					LOG_ERR("Trigger type is mismatched");
-				}
-			} else {
-				LOG_DBG("Not supported tap event");
-			}
-		}
-	}*/
 
 	return 0;
 }

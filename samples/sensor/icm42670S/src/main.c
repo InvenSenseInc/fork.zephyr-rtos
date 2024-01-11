@@ -10,9 +10,10 @@
 #include <zephyr/drivers/sensor.h>
 #include <stdio.h>
 
-struct sensor_value accel[3];
-struct sensor_value gyro[3];
-struct sensor_value temperature;
+static struct sensor_trigger data_trigger;
+static struct sensor_value accel[3];
+static struct sensor_value gyro[3];
+static struct sensor_value temperature;
 
 /*
  * Get a device structure from a devicetree node with compatible
@@ -85,10 +86,6 @@ static int process_icm42670S(const struct device *dev)
 	return rc;
 }
 
-static struct sensor_trigger data_trigger;
-static struct sensor_trigger tap_trigger;
-static struct sensor_trigger double_tap_trigger;
-
 static void handle_icm42670S_drdy(const struct device *dev,
 				 const struct sensor_trigger *trig)
 {
@@ -101,45 +98,11 @@ static void handle_icm42670S_drdy(const struct device *dev,
 	}
 }
 
-static void handle_icm42670S_tap(const struct device *dev,
-				const struct sensor_trigger *trig)
-{
-	printf("Tap Detected!\n");
-}
-
-static void handle_icm42670S_double_tap(const struct device *dev,
-				       const struct sensor_trigger *trig)
-{
-	printf("Double Tap detected!\n");
-}
-
 int main(void)
 {
 	const struct device *dev = get_icm42670S_device();
 
 	if (dev == NULL) {
-		return 0;
-	}
-
-	tap_trigger = (struct sensor_trigger) {
-		.type = SENSOR_TRIG_TAP,
-		.chan = SENSOR_CHAN_ALL,
-	};
-
-	if (sensor_trigger_set(dev, &tap_trigger,
-			       handle_icm42670S_tap) < 0) {
-		printf("Cannot configure tap trigger!!!\n");
-		return 0;
-	}
-
-	double_tap_trigger = (struct sensor_trigger) {
-		.type = SENSOR_TRIG_DOUBLE_TAP,
-		.chan = SENSOR_CHAN_ALL,
-	};
-
-	if (sensor_trigger_set(dev, &double_tap_trigger,
-			       handle_icm42670S_double_tap) < 0) {
-		printf("Cannot configure double tap trigger!!!\n");
 		return 0;
 	}
 
@@ -157,17 +120,16 @@ int main(void)
 	printf("Configured for triggered sampling.\n");
 	
 	while (1) {
-		
-		printf("[%s]: ACC m/s/s: %d.%06d %d.%06d %d.%06d "
-		             "GYR rad/s: %d.%06d %d.%06d %d.%06d "
-					 "TEMP degC: %d.%06d\n",
-			   now_str(),
-		       accel[0].val1, accel[0].val2,
-		       accel[1].val1, accel[1].val2,
-		       accel[2].val1, accel[2].val2,
-		       gyro[0].val1, gyro[0].val2,
-		       gyro[1].val1, gyro[1].val2,
-		       gyro[2].val1, gyro[2].val2,
-			   temperature.val1, temperature.val2);
+		printf("[%s]: temp %.2f Cel "
+		       "  accel %f %f %f m/s/s "
+		       "  gyro  %f %f %f rad/s\n",
+		       now_str(),
+		       sensor_value_to_double(&temperature),
+		       sensor_value_to_double(&accel[0]),
+		       sensor_value_to_double(&accel[1]),
+		       sensor_value_to_double(&accel[2]),
+		       sensor_value_to_double(&gyro[0]),
+		       sensor_value_to_double(&gyro[1]),
+		       sensor_value_to_double(&gyro[2]));
 	}
 }
