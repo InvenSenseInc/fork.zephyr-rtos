@@ -11,9 +11,10 @@
 #include <stdio.h>
 
 static struct sensor_trigger data_trigger;
-static struct sensor_value accel[3];
-static struct sensor_value gyro[3];
-static struct sensor_value temperature;
+static uint32_t now;
+
+/* Flag set from IMU device irq handler */
+static volatile int irq_from_device = 0;
 
 /*
  * Get a device structure from a devicetree node with compatible
@@ -44,7 +45,6 @@ static const struct device *get_icm42670S_device(void)
 static const char *now_str(void)
 {
 	static char buf[16]; /* ...HH:MM:SS.MMM */
-	uint32_t now = k_uptime_get_32();
 	unsigned int ms = now % MSEC_PER_SEC;
 	unsigned int s;
 	unsigned int min;
@@ -66,21 +66,11 @@ static int process_icm42670S(const struct device *dev)
 {
 	int rc = sensor_sample_fetch(dev);
 	
-	if (rc == 0) {
-		rc = sensor_channel_get(dev, SENSOR_CHAN_ACCEL_XYZ,
-					accel);
-	}
-	if (rc == 0) {
-		rc = sensor_channel_get(dev, SENSOR_CHAN_GYRO_XYZ,
-					gyro);
-	}
-	if (rc == 0) {
-		rc = sensor_channel_get(dev, SENSOR_CHAN_DIE_TEMP,
-					&temperature);
-	}
-	
 	if (rc != 0) { 
-		printf("sample fetch/get failed: %d\n", rc);
+		printf("sample fetch failed: %d\n", rc);
+	} else {
+		now = k_uptime_get_32();
+		irq_from_device = 1;
 	}
 
 	return rc;
@@ -101,6 +91,9 @@ static void handle_icm42670S_drdy(const struct device *dev,
 int main(void)
 {
 	const struct device *dev = get_icm42670S_device();
+	struct sensor_value accel[3];
+	struct sensor_value gyro[3];
+	struct sensor_value temperature;
 
 	if (dev == NULL) {
 		return 0;
@@ -120,16 +113,27 @@ int main(void)
 	printf("Configured for triggered sampling.\n");
 	
 	while (1) {
-		printf("[%s]: temp %.2f Cel "
-		       "  accel %f %f %f m/s/s "
-		       "  gyro  %f %f %f rad/s\n",
-		       now_str(),
-		       sensor_value_to_double(&temperature),
-		       sensor_value_to_double(&accel[0]),
-		       sensor_value_to_double(&accel[1]),
-		       sensor_value_to_double(&accel[2]),
-		       sensor_value_to_double(&gyro[0]),
-		       sensor_value_to_double(&gyro[1]),
-		       sensor_value_to_double(&gyro[2]));
+		
+		if( irq_from_device ) {
+			sensor_channel_get(dev, SENSOR_CHAN_ACCEL_XYZ,
+							accel);
+			sensor_channel_get(dev, SENSOR_CHAN_GYRO_XYZ,
+							gyro);
+			sensor_channel_get(dev, SENSOR_CHAN_DIE_TEMP,
+							&temperature);
+	
+			printf("[%s]: temp %.2f Cel "
+				   "  accel %f %f %f m/s/s "
+				   "  gyro  %f %f %f rad/s\n",
+				   now_str(),
+				   sensor_value_to_double(&temperature),
+				   sensor_value_to_double(&accel[0]),
+				   sensor_value_to_double(&accel[1]),
+				   sensor_value_to_double(&accel[2]),
+				   sensor_value_to_double(&gyro[0]),
+				   sensor_value_to_double(&gyro[1]),
+				   sensor_value_to_double(&gyro[2]));
+			irq_from_device = 0;
+		}
 	}
 }
