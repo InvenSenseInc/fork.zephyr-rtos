@@ -15,7 +15,7 @@
 	icm42670S@68 {
 		compatible = "invensense,icm42670S";
 		reg = <0x68>;
-		int-gpios = <&gpio0 2 GPIO_ACTIVE_HIGH>;
+		int-gpios = <&arduino_header 8 GPIO_ACTIVE_HIGH>; /* D2 */
 	};
 };
 
