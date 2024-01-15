@@ -10,6 +10,12 @@
 #include <zephyr/drivers/sensor.h>
 #include <stdio.h>
 
+static struct sensor_trigger data_trigger;
+static uint32_t now;
+
+/* Flag set from IMU device irq handler */
+static volatile int irq_from_device = 0;
+
 /*
  * Get a device structure from a devicetree node with compatible
  * "invensense,icm42670S". (If there are multiple, just pick one.)
@@ -39,7 +45,6 @@ static const struct device *get_icm42670S_device(void)
 static const char *now_str(void)
 {
 	static char buf[16]; /* ...HH:MM:SS.MMM */
-	uint32_t now = k_uptime_get_32();
 	unsigned int ms = now % MSEC_PER_SEC;
 	unsigned int s;
 	unsigned int min;
@@ -59,45 +64,17 @@ static const char *now_str(void)
 
 static int process_icm42670S(const struct device *dev)
 {
-	struct sensor_value temperature;
-	struct sensor_value accel[3];
-	struct sensor_value gyro[3];
 	int rc = sensor_sample_fetch(dev);
-
-	if (rc == 0) {
-		rc = sensor_channel_get(dev, SENSOR_CHAN_ACCEL_XYZ,
-					accel);
-	}
-	if (rc == 0) {
-		rc = sensor_channel_get(dev, SENSOR_CHAN_GYRO_XYZ,
-					gyro);
-	}
-	if (rc == 0) {
-		rc = sensor_channel_get(dev, SENSOR_CHAN_DIE_TEMP,
-					&temperature);
-	}
-	if (rc == 0) {
-		printf("[%s]:% g Cel\n"
-		       "  accel % f % f % f m/s/s\n"
-		       "  gyro  % f % f % f rad/s\n",
-		       now_str(),
-		       sensor_value_to_double(&temperature),
-		       sensor_value_to_double(&accel[0]),
-		       sensor_value_to_double(&accel[1]),
-		       sensor_value_to_double(&accel[2]),
-		       sensor_value_to_double(&gyro[0]),
-		       sensor_value_to_double(&gyro[1]),
-		       sensor_value_to_double(&gyro[2]));
+	
+	if (rc != 0) { 
+		printf("sample fetch failed: %d\n", rc);
 	} else {
-		printf("sample fetch/get failed: %d\n", rc);
+		now = k_uptime_get_32();
+		irq_from_device = 1;
 	}
 
 	return rc;
 }
-
-static struct sensor_trigger data_trigger;
-static struct sensor_trigger tap_trigger;
-static struct sensor_trigger double_tap_trigger;
 
 static void handle_icm42670S_drdy(const struct device *dev,
 				 const struct sensor_trigger *trig)
@@ -111,45 +88,14 @@ static void handle_icm42670S_drdy(const struct device *dev,
 	}
 }
 
-static void handle_icm42670S_tap(const struct device *dev,
-				const struct sensor_trigger *trig)
-{
-	printf("Tap Detected!\n");
-}
-
-static void handle_icm42670S_double_tap(const struct device *dev,
-				       const struct sensor_trigger *trig)
-{
-	printf("Double Tap detected!\n");
-}
-
 int main(void)
 {
 	const struct device *dev = get_icm42670S_device();
+	struct sensor_value accel[3];
+	struct sensor_value gyro[3];
+	struct sensor_value temperature;
 
 	if (dev == NULL) {
-		return 0;
-	}
-
-	tap_trigger = (struct sensor_trigger) {
-		.type = SENSOR_TRIG_TAP,
-		.chan = SENSOR_CHAN_ALL,
-	};
-
-	if (sensor_trigger_set(dev, &tap_trigger,
-			       handle_icm42670S_tap) < 0) {
-		printf("Cannot configure tap trigger!!!\n");
-		return 0;
-	}
-
-	double_tap_trigger = (struct sensor_trigger) {
-		.type = SENSOR_TRIG_DOUBLE_TAP,
-		.chan = SENSOR_CHAN_ALL,
-	};
-
-	if (sensor_trigger_set(dev, &double_tap_trigger,
-			       handle_icm42670S_double_tap) < 0) {
-		printf("Cannot configure double tap trigger!!!\n");
 		return 0;
 	}
 
@@ -165,5 +111,29 @@ int main(void)
 	}
 
 	printf("Configured for triggered sampling.\n");
-	return 0;
+	
+	while (1) {
+		
+		if( irq_from_device ) {
+			sensor_channel_get(dev, SENSOR_CHAN_ACCEL_XYZ,
+							accel);
+			sensor_channel_get(dev, SENSOR_CHAN_GYRO_XYZ,
+							gyro);
+			sensor_channel_get(dev, SENSOR_CHAN_DIE_TEMP,
+							&temperature);
+	
+			printf("[%s]: temp %.2f Cel "
+				   "  accel %f %f %f m/s/s "
+				   "  gyro  %f %f %f rad/s\n",
+				   now_str(),
+				   sensor_value_to_double(&temperature),
+				   sensor_value_to_double(&accel[0]),
+				   sensor_value_to_double(&accel[1]),
+				   sensor_value_to_double(&accel[2]),
+				   sensor_value_to_double(&gyro[0]),
+				   sensor_value_to_double(&gyro[1]),
+				   sensor_value_to_double(&gyro[2]));
+			irq_from_device = 0;
+		}
+	}
 }

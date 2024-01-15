@@ -14,6 +14,8 @@
 #include <zephyr/drivers/i2c.h>
 #include <zephyr/drivers/sensor.h>
 
+#include "imu/inv_imu_driver.h"
+
 #define DT_DRV_COMPAT invensense_icm42670s
 
 #define ICM42670S_BUS_SPI DT_ANY_INST_ON_BUS_STATUS_OKAY(spi)
@@ -33,9 +35,9 @@ int icm42670S_tap_fetch(const struct device *dev);
 
 typedef int (*icm42670S_bus_check_fn)(const union icm42670S_bus *bus);
 typedef int (*icm42670S_reg_read_fn)(const union icm42670S_bus *bus,
-				  uint8_t start, uint8_t *buf, int size);
+				  uint8_t reg, uint8_t *buf, uint32_t size);
 typedef int (*icm42670S_reg_write_fn)(const union icm42670S_bus *bus,
-				   uint8_t reg, uint8_t val);
+				   uint8_t reg, uint8_t *buf, uint32_t size);
 
 struct icm42670S_bus_io {
 	icm42670S_bus_check_fn check;
@@ -54,9 +56,12 @@ extern const struct icm42670S_bus_io icm42670S_bus_io_i2c;
 #endif
 
 struct icm42670S_data {
+	struct inv_imu_serif serif;
+	struct inv_imu_device driver;
 	uint8_t chip_id;
 	int32_t accel[3];
 	int32_t gyro[3];
+	int32_t temperature;
 	
 	bool accel_en;
 	bool gyro_en;
