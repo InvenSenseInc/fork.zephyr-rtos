@@ -94,6 +94,7 @@ int main(void)
 	struct sensor_value accel[3];
 	struct sensor_value gyro[3];
 	struct sensor_value temperature;
+	struct sensor_value sampling_freq, mode;
 
 	if (dev == NULL) {
 		return 0;
@@ -104,6 +105,26 @@ int main(void)
 		.chan = SENSOR_CHAN_ALL,
 	};
 
+	/* Setting sampling frequency */
+	sampling_freq.val1 = 100;       /* Hz */
+	sampling_freq.val2 = 0;
+	
+	sensor_attr_set(dev, SENSOR_CHAN_ACCEL_XYZ,
+			SENSOR_ATTR_SAMPLING_FREQUENCY,
+			&sampling_freq);
+	sensor_attr_set(dev, SENSOR_CHAN_GYRO_XYZ,
+			SENSOR_ATTR_SAMPLING_FREQUENCY,
+			&sampling_freq);
+	
+	/* Setting mode 0:Off, 1:Low power (only Accel) 2:Low noise */
+	mode.val1 = 2;	
+	sensor_attr_set(dev, SENSOR_CHAN_ACCEL_XYZ,
+			SENSOR_ATTR_CONFIGURATION,
+			&mode);
+	sensor_attr_set(dev, SENSOR_CHAN_GYRO_XYZ,
+			SENSOR_ATTR_CONFIGURATION,
+			&mode);
+			
 	if (sensor_trigger_set(dev, &data_trigger,
 			       handle_icm42670S_drdy) < 0) {
 		printf("Cannot configure data trigger!!!\n");
@@ -136,4 +157,5 @@ int main(void)
 			irq_from_device = 0;
 		}
 	}
+	return 0;
 }

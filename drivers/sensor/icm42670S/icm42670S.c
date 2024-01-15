@@ -248,10 +248,131 @@ static int icm42670S_channel_get(const struct device *dev,
 	return 0;
 }
 
+static uint32_t convert_freq_to_bitfield(struct icm42670S_data *drv_data, uint32_t val)
+{
+	uint32_t odr_bitfield = 0;
+	
+	if (val < 3 && val >= 1) {
+		odr_bitfield = ACCEL_CONFIG0_ODR_1_5625_HZ;
+	} else if (val < 6 && val >= 3) {
+		odr_bitfield = ACCEL_CONFIG0_ODR_3_125_HZ;
+	} else if (val < 12 && val >= 6) {
+		odr_bitfield = ACCEL_CONFIG0_ODR_6_25_HZ;
+	} else if (val < 25 && val >= 12) {
+		odr_bitfield = ACCEL_CONFIG0_ODR_12_5_HZ;
+	} else if (val < 50 && val >= 25) {
+		odr_bitfield = ACCEL_CONFIG0_ODR_25_HZ;
+	} else if (val < 100 && val >= 50) {
+		odr_bitfield = ACCEL_CONFIG0_ODR_50_HZ;
+	} else if (val < 200 && val >= 100) {
+		odr_bitfield = ACCEL_CONFIG0_ODR_100_HZ;
+	} else if (val < 400 && val >= 200) {
+		odr_bitfield = ACCEL_CONFIG0_ODR_200_HZ;
+	} else if (val < 800 && val >= 400) {
+		odr_bitfield = ACCEL_CONFIG0_ODR_400_HZ;
+	} else if (val < 1600 && val >= 800) {
+		odr_bitfield = ACCEL_CONFIG0_ODR_800_HZ;
+	} else if (val == 1600 ) {
+		odr_bitfield = ACCEL_CONFIG0_ODR_1600_HZ;
+	}
+	drv_data->accel_odr_us = inv_imu_convert_odr_bitfield_to_us(odr_bitfield);
+	return odr_bitfield;
+}
+
+static int icm42670S_attr_set(const struct device *dev,
+			     enum sensor_channel chan,
+			     enum sensor_attribute attr,
+			     const struct sensor_value *val)
+{
+	struct icm42670S_data *drv_data = dev->data;
+	int err = 0;
+
+	__ASSERT_NO_MSG(val != NULL);
+
+	switch (chan) {
+	case SENSOR_CHAN_ACCEL_XYZ:
+		if (attr == SENSOR_ATTR_CONFIGURATION) {
+			if (val->val1 == 0)
+				/* Power off */
+				err |= inv_imu_disable_accel(&drv_data->driver);
+			else if (val->val1 == 1)
+				/* Low power mode */
+				err |= inv_imu_enable_accel_low_power_mode(&drv_data->driver);
+			else if (val->val1 == 2)
+				/* Low noise mode */
+				err |= inv_imu_enable_accel_low_noise_mode(&drv_data->driver);
+			else
+				LOG_ERR("Not supported ATTR value");
+				return -EINVAL;
+				
+		} else if (attr == SENSOR_ATTR_SAMPLING_FREQUENCY) {
+			if (val->val1 > 1600 || val->val1 < 1) {
+				LOG_ERR("Incorrect sampling value");
+				return -EINVAL;
+			} else {
+				LOG_DBG("Set accel frequency to: %d Hz", val->val1);
+				uint32_t odr_bitfield = convert_freq_to_bitfield(&drv_data, val->val1);
+				err |= inv_imu_set_accel_frequency(&drv_data->driver, odr_bitfield);	
+			}
+		
+		} else if (attr == SENSOR_ATTR_FULL_SCALE) {
+			if (val->val1 < 16 || val->val1 > 2) {
+				LOG_ERR("Incorrect fullscale value");
+				return -EINVAL;
+			} else {
+			}
+		} else {
+			LOG_ERR("Not supported ATTR");
+			return -ENOTSUP;
+		}
+
+		break;
+	case SENSOR_CHAN_GYRO_XYZ:
+		if (attr == SENSOR_ATTR_CONFIGURATION) {
+			if (val->val1 == 0)
+				/* Power off */
+				err |= inv_imu_disable_gyro(&drv_data->driver);
+			else if (val->val1 == 2)
+				/* Low noise mode */
+				err |= inv_imu_enable_gyro_low_noise_mode(&drv_data->driver);
+			else
+				LOG_ERR("Not supported ATTR value");
+				return -EINVAL;
+		
+		} else if (attr == SENSOR_ATTR_SAMPLING_FREQUENCY) {
+			if (val->val1 > 8000 || val->val1 < 12) {
+				LOG_ERR("Incorrect sampling value");
+				return -EINVAL;
+			} else {
+				LOG_DBG("Set gyro frequency to: %d Hz", val->val1);
+				uint32_t odr_bitfield = convert_freq_to_bitfield(&drv_data, val->val1);
+				err |= inv_imu_set_gyro_frequency(&drv_data->driver, odr_bitfield);
+			}
+		
+		} else if (attr == SENSOR_ATTR_FULL_SCALE) {
+			if (val->val1 < 2000 || val->val1 > 15) {
+				LOG_ERR("Incorrect fullscale value");
+				return -EINVAL;
+			} else {
+			}
+		} else {
+			LOG_ERR("Not supported ATTR");
+			return -EINVAL;
+		}
+		break;
+	default:
+		LOG_ERR("Not support");
+		return -EINVAL;
+	}
+
+	return err;
+}
+
 static const struct sensor_driver_api icm42670S_api_funcs = {
 	.sample_fetch = icm42670S_sample_fetch,
 	.channel_get = icm42670S_channel_get,
 	.trigger_set = icm42670S_trigger_set,
+	.attr_set = icm42670S_attr_set,
 };
 
 static int icm42670S_chip_init(const struct device *dev)
@@ -298,18 +419,6 @@ static int icm42670S_chip_init(const struct device *dev)
 		return err;
 	}
 	
-	// TODO with attr_set API
-	err |= inv_imu_set_accel_frequency(&data->driver, ACCEL_CONFIG0_ODR_100_HZ);
-	err |= inv_imu_set_gyro_frequency(&data->driver, GYRO_CONFIG0_ODR_100_HZ);
-	
-	err = inv_imu_enable_accel_low_noise_mode(&data->driver);
-	err |= inv_imu_enable_gyro_low_noise_mode(&data->driver);
-			
-	if (err < 0) {
-		LOG_DBG("Start sensor failed: %d", err);
-		return err;
-	}
-	
 	k_sleep(K_MSEC(1));
 
 	LOG_DBG("\"%s\" OK", dev->name);
@@ -352,10 +461,6 @@ static int icm42670S_pm_action(const struct device *dev,
 			inst, ICM42670S_SPI_OPERATION, 0),	\
 		.bus_io = &icm42670S_bus_io_spi,		\
 		.gpio_int = GPIO_DT_SPEC_INST_GET(inst, int_gpios),    \
-		.accel_hz = DT_INST_PROP(inst, accel_hz),		\
-		.gyro_hz = DT_INST_PROP(inst, gyro_hz),		\
-		.accel_fs = DT_INST_ENUM_IDX(inst, accel_fs),		\
-		.gyro_fs = DT_INST_ENUM_IDX(inst, gyro_fs),		\
 	}
 
 /* Initializes a struct icm42670S_config for an instance on an I2C bus. */
@@ -364,10 +469,6 @@ static int icm42670S_pm_action(const struct device *dev,
 		.bus.i2c = I2C_DT_SPEC_INST_GET(inst), \
 		.bus_io = &icm42670S_bus_io_i2c,	       \
 		.gpio_int = GPIO_DT_SPEC_INST_GET(inst, int_gpios),    \
-		.accel_hz = DT_INST_PROP(inst, accel_hz),		\
-		.gyro_hz = DT_INST_PROP(inst, gyro_hz),		\
-		.accel_fs = DT_INST_ENUM_IDX(inst, accel_fs),		\
-		.gyro_fs = DT_INST_ENUM_IDX(inst, gyro_fs),		\
 	}
 
 /*
