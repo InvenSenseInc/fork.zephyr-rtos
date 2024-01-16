@@ -13,6 +13,7 @@
 #include <zephyr/sys/__assert.h>
 
 #include <zephyr/logging/log.h>
+#include <zephyr/drivers/sensor/icm42670s.h>
 
 #include "icm42670S.h"
 
@@ -81,14 +82,6 @@ static int icm42670S_sample_fetch(const struct device *dev,
 	                       FIFO_TEMP_DATA_SIZE + FIFO_TS_FSYNC_SIZE;
 	
 	__ASSERT_NO_MSG(chan == SENSOR_CHAN_ALL);
-
-#ifdef CONFIG_PM_DEVICE
-	enum pm_device_state state;
-	(void)pm_device_state_get(dev, &state);
-	/* Do not allow sample fetching from suspended state */
-	if (state == PM_DEVICE_STATE_SUSPENDED)
-		return -EIO;
-#endif
 
 	/* Ensure data ready status bit is set */
 	if (status |= inv_imu_read_reg(&data->driver, INT_STATUS, 1, &int_status))
@@ -318,6 +311,50 @@ static uint32_t convert_gyr_fs_to_bitfield(uint32_t val, uint16_t *fs)
 	return odr_bitfield;
 }
 
+static uint32_t convert_ln_bw_to_bitfield(uint32_t val)
+{
+	uint32_t odr_bitfield = 0xFF;
+	
+	if (val < 25 && val >= 16) {
+		odr_bitfield = ACCEL_CONFIG1_ACCEL_FILT_BW_16; /* (= GYRO_CONFIG1_GYRO_FILT_BW_16) */
+	} else if (val < 34 && val >= 25) {
+		odr_bitfield = ACCEL_CONFIG1_ACCEL_FILT_BW_25; /* (= GYRO_CONFIG1_GYRO_FILT_BW_25) */
+	} else if (val < 53 && val >= 34) {
+		odr_bitfield = ACCEL_CONFIG1_ACCEL_FILT_BW_34; /* (= GYRO_CONFIG1_GYRO_FILT_BW_34) */
+	} else if (val < 73 && val >= 53) {
+		odr_bitfield = ACCEL_CONFIG1_ACCEL_FILT_BW_53; /* (= GYRO_CONFIG1_GYRO_FILT_BW_53) */
+	} else if (val < 121 && val >= 73) {
+		odr_bitfield = ACCEL_CONFIG1_ACCEL_FILT_BW_73; /* (= GYRO_CONFIG1_GYRO_FILT_BW_73) */
+	} else if (val < 180 && val >= 121) {
+		odr_bitfield = ACCEL_CONFIG1_ACCEL_FILT_BW_121; /* (= GYRO_CONFIG1_GYRO_FILT_BW_121) */
+	} else if (val == 180) {
+		odr_bitfield = ACCEL_CONFIG1_ACCEL_FILT_BW_180; /* (= GYRO_CONFIG1_GYRO_FILT_BW_180) */
+	} else if (val == 0) {
+		odr_bitfield = ACCEL_CONFIG1_ACCEL_FILT_BW_NO_FILTER; /* (= GYRO_CONFIG1_GYRO_FILT_BW_NO_FILTER) */
+	}
+	return odr_bitfield;
+}
+
+static uint32_t convert_lp_avg_to_bitfield(uint32_t val)
+{
+	uint32_t odr_bitfield = 0xFF;
+	
+	if (val < 4 && val >= 2) {
+		odr_bitfield = ACCEL_CONFIG1_ACCEL_FILT_AVG_2;
+	} else if (val < 8 && val >= 4) {
+		odr_bitfield = ACCEL_CONFIG1_ACCEL_FILT_AVG_4; 
+	} else if (val < 16 && val >= 8) {
+		odr_bitfield = ACCEL_CONFIG1_ACCEL_FILT_AVG_8; 
+	} else if (val < 32 && val >= 16) {
+		odr_bitfield = ACCEL_CONFIG1_ACCEL_FILT_AVG_16; 
+	} else if (val < 64 && val >= 32) {
+		odr_bitfield = ACCEL_CONFIG1_ACCEL_FILT_AVG_32; 
+	} else if (val == 64) {
+		odr_bitfield = ACCEL_CONFIG1_ACCEL_FILT_AVG_64;
+	}
+	return odr_bitfield;
+}
+
 static int icm42670S_attr_set(const struct device *dev,
 			     enum sensor_channel chan,
 			     enum sensor_attribute attr,
@@ -364,12 +401,31 @@ static int icm42670S_attr_set(const struct device *dev,
 						convert_acc_fs_to_bitfield(val->val1, &drv_data->accel_fs));
 				LOG_DBG("Set accel full scale to: %d G", drv_data->accel_fs);
 			}
-		} else {
+			
+		} else if ((enum sensor_attribute_icm42670S)attr == SENSOR_ATTR_BW_FILTER_LPF) {
+			if (val->val1 > 180) {
+				LOG_ERR("Incorrect low pass filter bandwith value");
+				return -EINVAL;
+			} else {
+				err |= inv_imu_set_accel_ln_bw(&drv_data->driver,
+						convert_ln_bw_to_bitfield(val->val1));
+			}
+			
+		} else if ((enum sensor_attribute_icm42670S)attr == SENSOR_ATTR_AVERAGING) {
+			if (val->val1 > 64 || val->val1 < 2) {
+				LOG_ERR("Incorrect averaging filter value");
+				return -EINVAL;
+			} else {
+				err |= inv_imu_set_accel_lp_avg(&drv_data->driver,
+						convert_lp_avg_to_bitfield(val->val1));
+			}
+			
+		}else {
 			LOG_ERR("Not supported ATTR");
 			return -ENOTSUP;
 		}
-
 		break;
+		
 	case SENSOR_CHAN_GYRO_XYZ:
 		if (attr == SENSOR_ATTR_CONFIGURATION) {
 			if (val->val1 == 0) {
@@ -382,6 +438,7 @@ static int icm42670S_attr_set(const struct device *dev,
 				LOG_ERR("Not supported ATTR value");
 				return -EINVAL;
 			}
+			
 		} else if (attr == SENSOR_ATTR_SAMPLING_FREQUENCY) {
 			if (val->val1 > 8000 || val->val1 < 12) {
 				LOG_ERR("Incorrect sampling value");
@@ -401,12 +458,22 @@ static int icm42670S_attr_set(const struct device *dev,
 						convert_gyr_fs_to_bitfield(val->val1, &drv_data->gyro_fs));
 				LOG_DBG("Set gyro fullscale to: %d dps", drv_data->gyro_fs);
 			}
-
+			
+		} else if ((enum sensor_attribute_icm42670S)attr == SENSOR_ATTR_BW_FILTER_LPF) {
+			if (val->val1 > 180) {
+				LOG_ERR("Incorrect low pass filter bandwith value");
+				return -EINVAL;
+			} else {
+				err |= inv_imu_set_gyro_ln_bw(&drv_data->driver,
+						convert_ln_bw_to_bitfield(val->val1));
+			}
+			
 		} else {
 			LOG_ERR("Not supported ATTR");
 			return -EINVAL;
 		}
 		break;
+	
 	default:
 		LOG_ERR("Not supported");
 		return -EINVAL;
@@ -474,35 +541,6 @@ static int icm42670S_chip_init(const struct device *dev)
 	LOG_DBG("\"%s\" OK", dev->name);
 	return 0;
 }
-
-#ifdef CONFIG_PM_DEVICE
-static int icm42670S_pm_action(const struct device *dev,
-			    enum pm_device_action action)
-{
-	int ret = 0;
-
-	switch (action) {
-	case PM_DEVICE_ACTION_RESUME:
-		/* Re-initialize the chip */
-		ret = icm42670S_chip_init(dev);
-		break;
-	case PM_DEVICE_ACTION_SUSPEND:
-		/* Put the chip into sleep mode */
-		ret = icm42670S_reg_write(dev,
-			0x00,//BME280_REG_CTRL_MEAS,
-			0x00,//BME280_CTRL_MEAS_OFF_VAL);
-
-		if (ret < 0) {
-			LOG_DBG("CTRL_MEAS write failed: %d", ret);
-		}
-		break;
-	default:
-		return -ENOTSUP;
-	}
-
-	return ret;
-}
-#endif /* CONFIG_PM_DEVICE */
 
 /* Initializes a struct icm42670S_config for an instance on a SPI bus. */
 #define ICM42670S_CONFIG_SPI(inst)				\

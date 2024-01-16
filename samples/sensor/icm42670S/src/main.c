@@ -8,6 +8,7 @@
 #include <zephyr/device.h>
 #include <zephyr/devicetree.h>
 #include <zephyr/drivers/sensor.h>
+#include <zephyr/drivers/sensor/icm42670S.h>
 #include <stdio.h>
 
 static struct sensor_trigger data_trigger;
@@ -94,6 +95,7 @@ int main(void)
 	struct sensor_value accel[3];
 	struct sensor_value gyro[3];
 	struct sensor_value temperature;
+	struct sensor_value bw_filter;
 	struct sensor_value full_scale, sampling_freq, mode;
 
 	if (dev == NULL) {
@@ -105,6 +107,16 @@ int main(void)
 		.chan = SENSOR_CHAN_ALL,
 	};
 
+	/* Setting LN bandwith filtering options */
+	bw_filter.val1 = 180; /* Hz */
+	bw_filter.val2 = 0;
+	sensor_attr_set(dev, SENSOR_CHAN_ACCEL_XYZ,
+				SENSOR_ATTR_BW_FILTER_LPF,
+				&bw_filter);
+	sensor_attr_set(dev, SENSOR_CHAN_GYRO_XYZ,
+				SENSOR_ATTR_BW_FILTER_LPF,
+				&bw_filter);
+	
 	/* Setting full scale */
 	full_scale.val1 = 2; /* G */
 	full_scale.val2 = 0;
