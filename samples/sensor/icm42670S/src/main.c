@@ -94,7 +94,7 @@ int main(void)
 	struct sensor_value accel[3];
 	struct sensor_value gyro[3];
 	struct sensor_value temperature;
-	struct sensor_value sampling_freq, mode;
+	struct sensor_value full_scale, sampling_freq, mode;
 
 	if (dev == NULL) {
 		return 0;
@@ -105,10 +105,21 @@ int main(void)
 		.chan = SENSOR_CHAN_ALL,
 	};
 
+	/* Setting full scale */
+	full_scale.val1 = 2; /* G */
+	full_scale.val2 = 0;
+	sensor_attr_set(dev, SENSOR_CHAN_ACCEL_XYZ,
+				SENSOR_ATTR_FULL_SCALE,
+				&full_scale);
+	full_scale.val1 = 1000; /* dps */
+	full_scale.val2 = 0;
+	sensor_attr_set(dev, SENSOR_CHAN_GYRO_XYZ,
+				SENSOR_ATTR_FULL_SCALE,
+				&full_scale);
+	
 	/* Setting sampling frequency */
 	sampling_freq.val1 = 100;       /* Hz */
 	sampling_freq.val2 = 0;
-	
 	sensor_attr_set(dev, SENSOR_CHAN_ACCEL_XYZ,
 			SENSOR_ATTR_SAMPLING_FREQUENCY,
 			&sampling_freq);

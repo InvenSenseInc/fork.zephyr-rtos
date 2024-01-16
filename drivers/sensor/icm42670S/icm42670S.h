@@ -63,8 +63,8 @@ struct icm42670S_data {
 	int32_t gyro[3];
 	int32_t temperature;
 
-	uint32_t accel_odr_us;
-	uint32_t gyro_odr_us;
+	uint8_t accel_fs;
+	uint16_t gyro_fs;
 	
 	const struct device *dev;
 	struct gpio_callback gpio_cb;
