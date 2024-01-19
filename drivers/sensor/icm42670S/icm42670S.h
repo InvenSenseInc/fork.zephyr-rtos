@@ -72,11 +72,9 @@ struct icm42670S_data {
 	const struct sensor_trigger *data_ready_trigger;
 	sensor_trigger_handler_t data_ready_handler;
 
-#ifdef CONFIG_ICM42670S_TRIGGER
 	K_KERNEL_STACK_MEMBER(thread_stack, CONFIG_ICM42670S_THREAD_STACK_SIZE);
 	struct k_thread thread;
 	struct k_sem gpio_sem;
-#endif
 };
 
 struct icm42670S_config {

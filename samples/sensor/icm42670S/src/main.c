@@ -12,7 +12,6 @@
 #include <stdio.h>
 
 static struct sensor_trigger data_trigger;
-static uint32_t now;
 
 /* Flag set from IMU device irq handler */
 static volatile int irq_from_device = 0;
@@ -46,6 +45,7 @@ static const struct device *get_icm42670S_device(void)
 static const char *now_str(void)
 {
 	static char buf[16]; /* ...HH:MM:SS.MMM */
+	uint32_t now = k_uptime_get_32();
 	unsigned int ms = now % MSEC_PER_SEC;
 	unsigned int s;
 	unsigned int min;
@@ -70,7 +70,6 @@ static int process_icm42670S(const struct device *dev)
 	if (rc != 0) { 
 		printf("sample fetch failed: %d\n", rc);
 	} else {
-		now = k_uptime_get_32();
 		irq_from_device = 1;
 	}
 
@@ -140,7 +139,7 @@ int main(void)
 			&sampling_freq);
 	
 	/* Setting mode 0:Off, 1:Low power (only Accel) 2:Low noise */
-	mode.val1 = 2;	
+	mode.val1 = ICM42670S_LOW_NOISE_MODE;	
 	sensor_attr_set(dev, SENSOR_CHAN_ACCEL_XYZ,
 			SENSOR_ATTR_CONFIGURATION,
 			&mode);

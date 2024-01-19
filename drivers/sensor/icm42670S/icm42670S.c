@@ -368,14 +368,11 @@ static int icm42670S_attr_set(const struct device *dev,
 	switch (chan) {
 	case SENSOR_CHAN_ACCEL_XYZ:
 		if (attr == SENSOR_ATTR_CONFIGURATION) {
-			if (val->val1 == 0) {
-				LOG_DBG("Power off accel");
+			if (val->val1 == ICM42670S_POWER_OFF) {
 				err |= inv_imu_disable_accel(&drv_data->driver);
-			} else if (val->val1 == 1) {
-				LOG_DBG("Set accel low power mode");
+			} else if (val->val1 == ICM42670S_LOW_POWER_MODE) {
 				err |= inv_imu_enable_accel_low_power_mode(&drv_data->driver);
-			} else if (val->val1 == 2) {
-				LOG_DBG("Set accel low noise mode");
+			} else if (val->val1 == ICM42670S_LOW_NOISE_MODE) {
 				err |= inv_imu_enable_accel_low_noise_mode(&drv_data->driver);
 			} else {
 				LOG_ERR("Not supported ATTR value");
@@ -387,7 +384,6 @@ static int icm42670S_attr_set(const struct device *dev,
 				LOG_ERR("Incorrect sampling value");
 				return -EINVAL;
 			} else {
-				LOG_DBG("Set accel frequency to: %d Hz", val->val1);
 				err |= inv_imu_set_accel_frequency(&drv_data->driver, 
 						convert_freq_to_bitfield(val->val1));	
 			}
@@ -428,11 +424,9 @@ static int icm42670S_attr_set(const struct device *dev,
 		
 	case SENSOR_CHAN_GYRO_XYZ:
 		if (attr == SENSOR_ATTR_CONFIGURATION) {
-			if (val->val1 == 0) {
-				LOG_DBG("Power off gyro");
+			if (val->val1 == ICM42670S_POWER_OFF) {
 				err |= inv_imu_disable_gyro(&drv_data->driver);
-			} else if (val->val1 == 2) {
-				LOG_DBG("Set gyro low noise mode");
+			} else if (val->val1 == ICM42670S_LOW_NOISE_MODE) {
 				err |= inv_imu_enable_gyro_low_noise_mode(&drv_data->driver);
 			} else {
 				LOG_ERR("Not supported ATTR value");
@@ -444,7 +438,6 @@ static int icm42670S_attr_set(const struct device *dev,
 				LOG_ERR("Incorrect sampling value");
 				return -EINVAL;
 			} else {
-				LOG_DBG("Set gyro frequency to: %d Hz", val->val1);
 				err |= inv_imu_set_gyro_frequency(&drv_data->driver, 
 						convert_freq_to_bitfield(val->val1));
 			}
