@@ -15,6 +15,9 @@
 #include <zephyr/drivers/sensor.h>
 
 #include "imu/inv_imu_driver.h"
+#ifdef CONFIG_ICM42670S_APEX
+#include "imu/inv_imu_apex.h"
+#endif
 
 #define DT_DRV_COMPAT invensense_icm42670s
 
@@ -66,6 +69,13 @@ struct icm42670S_data {
 	uint8_t accel_fs;
 	uint16_t gyro_fs;
 	
+#ifdef CONFIG_ICM42670S_APEX_PEDOMETER
+	uint8_t dmp_odr_hz;
+	uint64_t pedometer_cnt;
+	uint8_t pedometer_activity;
+	uint8_t pedometer_cadence;
+#endif
+
 	const struct device *dev;
 	struct gpio_callback gpio_cb;
 
@@ -88,5 +98,12 @@ int icm42670S_trigger_set(const struct device *dev,
 			 sensor_trigger_handler_t handler);
 
 int icm42670S_init_interrupt(const struct device *dev);
+
+#ifdef CONFIG_ICM42670S_APEX_PEDOMETER
+int icm42670S_apex_enable_pedometer(const struct device *dev, inv_imu_device_t *s);
+
+int icm42670S_apex_pedometer_fetch_from_dmp(const struct device *dev);
+void icm42670S_apex_pedometer_cadence_convert(struct sensor_value *val, uint8_t raw_val, uint8_t dmp_odr_hz);
+#endif
 
 #endif /* ZEPHYR_DRIVERS_SENSOR_ICM42670S_ICM42670S_H_ */

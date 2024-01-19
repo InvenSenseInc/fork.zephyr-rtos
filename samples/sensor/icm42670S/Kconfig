@@ -19,4 +19,7 @@ config SPI
 config I2C
 	default y
 
+config ICM42670S_APEX
+	default n
+
 source "Kconfig.zephyr"

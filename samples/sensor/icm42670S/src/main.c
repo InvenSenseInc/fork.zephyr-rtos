@@ -63,58 +63,61 @@ static const char *now_str(void)
 	return buf;
 }
 
-static int process_icm42670S(const struct device *dev)
-{
-	int rc = sensor_sample_fetch(dev);
-	
-	if (rc != 0) { 
-		printf("sample fetch failed: %d\n", rc);
-	} else {
-		irq_from_device = 1;
-	}
-
-	return rc;
-}
-
 static void handle_icm42670S_drdy(const struct device *dev,
 				 const struct sensor_trigger *trig)
 {
-	int rc = process_icm42670S(dev);
-
-	if (rc != 0) {
-		printf("cancelling trigger due to failure: %d\n", rc);
-		(void)sensor_trigger_set(dev, trig, NULL);
-		return;
+	if ((trig->type == SENSOR_TRIG_DATA_READY) || (trig->type == SENSOR_TRIG_MOTION)) {
+		int rc = sensor_sample_fetch_chan(dev, trig->type);
+	
+		if (rc < 0) { 
+			printf("sample fetch failed: %d\n", rc);
+			printf("cancelling trigger due to failure: %d\n", rc);
+			(void)sensor_trigger_set(dev, trig, NULL);
+			return;
+		} else if (rc == 0) {
+			irq_from_device = 1;
+		}
 	}
 }
 
 int main(void)
 {
 	const struct device *dev = get_icm42670S_device();
-	struct sensor_value accel[3];
-	struct sensor_value gyro[3];
-	struct sensor_value temperature;
-	struct sensor_value bw_filter;
-	struct sensor_value full_scale, sampling_freq, mode;
 
 	if (dev == NULL) {
 		return 0;
 	}
+				
+#ifdef CONFIG_ICM42670S_APEX
+	struct sensor_value apex_mode;
+	
+ #ifdef CONFIG_ICM42670S_APEX_PEDOMETER
+	struct sensor_value apex_pedometer[2];
+	
+	/* Setting APEX Pedometer feature */
+	apex_mode.val1 = ICM42670S_APEX_PEDOMETER;
+	apex_mode.val2 = 0;
+	sensor_attr_set(dev, SENSOR_CHAN_APEX_MOTION,
+				SENSOR_ATTR_CONFIGURATION,
+				&apex_mode);
+ #endif
 
 	data_trigger = (struct sensor_trigger) {
-		.type = SENSOR_TRIG_DATA_READY,
+		.type = SENSOR_TRIG_MOTION,
 		.chan = SENSOR_CHAN_ALL,
 	};
+	if (sensor_trigger_set(dev, &data_trigger,
+			       handle_icm42670S_drdy) < 0) {
+		printf("Cannot configure data trigger!!!\n");
+		return 0;
+	}
 
-	/* Setting LN bandwith filtering options */
-	bw_filter.val1 = 180; /* Hz */
-	bw_filter.val2 = 0;
-	sensor_attr_set(dev, SENSOR_CHAN_ACCEL_XYZ,
-				SENSOR_ATTR_BW_FILTER_LPF,
-				&bw_filter);
-	sensor_attr_set(dev, SENSOR_CHAN_GYRO_XYZ,
-				SENSOR_ATTR_BW_FILTER_LPF,
-				&bw_filter);
+	printf("Configured for APEX data collecting.\n");
+#else
+	struct sensor_value full_scale, bw_filter, sampling_freq, mode;
+	struct sensor_value accel[3];
+	struct sensor_value gyro[3];
+	struct sensor_value temperature;
 	
 	/* Setting full scale */
 	full_scale.val1 = 2; /* G */
@@ -127,6 +130,16 @@ int main(void)
 	sensor_attr_set(dev, SENSOR_CHAN_GYRO_XYZ,
 				SENSOR_ATTR_FULL_SCALE,
 				&full_scale);
+				
+	/* Setting LN bandwith filtering options */
+	bw_filter.val1 = 180; /* Hz */
+	bw_filter.val2 = 0;
+	sensor_attr_set(dev, SENSOR_CHAN_ACCEL_XYZ,
+				SENSOR_ATTR_BW_FILTER_LPF,
+				&bw_filter);
+	sensor_attr_set(dev, SENSOR_CHAN_GYRO_XYZ,
+				SENSOR_ATTR_BW_FILTER_LPF,
+				&bw_filter);
 	
 	/* Setting sampling frequency */
 	sampling_freq.val1 = 100;       /* Hz */
@@ -146,18 +159,37 @@ int main(void)
 	sensor_attr_set(dev, SENSOR_CHAN_GYRO_XYZ,
 			SENSOR_ATTR_CONFIGURATION,
 			&mode);
-			
+	
+	data_trigger = (struct sensor_trigger) {
+		.type = SENSOR_TRIG_DATA_READY,
+		.chan = SENSOR_CHAN_ALL,
+	};
 	if (sensor_trigger_set(dev, &data_trigger,
 			       handle_icm42670S_drdy) < 0) {
 		printf("Cannot configure data trigger!!!\n");
 		return 0;
 	}
 
-	printf("Configured for triggered sampling.\n");
+	printf("Configured for IMU sampling.\n");
+#endif
 	
 	while (1) {
 		
 		if( irq_from_device ) {
+#ifdef CONFIG_ICM42670S_APEX 
+ #ifdef CONFIG_ICM42670S_APEX_PEDOMETER
+			sensor_channel_get(dev, SENSOR_CHAN_APEX_MOTION,
+							apex_pedometer);
+			
+			printf("[%s]: STEP_DET     count: %d steps  cadence: %.1f steps/s  activity: %s\n",
+				   now_str(),
+				   apex_pedometer[0].val1,
+				   sensor_value_to_double(&apex_pedometer[1]),
+				   apex_pedometer[0].val2 == 1 ? "Walk":
+				   apex_pedometer[0].val2 == 2 ? "Run":
+											  "Unknown");
+ #endif
+#else
 			sensor_channel_get(dev, SENSOR_CHAN_ACCEL_XYZ,
 							accel);
 			sensor_channel_get(dev, SENSOR_CHAN_GYRO_XYZ,
@@ -176,6 +208,7 @@ int main(void)
 				   sensor_value_to_double(&gyro[0]),
 				   sensor_value_to_double(&gyro[1]),
 				   sensor_value_to_double(&gyro[2]));
+#endif
 			irq_from_device = 0;
 		}
 	}

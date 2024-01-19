@@ -12,52 +12,37 @@ menuconfig ICM42670S
 	  Enable driver for ICM42670S I2C-based or SPI-based Six-Axis Motion Tracking device.
 
 if ICM42670S
+
+config ICM42670S_APEX
+	bool "ICM42670S APEX features"
+	default n
+
 choice
-	prompt "ICM42670S GYRO FSR"
-	default ICM42670S_GYRO_FSR_2000DPS
+	prompt "ICM42670S APEX features"
+	depends on ICM42670S_APEX
+	default ICM42670S_APEX_PEDOMETER
 	help
-	  Select Gyro FSR for ICM42670S sensor.
-config ICM42670S_GYRO_FSR_125DPS
-	bool "125dps"
-config ICM42670S_GYRO_FSR_250DPS
-	bool "250dps"
-config ICM42670S_GYRO_FSR_500DPS
-	bool "500dps"
-config ICM42670S_GYRO_FSR_1000DPS
-	bool "1000dps"
-config ICM42670S_GYRO_FSR_2000DPS
-	bool "2000dps"
+	  Select APEX features for ICM42670S sensor.
+config ICM42670S_APEX_PEDOMETER
+	bool "Pedometer: Tracks step count"
+config ICM42670S_APEX_TILT
+	bool "Tilt Detection: Detect the Tilt angle exceeds 35 degrees"
+config ICM42670S_APEX_SMD
+	bool "Significant Motion Detector (SMD): Detects significant motion based on accelerometer data"
+config ICM42670S_APEX_WOM
+	bool "Wake on Motion (WoM): Detects motion when accelerometer samples exceed a programmable threshold"
 endchoice
-choice ICM42670S_TRIGGER_MODE
-	prompt "Trigger mode"
-	default ICM42670S_TRIGGER_GLOBAL_THREAD
-	help
-	  Specify the type of triggering to be used by the driver.
-
-config ICM42670S_TRIGGER_NONE
-	bool "No trigger"
-
-config ICM42670S_TRIGGER_GLOBAL_THREAD
-	bool "Use global thread"
-	depends on GPIO
-	select ICM42670S_TRIGGER
-
-endchoice
-
-config ICM42670S_TRIGGER
-	bool
 
 config ICM42670S_THREAD_PRIORITY
 	int "Thread priority"
-	depends on ICM42670S_TRIGGER_GLOBAL_THREAD
 	default 10
 	help
 	  Priority of thread used by the driver to handle interrupts.
 
 config ICM42670S_THREAD_STACK_SIZE
 	int "Thread stack size"
-	depends on ICM42670S_TRIGGER_GLOBAL_THREAD
 	default 1024
 	help
 	  Stack size of thread used by the driver to handle interrupts.
+
 endif # ICM42670S
