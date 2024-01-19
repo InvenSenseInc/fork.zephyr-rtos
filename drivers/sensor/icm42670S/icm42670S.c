@@ -71,8 +71,7 @@ uint64_t inv_imu_get_time_us(void)
 	return k_uptime_get() * 1000;
 }
 
-static int icm42670S_sample_fetch(const struct device *dev,
-			       enum sensor_channel chan)
+static int icm42670S_fetch_from_fifo(const struct device *dev)
 {
 	struct icm42670S_data *data = dev->data;
 	int      status = 0;
@@ -81,8 +80,6 @@ static int icm42670S_sample_fetch(const struct device *dev,
 	uint16_t packet_size        = FIFO_HEADER_SIZE + FIFO_ACCEL_DATA_SIZE + FIFO_GYRO_DATA_SIZE +
 	                       FIFO_TEMP_DATA_SIZE + FIFO_TS_FSYNC_SIZE;
 	
-	__ASSERT_NO_MSG(chan == SENSOR_CHAN_ALL);
-
 	/* Ensure data ready status bit is set */
 	if (status |= inv_imu_read_reg(&data->driver, INT_STATUS, 1, &int_status))
 		return status;
@@ -184,6 +181,21 @@ static int icm42670S_sample_fetch(const struct device *dev,
 	return 0;
 }
 
+static int icm42670S_sample_fetch(const struct device *dev,
+			       enum sensor_channel chan)
+{
+	int status = 0;
+	
+#ifdef CONFIG_ICM42670S_APEX
+	if ((enum sensor_trigger_type)chan == SENSOR_TRIG_MOTION)
+		status = icm42670S_apex_pedometer_fetch_from_dmp(dev);
+	else
+#endif
+		status = icm42670S_fetch_from_fifo(dev);
+	
+	return status;
+}
+
 static void icm42670S_accel_convert(struct sensor_value *val, int raw_val, uint16_t fs)
 {
 	int64_t conv_val;
@@ -220,21 +232,23 @@ static int icm42670S_channel_get(const struct device *dev,
 {
 	struct icm42670S_data *data = dev->data;
 
-	switch (chan) {
-	case SENSOR_CHAN_ACCEL_XYZ:
+	if (chan == SENSOR_CHAN_ACCEL_XYZ) {
 		icm42670S_accel_convert(val, data->accel[0], data->accel_fs);
 		icm42670S_accel_convert(val + 1, data->accel[1], data->accel_fs);
 		icm42670S_accel_convert(val + 2, data->accel[2], data->accel_fs);
-		break;
-	case SENSOR_CHAN_GYRO_XYZ:
+	} else if (chan == SENSOR_CHAN_GYRO_XYZ) {
 		icm42670S_gyro_convert(val, data->gyro[0], data->gyro_fs);
 		icm42670S_gyro_convert(val + 1, data->gyro[1], data->gyro_fs);
 		icm42670S_gyro_convert(val + 2, data->gyro[2], data->gyro_fs);
-		break;
-	case SENSOR_CHAN_DIE_TEMP:
+	} else if (chan == SENSOR_CHAN_DIE_TEMP) {
 		icm42670S_temp_convert(val, data->temperature);
-		break;
-	default:
+#ifdef CONFIG_ICM42670S_APEX_PEDOMETER
+	} else if ((enum sensor_channel_icm42670S)chan == SENSOR_CHAN_APEX_MOTION) {
+		val->val1 = data->pedometer_cnt;
+		val->val2 = data->pedometer_activity;
+		icm42670S_apex_pedometer_cadence_convert(val + 1, data->pedometer_cadence, data->dmp_odr_hz);
+#endif
+	} else {
 		return -ENOTSUP;
 	}
 
@@ -466,7 +480,30 @@ static int icm42670S_attr_set(const struct device *dev,
 			return -EINVAL;
 		}
 		break;
-	
+		
+#ifdef CONFIG_ICM42670S_APEX
+	case SENSOR_CHAN_APEX_MOTION:
+		if (attr == SENSOR_ATTR_CONFIGURATION) {
+			if (val->val1 == ICM42670S_APEX_PEDOMETER) {
+				LOG_DBG("Enable Pedometer feature");
+				err |= icm42670S_apex_enable_pedometer(dev, &drv_data->driver);
+			} else if (val->val1 == ICM42670S_APEX_TILT) {
+				LOG_DBG("Enable Tilt feature");
+			} else if (val->val1 == ICM42670S_APEX_SMD) {
+				LOG_DBG("Enable SMD feature");
+			} else if (val->val1 == ICM42670S_APEX_WOM) {
+				LOG_DBG("Enable WoM feature");
+			} else {
+				LOG_ERR("Not supported ATTR value");
+				return -EINVAL;
+			}
+		} else {
+			LOG_ERR("Not supported ATTR");
+				return -EINVAL;
+		}
+		break;
+#endif
+
 	default:
 		LOG_ERR("Not supported");
 		return -EINVAL;
@@ -485,6 +522,7 @@ static const struct sensor_driver_api icm42670S_api_funcs = {
 static int icm42670S_chip_init(const struct device *dev)
 {
 	struct icm42670S_data *data = dev->data;
+	inv_imu_interrupt_parameter_t config_int = { (inv_imu_interrupt_value)0 };
 	
 	int err = icm42670S_bus_check(dev);
 	if (err < 0) {
@@ -519,6 +557,9 @@ static int icm42670S_chip_init(const struct device *dev)
 		return -ENOTSUP;
 	}
 	
+	/* Set interrupt config */
+	config_int.INV_FIFO_THS      = INV_IMU_ENABLE;
+	err |= inv_imu_set_config_int1(&data->driver, &config_int);
 	err = icm42670S_init_interrupt(dev);
 	if (err < 0) {
 		LOG_ERR("Failed to initialize interrupt.");

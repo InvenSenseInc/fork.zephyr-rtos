@@ -22,10 +22,6 @@ int icm42670S_trigger_set(const struct device *dev,
 	struct icm42670S_data *drv_data = dev->data;
 	const struct icm42670S_config *cfg = dev->config;
 
-	if (trig->type != SENSOR_TRIG_DATA_READY) {
-		return -ENOTSUP;
-	}
-
 	gpio_pin_interrupt_configure_dt(&cfg->gpio_int, GPIO_INT_DISABLE);
 
 	if (handler == NULL) {
@@ -35,6 +31,11 @@ int icm42670S_trigger_set(const struct device *dev,
 	if (trig->type == SENSOR_TRIG_DATA_READY) {
 		drv_data->data_ready_handler = handler;
 		drv_data->data_ready_trigger = trig;
+#ifdef CONFIG_ICM42670S_APEX
+	} else if (trig->type == SENSOR_TRIG_MOTION) {
+		drv_data->data_ready_handler = handler;
+		drv_data->data_ready_trigger = trig;
+#endif
 	} else {
 		return -ENOTSUP;
 	}
