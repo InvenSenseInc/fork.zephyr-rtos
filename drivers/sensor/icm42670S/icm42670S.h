@@ -62,12 +62,9 @@ struct icm42670S_data {
 	int32_t accel[3];
 	int32_t gyro[3];
 	int32_t temperature;
-	
-	bool accel_en;
-	bool gyro_en;
-	bool tap_en;
 
-	bool sensor_started;
+	uint8_t accel_fs;
+	uint16_t gyro_fs;
 	
 	const struct device *dev;
 	struct gpio_callback gpio_cb;
@@ -75,27 +72,15 @@ struct icm42670S_data {
 	const struct sensor_trigger *data_ready_trigger;
 	sensor_trigger_handler_t data_ready_handler;
 
-	const struct sensor_trigger *tap_trigger;
-	sensor_trigger_handler_t tap_handler;
-
-	const struct sensor_trigger *double_tap_trigger;
-	sensor_trigger_handler_t double_tap_handler;
-
-#ifdef CONFIG_ICM42670S_TRIGGER
 	K_KERNEL_STACK_MEMBER(thread_stack, CONFIG_ICM42670S_THREAD_STACK_SIZE);
 	struct k_thread thread;
 	struct k_sem gpio_sem;
-#endif
 };
 
 struct icm42670S_config {
 	union icm42670S_bus bus;
 	const struct icm42670S_bus_io *bus_io;
-	struct gpio_dt_spec gpio_int;
-	uint16_t accel_hz;
-	uint16_t gyro_hz;
-	uint16_t accel_fs;
-	uint16_t gyro_fs;	
+	struct gpio_dt_spec gpio_int;	
 };
 
 int icm42670S_trigger_set(const struct device *dev,
