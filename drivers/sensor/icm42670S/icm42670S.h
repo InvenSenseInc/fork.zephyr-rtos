@@ -75,6 +75,11 @@ struct icm42670S_data {
 	uint8_t pedometer_activity;
 	uint8_t pedometer_cadence;
 #endif
+#ifdef CONFIG_ICM42670S_APEX_WOM
+	uint8_t wom_x;
+	uint8_t wom_y;
+	uint8_t wom_z;
+#endif
 
 	const struct device *dev;
 	struct gpio_callback gpio_cb;
@@ -116,6 +121,11 @@ int icm42670S_apex_tilt_fetch_from_dmp(const struct device *dev);
 int icm42670S_apex_enable(inv_imu_device_t *s);
 int icm42670S_apex_enable_smd(inv_imu_device_t *s);
 int icm42670S_apex_smd_fetch_from_dmp(const struct device *dev);
+#endif
+
+#ifdef CONFIG_ICM42670S_APEX_WOM
+int icm42670S_apex_enable_wom(inv_imu_device_t *s);
+int icm42670S_apex_wom_fetch_from_dmp(const struct device *dev);
 #endif
 
 #endif /* ZEPHYR_DRIVERS_SENSOR_ICM42670S_ICM42670S_H_ */

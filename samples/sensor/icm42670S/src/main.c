@@ -98,6 +98,9 @@ int main(void)
  #ifdef CONFIG_ICM42670S_APEX_TILT
 	apex_mode.val1 = ICM42670S_APEX_TILT;
  #endif
+ #ifdef CONFIG_ICM42670S_APEX_WOM
+	apex_mode.val1 = ICM42670S_APEX_WOM;
+ #endif
  #ifdef CONFIG_ICM42670S_APEX_SMD
 	apex_mode.val1 = ICM42670S_APEX_SMD;
  #endif
@@ -196,6 +199,17 @@ int main(void)
  #endif
  #ifdef CONFIG_ICM42670S_APEX_TILT
 			printf("[%s]: TILT\n", now_str());
+ #endif
+ #ifdef CONFIG_ICM42670S_APEX_WOM
+			struct sensor_value apex_wom[2];
+			sensor_channel_get(dev, SENSOR_CHAN_APEX_MOTION,
+							apex_wom);
+			
+			printf("[%s]: WOM x=%d y=%d z=%d\n", 
+					now_str(),
+					apex_wom[0].val1,
+					apex_wom[0].val2,
+					apex_wom[1].val1);
  #endif
  #ifdef CONFIG_ICM42670S_APEX_SMD
 			printf("[%s]: SMD\n", now_str());
