@@ -100,10 +100,16 @@ int icm42670S_trigger_set(const struct device *dev,
 int icm42670S_init_interrupt(const struct device *dev);
 
 #ifdef CONFIG_ICM42670S_APEX_PEDOMETER
+int icm42670S_apex_enable(inv_imu_device_t *s);
 int icm42670S_apex_enable_pedometer(const struct device *dev, inv_imu_device_t *s);
-
 int icm42670S_apex_pedometer_fetch_from_dmp(const struct device *dev);
 void icm42670S_apex_pedometer_cadence_convert(struct sensor_value *val, uint8_t raw_val, uint8_t dmp_odr_hz);
+#endif
+
+#ifdef CONFIG_ICM42670S_APEX_TILT
+int icm42670S_apex_enable(inv_imu_device_t *s);
+int icm42670S_apex_enable_tilt(inv_imu_device_t *s);
+int icm42670S_apex_tilt_fetch_from_dmp(const struct device *dev);
 #endif
 
 #endif /* ZEPHYR_DRIVERS_SENSOR_ICM42670S_ICM42670S_H_ */

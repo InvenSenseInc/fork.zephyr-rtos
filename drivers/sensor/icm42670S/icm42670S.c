@@ -184,13 +184,17 @@ static int icm42670S_fetch_from_fifo(const struct device *dev)
 static int icm42670S_sample_fetch(const struct device *dev,
 			       enum sensor_channel chan)
 {
-	int status = 0;
+	int status = -1;
 	
-#ifdef CONFIG_ICM42670S_APEX
-	if ((enum sensor_trigger_type)chan == SENSOR_TRIG_MOTION)
+	if ((enum sensor_channel_icm42670S)chan == SENSOR_CHAN_APEX_MOTION) {
+#ifdef CONFIG_ICM42670S_APEX_PEDOMETER
 		status = icm42670S_apex_pedometer_fetch_from_dmp(dev);
-	else
+#elif CONFIG_ICM42670S_APEX_TILT
+		status = icm42670S_apex_tilt_fetch_from_dmp(dev);
 #endif
+	}
+	
+	if (chan == SENSOR_CHAN_ALL)
 		status = icm42670S_fetch_from_fifo(dev);
 	
 	return status;
@@ -481,28 +485,26 @@ static int icm42670S_attr_set(const struct device *dev,
 		}
 		break;
 		
-#ifdef CONFIG_ICM42670S_APEX
 	case SENSOR_CHAN_APEX_MOTION:
 		if (attr == SENSOR_ATTR_CONFIGURATION) {
+#ifdef CONFIG_ICM42670S_APEX_PEDOMETER
 			if (val->val1 == ICM42670S_APEX_PEDOMETER) {
-				LOG_DBG("Enable Pedometer feature");
+				err |= icm42670S_apex_enable(&drv_data->driver);
 				err |= icm42670S_apex_enable_pedometer(dev, &drv_data->driver);
-			} else if (val->val1 == ICM42670S_APEX_TILT) {
-				LOG_DBG("Enable Tilt feature");
-			} else if (val->val1 == ICM42670S_APEX_SMD) {
-				LOG_DBG("Enable SMD feature");
-			} else if (val->val1 == ICM42670S_APEX_WOM) {
-				LOG_DBG("Enable WoM feature");
-			} else {
-				LOG_ERR("Not supported ATTR value");
-				return -EINVAL;
 			}
+#elif CONFIG_ICM42670S_APEX_TILT
+			if (val->val1 == ICM42670S_APEX_TILT) {
+				err |= icm42670S_apex_enable(&drv_data->driver);
+				err |= icm42670S_apex_enable_tilt(&drv_data->driver);
+			}
+#else
+			LOG_ERR("Not supported ATTR value");
+#endif
 		} else {
 			LOG_ERR("Not supported ATTR");
 				return -EINVAL;
 		}
 		break;
-#endif
 
 	default:
 		LOG_ERR("Not supported");

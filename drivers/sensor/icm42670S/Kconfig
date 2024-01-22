@@ -17,7 +17,7 @@ config ICM42670S_APEX
 	bool "ICM42670S APEX features"
 	default n
 
-choice
+choice APEX_FEATURES
 	prompt "ICM42670S APEX features"
 	depends on ICM42670S_APEX
 	default ICM42670S_APEX_PEDOMETER
