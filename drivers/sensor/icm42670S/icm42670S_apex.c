@@ -7,9 +7,9 @@
 #include "icm42670S.h"
 #include "imu/inv_imu_apex.h"
 
-int icm42670S_apex_enable_pedometer(const struct device *dev, inv_imu_device_t *s)
+#if defined(CONFIG_ICM42670S_APEX_PEDOMETER) || defined(CONFIG_ICM42670S_APEX_TILT)
+int icm42670S_apex_enable(inv_imu_device_t *s)
 {
-	struct icm42670S_data *data = dev->data;
 	int err = 0;
 	inv_imu_apex_parameters_t apex_inputs;
 	inv_imu_interrupt_parameter_t config_int = { (inv_imu_interrupt_value)0 };
@@ -22,6 +22,7 @@ int icm42670S_apex_enable_pedometer(const struct device *dev, inv_imu_device_t *
 	config_int.INV_UI_DRDY       = INV_IMU_DISABLE;
 	config_int.INV_STEP_DET      = INV_IMU_ENABLE;
 	config_int.INV_STEP_CNT_OVFL = INV_IMU_ENABLE;
+	config_int.INV_TILT_DET      = INV_IMU_ENABLE;
 	err |= inv_imu_set_config_int1(s, &config_int);
 
 	/* Enable accelerometer to feed the APEX Pedometer algorithm */
@@ -41,12 +42,21 @@ int icm42670S_apex_enable_pedometer(const struct device *dev, inv_imu_device_t *
 	apex_inputs.power_save = APEX_CONFIG0_DMP_POWER_SAVE_DIS;
 	err |= inv_imu_apex_configure_parameters(s, &apex_inputs);
 
-	/* Enable the pedometer */
+	/* Configure sampling frequency to 50Hz */
 	err |= inv_imu_apex_set_frequency(s, APEX_CONFIG1_DMP_ODR_50Hz);
-	data->dmp_odr_hz = 50;
-	err |= inv_imu_apex_enable_pedometer(s);
-	
+
 	return err;
+}
+#endif
+
+#ifdef CONFIG_ICM42670S_APEX_PEDOMETER
+int icm42670S_apex_enable_pedometer(const struct device *dev, inv_imu_device_t *s)
+{
+	struct icm42670S_data *data = dev->data;
+	
+	data->dmp_odr_hz = 50;
+	/* Enable the pedometer */	
+	return inv_imu_apex_enable_pedometer(s);
 }
 
 int icm42670S_apex_pedometer_fetch_from_dmp(const struct device *dev)
@@ -88,3 +98,27 @@ void icm42670S_apex_pedometer_cadence_convert(struct sensor_value *val, uint8_t 
 	val->val1 = conv_val / 1000000;
 	val->val2 = conv_val % 1000000;
 }
+#endif
+
+#ifdef CONFIG_ICM42670S_APEX_TILT
+int icm42670S_apex_enable_tilt(inv_imu_device_t *s)
+{
+	/* Enable the pedometer */	
+	return inv_imu_apex_enable_tilt(s);
+}
+
+int icm42670S_apex_tilt_fetch_from_dmp(const struct device *dev)
+{
+	struct icm42670S_data *data = dev->data;
+	int rc = 0;
+	uint8_t int_status3;
+	
+	/* Read Pedometer interrupt status */
+	rc |= inv_imu_read_reg(&data->driver, INT_STATUS3, 1, &int_status3);
+
+	if (int_status3 & (INT_STATUS3_TILT_DET_INT_MASK))
+		return rc;
+	else 
+		return -1;
+}
+#endif

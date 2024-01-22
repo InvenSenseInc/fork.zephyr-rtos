@@ -67,7 +67,7 @@ static void handle_icm42670S_drdy(const struct device *dev,
 				 const struct sensor_trigger *trig)
 {
 	if ((trig->type == SENSOR_TRIG_DATA_READY) || (trig->type == SENSOR_TRIG_MOTION)) {
-		int rc = sensor_sample_fetch_chan(dev, trig->type);
+		int rc = sensor_sample_fetch_chan(dev, trig->chan);
 	
 		if (rc < 0) { 
 			printf("sample fetch failed: %d\n", rc);
@@ -101,10 +101,19 @@ int main(void)
 				SENSOR_ATTR_CONFIGURATION,
 				&apex_mode);
  #endif
+ #ifdef CONFIG_ICM42670S_APEX_TILT
+
+	/* Setting APEX Pedometer feature */
+	apex_mode.val1 = ICM42670S_APEX_TILT;
+	apex_mode.val2 = 0;
+	sensor_attr_set(dev, SENSOR_CHAN_APEX_MOTION,
+				SENSOR_ATTR_CONFIGURATION,
+				&apex_mode);
+ #endif
 
 	data_trigger = (struct sensor_trigger) {
 		.type = SENSOR_TRIG_MOTION,
-		.chan = SENSOR_CHAN_ALL,
+		.chan = SENSOR_CHAN_APEX_MOTION,
 	};
 	if (sensor_trigger_set(dev, &data_trigger,
 			       handle_icm42670S_drdy) < 0) {
@@ -188,6 +197,9 @@ int main(void)
 				   apex_pedometer[0].val2 == 1 ? "Walk":
 				   apex_pedometer[0].val2 == 2 ? "Run":
 											  "Unknown");
+ #endif
+ #ifdef CONFIG_ICM42670S_APEX_TILT
+			printf("[%s]: TILT\n", now_str());
  #endif
 #else
 			sensor_channel_get(dev, SENSOR_CHAN_ACCEL_XYZ,

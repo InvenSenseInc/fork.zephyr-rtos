@@ -22,4 +22,8 @@ config I2C
 config ICM42670S_APEX
 	default n
 
+choice APEX_FEATURES
+    default ICM42670S_APEX_PEDOMETER
+endchoice
+
 source "Kconfig.zephyr"
