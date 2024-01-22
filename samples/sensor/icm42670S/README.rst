@@ -43,6 +43,8 @@ Sample Output
 
 .. code-block:: console
 
+## Default configuration
+
 Configured for IMU data collecting.
 [0:00:27.656]: temp 24.00 Cel   accel -0.418998 -1.339596 9.949408 m/s/s   gyro  0.012250 -0.026099 -0.010652 rad/s
 [0:00:27.666]: temp 24.00 Cel   accel -0.566245 -1.303682 9.847651 m/s/s   gyro  0.022371 -0.000532 -0.017577 rad/s
@@ -83,5 +85,24 @@ Configured for APEX data collecting.
 [0:13:57.641]: TILT
 [0:14:03.005]: TILT
 
+
+## ICM42670S_APEX = y
+## APEX_FEATURES = ICM42670S_APEX_WOM
+
+Configured for APEX data collecting.
+[0:00:02.555]: WOM x=1 y=0 z=1
+[0:00:02.636]: WOM x=0 y=0 z=1
+[0:00:02.797]: WOM x=0 y=1 z=0
+[0:00:02.877]: WOM x=0 y=0 z=1
+[0:00:02.957]: WOM x=1 y=1 z=1
+
+
+## ICM42670S_APEX = y
+## APEX_FEATURES = ICM42670S_APEX_SMD
+
+Configured for APEX data collecting.
+[0:00:04.622]: SMD
+[0:00:05.084]: SMD
+[0:00:05.566]: SMD
 
 <repeats endlessly>

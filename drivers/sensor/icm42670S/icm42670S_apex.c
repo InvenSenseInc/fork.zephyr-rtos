@@ -19,7 +19,7 @@ int icm42670S_apex_enable(inv_imu_device_t *s)
 	/* Disabling FIFO to avoid extra power consumption due to ALP config */
 	err |= inv_imu_configure_fifo(s, INV_IMU_FIFO_DISABLED);
 	
-	/* Disable data ready interrupt and enable Pedometer interrupts */
+	/* Disable data ready interrupt and enable Pedometer, Tilt and SMD interrupts */
 	err |= inv_imu_get_config_int1(s, &config_int);
 	config_int.INV_UI_DRDY       = INV_IMU_DISABLE;
 	config_int.INV_STEP_DET      = INV_IMU_ENABLE;
@@ -153,4 +153,70 @@ int icm42670S_apex_smd_fetch_from_dmp(const struct device *dev)
 		/* Pedometer & SMD data processing */
 		return 0;
 }
+#endif
+
+#ifdef CONFIG_ICM42670S_APEX_WOM
+int icm42670S_apex_enable_wom(inv_imu_device_t *s)
+{
+	int rc = 0;
+	inv_imu_interrupt_parameter_t config_int = { (inv_imu_interrupt_value)0 };
+	
+	/* 
+	 * Optimize power consumption:
+	 * - Disable FIFO usage.
+	 * - Disable data ready interrupt and enable WOM interrupts.
+	 * - Set 2X averaging.
+	 * - Use Low-Power mode at low frequency.
+	 */
+	rc |= inv_imu_configure_fifo(s, INV_IMU_FIFO_DISABLED);
+	
+	rc |= inv_imu_get_config_int1(s, &config_int);
+	config_int.INV_UI_DRDY       = INV_IMU_DISABLE;
+	config_int.INV_WOM_X         = INV_IMU_ENABLE;
+	config_int.INV_WOM_Y         = INV_IMU_ENABLE;
+	config_int.INV_WOM_Z         = INV_IMU_ENABLE;
+	rc |= inv_imu_set_config_int1(s, &config_int);
+
+	rc |= inv_imu_set_accel_lp_avg(s, ACCEL_CONFIG1_ACCEL_FILT_AVG_2);
+	rc |= inv_imu_set_accel_frequency(s, ACCEL_CONFIG0_ODR_12_5_HZ);
+	rc |= inv_imu_enable_accel_low_power_mode(s);
+
+	/* Configure WOM thresholds for each axis to 195 mg (Resolution 1g/256)
+	 * WOM threshold = 50 * 1000 / 256 = 195 mg 
+	 * and enable WOM 
+	 */
+	rc |= inv_imu_configure_wom(s, 50, 50, 50,
+	                            WOM_CONFIG_WOM_INT_MODE_ORED, 
+								WOM_CONFIG_WOM_INT_DUR_1_SMPL);
+	rc |= inv_imu_enable_wom(s);
+	
+	return rc;
+}
+
+int icm42670S_apex_wom_fetch_from_dmp(const struct device *dev)
+{
+	struct icm42670S_data *data = dev->data;
+	int rc = 0;
+	uint8_t int_status2;
+	
+	data->wom_x = 0;
+	data->wom_y = 0;
+	data->wom_z = 0;
+	
+	/* Read SMD interrupt status */
+	rc |= inv_imu_read_reg(&data->driver, INT_STATUS2, 1, &int_status2);
+
+	if (int_status2 & (INT_STATUS2_WOM_X_INT_MASK | INT_STATUS2_WOM_Y_INT_MASK |
+			                  INT_STATUS2_WOM_Z_INT_MASK)) {
+		if (int_status2 & INT_STATUS2_WOM_X_INT_MASK) 
+			data->wom_x = 1;
+		if (int_status2 & INT_STATUS2_WOM_Y_INT_MASK) 
+			data->wom_y = 1;
+		if (int_status2 & INT_STATUS2_WOM_Z_INT_MASK) 
+			data->wom_z = 1;
+		return rc;
+	} else 
+		return -1;
+}
+
 #endif

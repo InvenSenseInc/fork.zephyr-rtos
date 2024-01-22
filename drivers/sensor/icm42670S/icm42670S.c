@@ -193,6 +193,8 @@ static int icm42670S_sample_fetch(const struct device *dev,
 		status = icm42670S_apex_tilt_fetch_from_dmp(dev);
 #elif CONFIG_ICM42670S_APEX_SMD
 		status = icm42670S_apex_smd_fetch_from_dmp(dev);
+#elif CONFIG_ICM42670S_APEX_WOM
+		status = icm42670S_apex_wom_fetch_from_dmp(dev);
 #endif
 	}
 	
@@ -253,6 +255,13 @@ static int icm42670S_channel_get(const struct device *dev,
 		val->val1 = data->pedometer_cnt;
 		val->val2 = data->pedometer_activity;
 		icm42670S_apex_pedometer_cadence_convert(val + 1, data->pedometer_cadence, data->dmp_odr_hz);
+#endif
+#ifdef CONFIG_ICM42670S_APEX_WOM
+	} else if ((enum sensor_channel_icm42670S)chan == SENSOR_CHAN_APEX_MOTION) {
+		val->val1 = data->wom_x;
+		val->val2 = data->wom_y;
+		val ++;
+		val->val1 = data->wom_z;
 #endif
 	} else {
 		return -ENOTSUP;
@@ -503,6 +512,10 @@ static int icm42670S_attr_set(const struct device *dev,
 			if (val->val1 == ICM42670S_APEX_SMD) {
 				err |= icm42670S_apex_enable(&drv_data->driver);
 				err |= icm42670S_apex_enable_smd(&drv_data->driver);
+			}
+#elif CONFIG_ICM42670S_APEX_WOM
+			if (val->val1 == ICM42670S_APEX_WOM) {
+				err |= icm42670S_apex_enable_wom(&drv_data->driver);
 			}
 #else
 			LOG_ERR("Not supported ATTR value");
