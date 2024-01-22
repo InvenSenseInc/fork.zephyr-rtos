@@ -91,26 +91,21 @@ int main(void)
 #ifdef CONFIG_ICM42670S_APEX
 	struct sensor_value apex_mode;
 	
- #ifdef CONFIG_ICM42670S_APEX_PEDOMETER
-	struct sensor_value apex_pedometer[2];
-	
 	/* Setting APEX Pedometer feature */
+ #ifdef CONFIG_ICM42670S_APEX_PEDOMETER
 	apex_mode.val1 = ICM42670S_APEX_PEDOMETER;
-	apex_mode.val2 = 0;
-	sensor_attr_set(dev, SENSOR_CHAN_APEX_MOTION,
-				SENSOR_ATTR_CONFIGURATION,
-				&apex_mode);
  #endif
  #ifdef CONFIG_ICM42670S_APEX_TILT
-
-	/* Setting APEX Pedometer feature */
 	apex_mode.val1 = ICM42670S_APEX_TILT;
+ #endif
+ #ifdef CONFIG_ICM42670S_APEX_SMD
+	apex_mode.val1 = ICM42670S_APEX_SMD;
+ #endif
 	apex_mode.val2 = 0;
 	sensor_attr_set(dev, SENSOR_CHAN_APEX_MOTION,
 				SENSOR_ATTR_CONFIGURATION,
 				&apex_mode);
- #endif
-
+	
 	data_trigger = (struct sensor_trigger) {
 		.type = SENSOR_TRIG_MOTION,
 		.chan = SENSOR_CHAN_APEX_MOTION,
@@ -187,6 +182,7 @@ int main(void)
 		if( irq_from_device ) {
 #ifdef CONFIG_ICM42670S_APEX 
  #ifdef CONFIG_ICM42670S_APEX_PEDOMETER
+			struct sensor_value apex_pedometer[2];
 			sensor_channel_get(dev, SENSOR_CHAN_APEX_MOTION,
 							apex_pedometer);
 			
@@ -200,6 +196,9 @@ int main(void)
  #endif
  #ifdef CONFIG_ICM42670S_APEX_TILT
 			printf("[%s]: TILT\n", now_str());
+ #endif
+ #ifdef CONFIG_ICM42670S_APEX_SMD
+			printf("[%s]: SMD\n", now_str());
  #endif
 #else
 			sensor_channel_get(dev, SENSOR_CHAN_ACCEL_XYZ,

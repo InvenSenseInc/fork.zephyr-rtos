@@ -191,6 +191,8 @@ static int icm42670S_sample_fetch(const struct device *dev,
 		status = icm42670S_apex_pedometer_fetch_from_dmp(dev);
 #elif CONFIG_ICM42670S_APEX_TILT
 		status = icm42670S_apex_tilt_fetch_from_dmp(dev);
+#elif CONFIG_ICM42670S_APEX_SMD
+		status = icm42670S_apex_smd_fetch_from_dmp(dev);
 #endif
 	}
 	
@@ -496,6 +498,11 @@ static int icm42670S_attr_set(const struct device *dev,
 			if (val->val1 == ICM42670S_APEX_TILT) {
 				err |= icm42670S_apex_enable(&drv_data->driver);
 				err |= icm42670S_apex_enable_tilt(&drv_data->driver);
+			}
+#elif CONFIG_ICM42670S_APEX_SMD
+			if (val->val1 == ICM42670S_APEX_SMD) {
+				err |= icm42670S_apex_enable(&drv_data->driver);
+				err |= icm42670S_apex_enable_smd(&drv_data->driver);
 			}
 #else
 			LOG_ERR("Not supported ATTR value");
