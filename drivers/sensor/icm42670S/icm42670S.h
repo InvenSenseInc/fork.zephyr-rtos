@@ -112,4 +112,10 @@ int icm42670S_apex_enable_tilt(inv_imu_device_t *s);
 int icm42670S_apex_tilt_fetch_from_dmp(const struct device *dev);
 #endif
 
+#ifdef CONFIG_ICM42670S_APEX_SMD
+int icm42670S_apex_enable(inv_imu_device_t *s);
+int icm42670S_apex_enable_smd(inv_imu_device_t *s);
+int icm42670S_apex_smd_fetch_from_dmp(const struct device *dev);
+#endif
+
 #endif /* ZEPHYR_DRIVERS_SENSOR_ICM42670S_ICM42670S_H_ */

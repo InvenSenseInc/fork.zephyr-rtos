@@ -7,7 +7,9 @@
 #include "icm42670S.h"
 #include "imu/inv_imu_apex.h"
 
-#if defined(CONFIG_ICM42670S_APEX_PEDOMETER) || defined(CONFIG_ICM42670S_APEX_TILT)
+#if defined(CONFIG_ICM42670S_APEX_PEDOMETER) \
+	|| defined(CONFIG_ICM42670S_APEX_TILT) \
+	|| defined(CONFIG_ICM42670S_APEX_SMD)
 int icm42670S_apex_enable(inv_imu_device_t *s)
 {
 	int err = 0;
@@ -23,6 +25,7 @@ int icm42670S_apex_enable(inv_imu_device_t *s)
 	config_int.INV_STEP_DET      = INV_IMU_ENABLE;
 	config_int.INV_STEP_CNT_OVFL = INV_IMU_ENABLE;
 	config_int.INV_TILT_DET      = INV_IMU_ENABLE;
+	config_int.INV_SMD           = INV_IMU_ENABLE;
 	err |= inv_imu_set_config_int1(s, &config_int);
 
 	/* Enable accelerometer to feed the APEX Pedometer algorithm */
@@ -113,12 +116,41 @@ int icm42670S_apex_tilt_fetch_from_dmp(const struct device *dev)
 	int rc = 0;
 	uint8_t int_status3;
 	
-	/* Read Pedometer interrupt status */
+	/* Read Tilt interrupt status */
 	rc |= inv_imu_read_reg(&data->driver, INT_STATUS3, 1, &int_status3);
 
 	if (int_status3 & (INT_STATUS3_TILT_DET_INT_MASK))
 		return rc;
 	else 
 		return -1;
+}
+#endif
+
+#ifdef CONFIG_ICM42670S_APEX_SMD
+int icm42670S_apex_enable_smd(inv_imu_device_t *s)
+{
+	int rc = 0;
+	
+	/* Enable SMD (and Pedometer as SMD uses it) */	
+	rc |= inv_imu_apex_enable_pedometer(s);
+	rc |= inv_imu_apex_enable_smd(s);
+	
+	return rc;
+}
+
+int icm42670S_apex_smd_fetch_from_dmp(const struct device *dev)
+{
+	struct icm42670S_data *data = dev->data;
+	int rc = 0;
+	uint8_t int_status2;
+	
+	/* Read SMD interrupt status */
+	rc |= inv_imu_read_reg(&data->driver, INT_STATUS2, 1, &int_status2);
+
+	if ((int_status2 & (INT_STATUS2_SMD_INT_MASK)) || (rc != 0))
+		return rc;
+	else 
+		/* Pedometer & SMD data processing */
+		return 0;
 }
 #endif
