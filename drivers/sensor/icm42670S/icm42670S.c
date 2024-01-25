@@ -51,7 +51,7 @@ static inline int icm42670S_reg_write(const struct device *dev,
 {
 	const struct icm42670S_config *cfg = dev->config;
 
-	return cfg->bus_io->write(&cfg->bus, reg, buf, size);
+	return cfg->bus_io->write(&cfg->bus, reg, (uint8_t*)buf, size);
 }
 
 static inline int inv_io_hal_write_reg(struct inv_imu_serif *serif, uint8_t reg, 
@@ -76,9 +76,9 @@ static int icm42670S_fetch_from_fifo(const struct device *dev)
 	struct icm42670S_data *data = dev->data;
 	int      status = 0;
 	uint8_t  int_status;
-	uint16_t total_packet_count = 0;
 	uint16_t packet_size        = FIFO_HEADER_SIZE + FIFO_ACCEL_DATA_SIZE + FIFO_GYRO_DATA_SIZE +
 	                       FIFO_TEMP_DATA_SIZE + FIFO_TS_FSYNC_SIZE;
+	uint16_t fifo_idx = 0;
 	
 	/* Ensure data ready status bit is set */
 	if (status |= inv_imu_read_reg(&data->driver, INT_STATUS, 1, &int_status))
@@ -86,91 +86,53 @@ static int icm42670S_fetch_from_fifo(const struct device *dev)
 
 	if ((int_status & INT_STATUS_FIFO_THS_INT_MASK) ||
 	    (int_status & INT_STATUS_FIFO_FULL_INT_MASK)) {
-		uint8_t  f_data[2];
 		uint16_t packet_count;
 
-/*
-		 * Make sure RCOSC is enabled to guarrantee FIFO read */
+		/* Make sure RCOSC is enabled to guarrantee FIFO read */
 		status |= inv_imu_switch_on_mclk(&data->driver);
 		
-		/* FIFO record mode configured at driver init, so we read packet number, not byte count */
-		if ((status |= inv_imu_read_reg(&data->driver, FIFO_COUNTH, 2, &f_data[0])) != INV_ERROR_SUCCESS) {
+		/* Read FIFO frame count */
+		status |= inv_imu_get_frame_count(&data->driver, &packet_count);
+		
+		/* Check for error */
+		if (status != INV_ERROR_SUCCESS) {
+			status |= inv_imu_switch_off_mclk(&data->driver);
 			return status;
 		}
 
-		total_packet_count = (uint16_t)(f_data[0] | (f_data[1] << 8));
-		packet_count       = total_packet_count;
-		while (packet_count > 0) {
-			uint16_t invalid_frame_cnt = 0;
-			/* Read FIFO only when data is expected in FIFO */
-			/* fifo_idx type variable must be large enough to parse the FIFO_MIRRORING_SIZE */
-			uint16_t fifo_idx = 0;
+		/* Read FIFO data */
+		status |= inv_imu_read_reg(&data->driver, FIFO_DATA, packet_size * packet_count, (uint8_t*)&data->driver.fifo_data);
 
-			if (status |=
-			    inv_imu_read_reg(&data->driver, FIFO_DATA, packet_size * packet_count, &data->driver.fifo_data)) {
-				/* 
-				 * Sensor data is in FIFO according to FIFO_COUNT but failed to read FIFO,
-				 * reset FIFO and try next chance 
-				 */
+		/* Check for error */
+		if (status != INV_ERROR_SUCCESS) {
+			status |= inv_imu_reset_fifo(&data->driver);
+			status |= inv_imu_switch_off_mclk(&data->driver);
+			return status;
+		}
+
+		for (uint16_t i = 0; i < packet_count; i++) {
+			inv_imu_sensor_event_t event;
+
+			status |= inv_imu_decode_fifo_frame(&data->driver, &data->driver.fifo_data[fifo_idx], &event);
+			fifo_idx += packet_size;
+
+			/* Check for error */
+			if (status != INV_ERROR_SUCCESS) {
 				status |= inv_imu_reset_fifo(&data->driver);
 				status |= inv_imu_switch_off_mclk(&data->driver);
 				return status;
 			}
-
-			for (uint16_t i = 0; i < packet_count; i++) {
-				const fifo_header_t *  header;
-
-				header            = (fifo_header_t *)&data->driver.fifo_data[fifo_idx];
-				fifo_idx += FIFO_HEADER_SIZE;
-
-				/* Decode invalid frame */
-				if (header->Byte == 0x80) {
-					uint8_t is_invalid_frame = 1;
-					/* Check N-FIFO_HEADER_SIZE remaining bytes are all 0 to be invalid frame */
-					for (uint8_t j = 0; j < (packet_size - FIFO_HEADER_SIZE); j++) {
-						if (data->driver.fifo_data[fifo_idx + j]) {
-							is_invalid_frame = 0;
-							break;
-						}
-					}
-					/* In case of invalid frame read FIFO will be retried for this packet */
-					invalid_frame_cnt += is_invalid_frame;
-					fifo_idx += packet_size - FIFO_HEADER_SIZE;
-				} else {
-					/* Decode packet */
-					if (header->bits.msg_bit) {
-						/* MSG BIT set in FIFO header, Resetting FIFO */
-						status |= inv_imu_reset_fifo(&data->driver);
-						status |= inv_imu_switch_off_mclk(&data->driver);
-						return status < 0 ? status : INV_ERROR;
-					}
-
-					if (header->bits.accel_bit) {
-						data->accel[0] = (int16_t)((data->driver.fifo_data[0 + fifo_idx] << 8) | data->driver.fifo_data[1 + fifo_idx]);
-						data->accel[1] = (int16_t)((data->driver.fifo_data[2 + fifo_idx] << 8) | data->driver.fifo_data[3 + fifo_idx]);
-						data->accel[2] = (int16_t)((data->driver.fifo_data[4 + fifo_idx] << 8) | data->driver.fifo_data[5 + fifo_idx]);
-						fifo_idx += FIFO_ACCEL_DATA_SIZE;
-					}
-
-					if (header->bits.gyro_bit) {
-						data->gyro[0] = (int16_t)((data->driver.fifo_data[0 + fifo_idx] << 8) | data->driver.fifo_data[1 + fifo_idx]);
-						data->gyro[1] = (int16_t)((data->driver.fifo_data[2 + fifo_idx] << 8) | data->driver.fifo_data[3 + fifo_idx]);
-						data->gyro[2] = (int16_t)((data->driver.fifo_data[4 + fifo_idx] << 8) | data->driver.fifo_data[5 + fifo_idx]);
-						fifo_idx += FIFO_GYRO_DATA_SIZE;
-					}
-
-					/* 
-					 * The coarse temperature (8B FIFO packet format) 
-					 * range is ± 64 degrees with 0.5°C resolution.
-					 */
-					/* cast to int8_t since FIFO is in 16 bits mode (temperature on 8 bits) */
-					data->temperature = (int8_t)data->driver.fifo_data[0 + fifo_idx];
-					fifo_idx += FIFO_TEMP_DATA_SIZE;
-
-				} /* end of else invalid frame */
-			} /* end of FIFO read for loop */
-			packet_count = invalid_frame_cnt;
-		} /*end of while: packet_count > 0*/
+			
+			data->accel[0] = event.accel[0];
+			data->accel[1] = event.accel[1];
+			data->accel[2] = event.accel[2];
+			data->gyro[0] = event.gyro[0];
+			data->gyro[1] = event.gyro[1];
+			data->gyro[2] = event.gyro[2];
+			data->temperature = event.temperature;
+			/* TODO use a ringbuffer to handle multiple samples in FIFO */
+		
+		} /* end of FIFO read for loop */
 
 		status |= inv_imu_switch_off_mclk(&data->driver);
 		if (status < 0)
@@ -544,6 +506,7 @@ static const struct sensor_driver_api icm42670S_api_funcs = {
 static int icm42670S_chip_init(const struct device *dev)
 {
 	struct icm42670S_data *data = dev->data;
+	inv_imu_int1_pin_config_t int1_pin_config;
 	inv_imu_interrupt_parameter_t config_int = { (inv_imu_interrupt_value)0 };
 	
 	int err = icm42670S_bus_check(dev);
@@ -554,7 +517,7 @@ static int icm42670S_chip_init(const struct device *dev)
 	k_sleep(K_SECONDS(0.3));
 
 	// Initialize serial interface and device
-	data->serif.context = dev;
+	data->serif.context = (struct device*)dev;
 	data->serif.read_reg = inv_io_hal_read_reg;
 	data->serif.write_reg = inv_io_hal_write_reg;
 	data->serif.max_read = 1024 * 32;
@@ -580,9 +543,15 @@ static int icm42670S_chip_init(const struct device *dev)
 	}
 	
 	/* Set interrupt config */
+	int1_pin_config.int_polarity = INT_CONFIG_INT1_POLARITY_HIGH;
+	int1_pin_config.int_mode     = INT_CONFIG_INT1_MODE_PULSED;
+	int1_pin_config.int_drive    = INT_CONFIG_INT1_DRIVE_CIRCUIT_PP;
+	err |= inv_imu_set_pin_config_int1(&data->driver, &int1_pin_config);
+	
 	config_int.INV_FIFO_THS      = INV_IMU_ENABLE;
 	err |= inv_imu_set_config_int1(&data->driver, &config_int);
-	err = icm42670S_init_interrupt(dev);
+	
+	err |= icm42670S_init_interrupt(dev);
 	if (err < 0) {
 		LOG_ERR("Failed to initialize interrupt.");
 		return err;
