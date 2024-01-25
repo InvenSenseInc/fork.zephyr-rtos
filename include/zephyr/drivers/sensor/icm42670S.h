@@ -72,10 +72,21 @@ enum sensor_attribute_icm42670S {
  * operation from sleep mode.
  * ** Significant Motion Detector (SMD): Detects significant motion based on
  * accelerometer data.
+ *
+ * This also exposes sensor channel for the ICM42670S which can be used for
+ * getting the Air Motion Library (AML) data.
+ *
+ * The AML library provides pointing from ICM42670S 6-axis sensor and intended 
+ * to be used in free space pointing devices to operate in-air point and click
+ * navigation, just like a classic 2D mouse will do on a desk. The library 
+ * additionally provides swipe motion recognition.
  */
 enum sensor_channel_icm42670S {
-	/** APEX features */
 	
+	/** APEX features */
 	SENSOR_CHAN_APEX_MOTION = SENSOR_CHAN_PRIV_START,
+	
+	/** AML */
+	SENSOR_CHAN_AML,
 };
 #endif /* ZEPHYR_INCLUDE_DRIVERS_SENSOR_ICM42670S_H_ */

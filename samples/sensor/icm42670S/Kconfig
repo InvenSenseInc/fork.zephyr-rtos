@@ -19,11 +19,19 @@ config SPI
 config I2C
 	default y
 
+# Enable APEX features support and choice between : 
+# ICM42670S_APEX_PEDOMETER, ICM42670S_APEX_TILT, ICM42670S_APEX_SMD or ICM42670S_APEX_WOM
+
 config ICM42670S_APEX
 	default n
 
 choice APEX_FEATURES
     default ICM42670S_APEX_PEDOMETER
 endchoice
+
+# Enable AML support
+
+config ICM42670S_AML
+	default y
 
 source "Kconfig.zephyr"

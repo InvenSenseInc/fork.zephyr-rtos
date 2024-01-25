@@ -1,0 +1,60 @@
+/*
+ * Copyright (c) 2023 TDK Invensense
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
+#include <zephyr/logging/log.h>
+
+#include "icm42670S.h"
+#include "invn_algo_aml.h"
+
+LOG_MODULE_REGISTER(ICM42670S_AML, CONFIG_SENSOR_LOG_LEVEL);
+
+#ifdef CONFIG_ICM42670S_AML
+int icm42670S_aml_init(inv_imu_device_t *s, int8_t delta_gain_x, int8_t delta_gain_y)
+{
+	int rc = 0;
+	/* Contains algorithms configuration */
+	InvnAlgoAMLConfig config;
+	
+	/* FSR */
+	config.acc_fsr = 16;
+	config.gyr_fsr = 2000;
+
+	/* Delta Gain */
+	config.delta_gain[0] = delta_gain_x;
+	config.delta_gain[1] = delta_gain_y;
+	
+	config.gestures_auto_reset = 1;
+
+	/* Initialize AML algorithms */
+	rc = invn_algo_aml_init(s, &config);
+	if (rc != 0) {
+		LOG_ERR("Error. Authentication Failed.");
+		return rc;
+	} else {
+		LOG_DBG("Initializing algorithms OK");
+	}
+	
+	/* Configure ICM device */
+	rc |= inv_imu_set_accel_fsr(s, ACCEL_CONFIG0_FS_SEL_16g);
+	rc |= inv_imu_set_gyro_fsr(s, GYRO_CONFIG0_FS_SEL_2000dps);
+
+	/* Set frequencies */ 
+	rc |= inv_imu_set_accel_frequency(s, ACCEL_CONFIG0_ODR_100_HZ);
+	rc |= inv_imu_set_gyro_frequency(s, GYRO_CONFIG0_ODR_100_HZ);
+
+	/* Enable sensors */
+	rc |= inv_imu_enable_accel_low_noise_mode(s);
+	rc |= inv_imu_enable_gyro_low_noise_mode(s);
+	
+	if (rc != 0) {
+		LOG_ERR("Error while configuring ICM device");
+	} else {
+		LOG_DBG("Configuring ICM device OK");
+	}
+	
+	return rc;
+}
+#endif

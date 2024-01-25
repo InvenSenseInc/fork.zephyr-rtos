@@ -120,6 +120,16 @@ int main(void)
 	}
 
 	printf("Configured for APEX data collecting.\n");
+#elif CONFIG_ICM42670S_AML
+	struct sensor_value aml_config;
+	
+	aml_config.val1 = 15; /* Delta Gain X */
+	aml_config.val2 = 15; /* Delta Gain Y */
+	sensor_attr_set(dev, SENSOR_CHAN_AML,
+				SENSOR_ATTR_CONFIGURATION,
+				&aml_config);
+
+	printf("Configured for AML data collecting.\n");
 #else
 	struct sensor_value full_scale, bw_filter, sampling_freq, mode;
 	struct sensor_value accel[3];
@@ -179,6 +189,8 @@ int main(void)
 
 	printf("Configured for IMU sampling.\n");
 #endif
+
+	k_sleep(K_MSEC(1000));
 	
 	while (1) {
 		
@@ -214,6 +226,8 @@ int main(void)
  #ifdef CONFIG_ICM42670S_APEX_SMD
 			printf("[%s]: SMD\n", now_str());
  #endif
+#elif CONFIG_ICM42670S_AML
+			
 #else
 			sensor_channel_get(dev, SENSOR_CHAN_ACCEL_XYZ,
 							accel);

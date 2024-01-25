@@ -128,4 +128,8 @@ int icm42670S_apex_enable_wom(inv_imu_device_t *s);
 int icm42670S_apex_wom_fetch_from_dmp(const struct device *dev);
 #endif
 
+#ifdef CONFIG_ICM42670S_AML
+int icm42670S_aml_init(inv_imu_device_t *s, int8_t delta_gain_x, int8_t delta_gain_y);
+#endif
+
 #endif /* ZEPHYR_DRIVERS_SENSOR_ICM42670S_ICM42670S_H_ */

@@ -488,6 +488,19 @@ static int icm42670S_attr_set(const struct device *dev,
 		}
 		break;
 
+	case SENSOR_CHAN_AML:
+		if (attr == SENSOR_ATTR_CONFIGURATION) {
+#ifdef CONFIG_ICM42670S_AML
+			err |= icm42670S_aml_init(&drv_data->driver, val->val1, val->val2);
+#else
+			LOG_ERR("Not supported ATTR value");
+#endif
+		} else {
+			LOG_ERR("Not supported ATTR");
+				return -EINVAL;
+		}
+		break;	
+
 	default:
 		LOG_ERR("Not supported");
 		return -EINVAL;
