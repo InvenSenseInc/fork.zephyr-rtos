@@ -137,6 +137,20 @@ typedef struct {
 	inv_imu_interrupt_value INV_TILT_DET;
 } inv_imu_interrupt_parameter_t;
 
+/** INT1 pin configuration */
+typedef struct {
+	INT_CONFIG_INT1_POLARITY_t      int_polarity;
+	INT_CONFIG_INT1_MODE_t          int_mode;
+	INT_CONFIG_INT1_DRIVE_CIRCUIT_t int_drive;
+} inv_imu_int1_pin_config_t;
+
+/** INT2 pin configuration */
+typedef struct {
+	INT_CONFIG_INT2_POLARITY_t      int_polarity;
+	INT_CONFIG_INT2_MODE_t          int_mode;
+	INT_CONFIG_INT2_DRIVE_CIRCUIT_t int_drive;
+} inv_imu_int2_pin_config_t;
+
 /** @brief Initializes device.
  *  @param[in] s                Pointer to device.
  *  @param[in] serif            Pointer on serial interface structure.
@@ -276,6 +290,20 @@ int inv_imu_enable_fsync(inv_imu_device_t *s);
 int inv_imu_disable_fsync(inv_imu_device_t *s);
 #endif
 
+/** @brief Configure INT1 pin behavior.
+ *  @param[in] s     Pointer to device.
+ *  @param[in] conf  Structure with the requested configuration.
+ *  @return          0 on success, negative value on error.
+ */
+int inv_imu_set_pin_config_int1(inv_imu_device_t *s, const inv_imu_int1_pin_config_t *conf);
+
+/** @brief Configure INT2 pin behavior.
+ *  @param[in] s     Pointer to device.
+ *  @param[in] conf  Structure with the requested configuration.
+ *  @return          0 on success, negative value on error.
+ */
+int inv_imu_set_pin_config_int2(inv_imu_device_t *s, const inv_imu_int2_pin_config_t *conf);
+
 /** @brief Configure which interrupt source can trigger INT1.
  *  @param[in] s   Pointer to device.
  *  @param[in] it  Structure with the corresponding state to manage INT1.
@@ -310,6 +338,22 @@ int inv_imu_get_config_int2(inv_imu_device_t *s, inv_imu_interrupt_parameter_t *
  *  @return       0 on success, negative value on error.
  */
 int inv_imu_get_data_from_registers(inv_imu_device_t *s);
+
+/** @brief Read FIFO frame count. 
+ *  @param[in] s             Pointer to device.
+ *  @param[out] frame_count  Number of frame available in the FIFO.
+ *  @return                  0 on success, negative value on error.
+ */
+int inv_imu_get_frame_count(inv_imu_device_t *s, uint16_t *frame_count);
+
+/** @brief Decode FIFO frame. 
+ *  @param[in] s       Pointer to device.
+ *  @param[in] frame   FIFO frame data.
+ *  @param[out] event  Data content coded as an event.
+ *  @return            0 on success, negative value on error.
+ */
+int inv_imu_decode_fifo_frame(inv_imu_device_t *s, const uint8_t *frame,
+                              inv_imu_sensor_event_t *event);
 
 /** @brief Read all available packets from the FIFO. 
  *         For each packet function builds a sensor event containing packet data 

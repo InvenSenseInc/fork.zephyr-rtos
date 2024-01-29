@@ -19,9 +19,7 @@ int icm42670S_apex_enable(inv_imu_device_t *s)
 	/* Disabling FIFO to avoid extra power consumption due to ALP config */
 	err |= inv_imu_configure_fifo(s, INV_IMU_FIFO_DISABLED);
 	
-	/* Disable data ready interrupt and enable Pedometer, Tilt and SMD interrupts */
-	err |= inv_imu_get_config_int1(s, &config_int);
-	config_int.INV_UI_DRDY       = INV_IMU_DISABLE;
+	/* Enable Pedometer, Tilt and SMD interrupts */
 	config_int.INV_STEP_DET      = INV_IMU_ENABLE;
 	config_int.INV_STEP_CNT_OVFL = INV_IMU_ENABLE;
 	config_int.INV_TILT_DET      = INV_IMU_ENABLE;
@@ -170,8 +168,6 @@ int icm42670S_apex_enable_wom(inv_imu_device_t *s)
 	 */
 	rc |= inv_imu_configure_fifo(s, INV_IMU_FIFO_DISABLED);
 	
-	rc |= inv_imu_get_config_int1(s, &config_int);
-	config_int.INV_UI_DRDY       = INV_IMU_DISABLE;
 	config_int.INV_WOM_X         = INV_IMU_ENABLE;
 	config_int.INV_WOM_Y         = INV_IMU_ENABLE;
 	config_int.INV_WOM_Z         = INV_IMU_ENABLE;

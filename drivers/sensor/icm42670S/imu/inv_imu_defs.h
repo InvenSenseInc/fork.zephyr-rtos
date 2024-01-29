@@ -439,18 +439,6 @@ typedef enum {
 } FIFO_CONFIG1_FIFO_BYPASS_t;
 
 /*
- * APEX_DATA0 and APEX_DATA1
- * Register Name: APEX_DATA0 and APEX_DATA1
- */
-
-/* Pedometer output */
-typedef struct APEX_DATA_STEP_ACTIVITY {
-	uint16_t step_cnt; /* Number of steps taken */
-	uint8_t  step_cadence; /* Walk/run cadence in number of samples. Format is u6.2.*/
-	uint8_t  activity_class; /* Detected activity unknown (0), walk (1) or run (2) */
-} APEX_DATA_STEP_ACTIVITY_t;
-
-/*
  * APEX_DATA3
  * Register Name: APEX_DATA3
  */
