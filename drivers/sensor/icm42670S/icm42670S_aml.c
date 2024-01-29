@@ -5,6 +5,7 @@
  */
 
 #include <zephyr/logging/log.h>
+#include <zephyr/drivers/sensor/icm42670S.h>
 
 #include "icm42670S.h"
 #include "invn_algo_aml.h"
@@ -12,6 +13,15 @@
 LOG_MODULE_REGISTER(ICM42670S_AML, CONFIG_SENSOR_LOG_LEVEL);
 
 #ifdef CONFIG_ICM42670S_AML
+static int32_t accel_mounting_matrix[9]= {0,   -1,    0,
+                                         -1,    0,    0,
+                                          0,    0,    1 };
+
+static int32_t gyro_mounting_matrix[9]= { 0,    1,    0,
+                                          1,    0,    0,
+                                          0,    0,   -1 };
+
+
 int icm42670S_aml_init(inv_imu_device_t *s, int8_t delta_gain_x, int8_t delta_gain_y)
 {
 	int rc = 0;
@@ -56,5 +66,54 @@ int icm42670S_aml_init(inv_imu_device_t *s, int8_t delta_gain_x, int8_t delta_ga
 	}
 	
 	return rc;
+}
+
+static void apply_mounting_matrix(const int32_t matrix[9], int16_t raw[3])
+{
+	unsigned i;
+	int16_t out_raw[3];
+	
+	for(i = 0; i < 3; i++) {
+		out_raw[i] =  ((int16_t)matrix[3*i+0] * raw[0]);
+		out_raw[i] += ((int16_t)matrix[3*i+1] * raw[1]);
+		out_raw[i] += ((int16_t)matrix[3*i+2] * raw[2]);
+	}
+
+	raw[0] = out_raw[0];
+	raw[1] = out_raw[1];
+	raw[2] = out_raw[2];
+}
+
+void icm42670S_aml_process(const struct device *dev)
+{
+	struct icm42670S_data *data = dev->data;
+	
+	static InvnAlgoAMLInput input;
+	static InvnAlgoAMLOutput output;
+	
+	input.racc_data[0] = data->accel[0];
+	input.racc_data[1] = data->accel[1];
+	input.racc_data[2] = data->accel[2];
+	
+	input.rgyr_data[0] = data->gyro[0];
+	input.rgyr_data[1] = data->gyro[1];
+	input.rgyr_data[2] = data->gyro[2];
+	
+	apply_mounting_matrix(accel_mounting_matrix, input.racc_data);
+	apply_mounting_matrix(gyro_mounting_matrix, input.rgyr_data);
+
+	/* Process the AML algo */
+	invn_algo_aml_process(&input, &output);
+	
+	if (output.status & INVN_ALGO_AML_STATUS_DELTA_COMPUTED) {
+		data->delta[0] = output.delta[0];
+		data->delta[1] = output.delta[1];
+	}
+	
+	data->swipes_detected = 0;
+	if (output.swipes_detected != 0) {
+		data->swipes_detected = output.swipes_detected;
+		output.swipes_detected = 0;
+	}
 }
 #endif

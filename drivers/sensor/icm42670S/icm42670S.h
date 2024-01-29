@@ -80,6 +80,10 @@ struct icm42670S_data {
 	uint8_t wom_y;
 	uint8_t wom_z;
 #endif
+#ifdef CONFIG_ICM42670S_AML
+	int8_t  delta[2];
+	uint8_t swipes_detected;
+#endif
 
 	const struct device *dev;
 	struct gpio_callback gpio_cb;
@@ -130,6 +134,7 @@ int icm42670S_apex_wom_fetch_from_dmp(const struct device *dev);
 
 #ifdef CONFIG_ICM42670S_AML
 int icm42670S_aml_init(inv_imu_device_t *s, int8_t delta_gain_x, int8_t delta_gain_y);
+void icm42670S_aml_process(const struct device *dev);
 #endif
 
 #endif /* ZEPHYR_DRIVERS_SENSOR_ICM42670S_ICM42670S_H_ */

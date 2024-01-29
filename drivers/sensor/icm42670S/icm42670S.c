@@ -160,6 +160,13 @@ static int icm42670S_sample_fetch(const struct device *dev,
 #endif
 	}
 	
+#ifdef CONFIG_ICM42670S_AML
+	if ((enum sensor_channel_icm42670S)chan == SENSOR_CHAN_AML) {
+		status = icm42670S_fetch_from_fifo(dev);
+		icm42670S_aml_process(dev);
+	}
+#endif
+	
 	if (chan == SENSOR_CHAN_ALL)
 		status = icm42670S_fetch_from_fifo(dev);
 	
@@ -224,6 +231,13 @@ static int icm42670S_channel_get(const struct device *dev,
 		val->val2 = data->wom_y;
 		val ++;
 		val->val1 = data->wom_z;
+#endif
+#ifdef CONFIG_ICM42670S_AML
+	} else if ((enum sensor_channel_icm42670S)chan == SENSOR_CHAN_AML) {
+		val->val1 = data->delta[0];
+		val->val2 = data->delta[1];
+		val ++;
+		val->val1 = data->swipes_detected;
 #endif
 	} else {
 		return -ENOTSUP;

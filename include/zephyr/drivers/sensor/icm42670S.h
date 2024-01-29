@@ -29,6 +29,14 @@
 #define ICM42670S_APEX_SMD          (3)
 #define ICM42670S_APEX_WOM          (4)
 
+/** ICM42670S swipes gesture */
+#define ICM42670S_AML_SWIPE_LEFT                0x1
+#define ICM42670S_AML_SWIPE_RIGTH               0x2
+#define ICM42670S_AML_SWIPE_UP                  0x4
+#define ICM42670S_AML_SWIPE_DOWN                0x8
+#define ICM42670S_AML_SWIPE_CLOCKWISE           0x10
+#define ICM42670S_AML_SWIPE_COUNTERCLOCKWISE    0x20
+
 /**
  * @brief Extended sensor attributes for ICM42670S 6-axis MEMS sensor
  *

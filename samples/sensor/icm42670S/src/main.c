@@ -129,6 +129,16 @@ int main(void)
 				SENSOR_ATTR_CONFIGURATION,
 				&aml_config);
 
+	data_trigger = (struct sensor_trigger) {
+		.type = SENSOR_TRIG_DATA_READY,
+		.chan = SENSOR_CHAN_AML,
+	};
+	if (sensor_trigger_set(dev, &data_trigger,
+			       handle_icm42670S_drdy) < 0) {
+		printf("Cannot configure data trigger!!!\n");
+		return 0;
+	}
+	
 	printf("Configured for AML data collecting.\n");
 #else
 	struct sensor_value full_scale, bw_filter, sampling_freq, mode;
@@ -227,7 +237,19 @@ int main(void)
 			printf("[%s]: SMD\n", now_str());
  #endif
 #elif CONFIG_ICM42670S_AML
+			struct sensor_value aml_data[2];
+			sensor_channel_get(dev, SENSOR_CHAN_AML,
+							aml_data);
 			
+			printf("[%s]: AML Pointing Delta=[%d, %d] %s \n",
+				   now_str(),
+				   aml_data[0].val1, aml_data[0].val2,			   
+				   aml_data[1].val1 == ICM42670S_AML_SWIPE_LEFT ?             "Swipe Left":
+				   aml_data[1].val1 == ICM42670S_AML_SWIPE_RIGTH ?            "Swipe Rigth":
+				   aml_data[1].val1 == ICM42670S_AML_SWIPE_UP ?               "Swipe Up":
+				   aml_data[1].val1 == ICM42670S_AML_SWIPE_DOWN ?             "Swipe Down":
+				   aml_data[1].val1 == ICM42670S_AML_SWIPE_CLOCKWISE ?        "Swipe Clockwise":
+				   aml_data[1].val1 == ICM42670S_AML_SWIPE_COUNTERCLOCKWISE ? "Swipe Counter Clockwise":"");
 #else
 			sensor_channel_get(dev, SENSOR_CHAN_ACCEL_XYZ,
 							accel);
