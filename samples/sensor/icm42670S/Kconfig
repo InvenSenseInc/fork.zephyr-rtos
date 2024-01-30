@@ -34,4 +34,8 @@ endchoice
 config ICM42670S_AML
 	default y
 
+choice AML_FEATURES
+	default ICM42670S_AML_GESTURES
+endchoice
+
 source "Kconfig.zephyr"

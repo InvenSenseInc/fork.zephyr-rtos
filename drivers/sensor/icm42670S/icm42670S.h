@@ -83,6 +83,10 @@ struct icm42670S_data {
 #ifdef CONFIG_ICM42670S_AML
 	int8_t  delta[2];
 	uint8_t swipes_detected;
+	uint8_t remote_position;
+	uint8_t remote_static;
+	int16_t gyr_offset[3];
+	int32_t quaternion[4];
 #endif
 
 	const struct device *dev;

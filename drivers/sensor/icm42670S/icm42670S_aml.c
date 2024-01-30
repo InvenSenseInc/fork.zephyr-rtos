@@ -110,10 +110,20 @@ void icm42670S_aml_process(const struct device *dev)
 		data->delta[1] = output.delta[1];
 	}
 	
+	if (output.status & INVN_ALGO_AML_STATUS_STATIC) {
+		data->remote_static = 1;
+	} else {
+		data->remote_static = 0;
+	}
+	
 	data->swipes_detected = 0;
 	if (output.swipes_detected != 0) {
 		data->swipes_detected = output.swipes_detected;
 		output.swipes_detected = 0;
+	}
+	
+	if ((uint8_t) output.remote_position != data->remote_position) {
+		data->remote_position = (uint8_t) output.remote_position;
 	}
 }
 #endif

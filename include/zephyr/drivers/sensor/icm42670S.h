@@ -37,6 +37,14 @@
 #define ICM42670S_AML_SWIPE_CLOCKWISE           0x10
 #define ICM42670S_AML_SWIPE_COUNTERCLOCKWISE    0x20
 
+/** ICM42670S remote position */
+#define ICM42670S_AML_TOP      (0)
+#define ICM42670S_AML_BOTTOM   (1)
+#define ICM42670S_AML_LEFT     (2)
+#define ICM42670S_AML_RIGHT    (3)
+#define ICM42670S_AML_FRONT    (4)
+#define ICM42670S_AML_REAR     (5)
+
 /**
  * @brief Extended sensor attributes for ICM42670S 6-axis MEMS sensor
  *

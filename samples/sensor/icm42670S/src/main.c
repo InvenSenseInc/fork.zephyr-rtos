@@ -120,7 +120,7 @@ int main(void)
 	}
 
 	printf("Configured for APEX data collecting.\n");
-#elif CONFIG_ICM42670S_AML
+#elif defined(CONFIG_ICM42670S_AML)
 	struct sensor_value aml_config;
 	
 	aml_config.val1 = 15; /* Delta Gain X */
@@ -236,20 +236,51 @@ int main(void)
  #ifdef CONFIG_ICM42670S_APEX_SMD
 			printf("[%s]: SMD\n", now_str());
  #endif
-#elif CONFIG_ICM42670S_AML
-			struct sensor_value aml_data[2];
+#elif defined(CONFIG_ICM42670S_AML)
+ #ifdef CONFIG_ICM42670S_AML_POINTING
+			struct sensor_value pointing_data;
+			sensor_channel_get(dev, SENSOR_CHAN_AML,
+							&pointing_data);
+			
+			printf("[%s]: AML Pointing Delta=[%d, %d]\n",
+				   now_str(),
+				   pointing_data.val1, pointing_data.val2);
+ #endif
+ #ifdef CONFIG_ICM42670S_AML_GESTURES
+ 			struct sensor_value aml_data[2];
+			static uint8_t previous_position = 0, previous_status = 0;
 			sensor_channel_get(dev, SENSOR_CHAN_AML,
 							aml_data);
+
+			if (aml_data[0].val1 != 0)
+				printf("[%s]: AML Gestures: %s \n",
+					   now_str(),			   
+					   aml_data[0].val1 == ICM42670S_AML_SWIPE_LEFT ?             "Swipe Left":
+					   aml_data[0].val1 == ICM42670S_AML_SWIPE_RIGTH ?            "Swipe Rigth":
+					   aml_data[0].val1 == ICM42670S_AML_SWIPE_UP ?               "Swipe Up":
+					   aml_data[0].val1 == ICM42670S_AML_SWIPE_DOWN ?             "Swipe Down":
+					   aml_data[0].val1 == ICM42670S_AML_SWIPE_CLOCKWISE ?        "Swipe Clockwise":
+					   aml_data[0].val1 == ICM42670S_AML_SWIPE_COUNTERCLOCKWISE ? "Swipe Counter Clockwise":"Unknown");
+				
+			if (aml_data[0].val2 != previous_position) {
+				printf("[%s]: AML Remote position: %s \n",
+					   now_str(),			   
+					   aml_data[0].val2 == ICM42670S_AML_TOP ?    "Top":
+					   aml_data[0].val2 == ICM42670S_AML_BOTTOM ? "Bottom":
+					   aml_data[0].val2 == ICM42670S_AML_LEFT ?   "Left":
+					   aml_data[0].val2 == ICM42670S_AML_RIGHT ?  "Right":
+					   aml_data[0].val2 == ICM42670S_AML_FRONT ?  "Front":
+					   aml_data[0].val2 == ICM42670S_AML_REAR ?   "Rear":"Unknown");
+				previous_position = aml_data[0].val2;
+			}
 			
-			printf("[%s]: AML Pointing Delta=[%d, %d] %s \n",
-				   now_str(),
-				   aml_data[0].val1, aml_data[0].val2,			   
-				   aml_data[1].val1 == ICM42670S_AML_SWIPE_LEFT ?             "Swipe Left":
-				   aml_data[1].val1 == ICM42670S_AML_SWIPE_RIGTH ?            "Swipe Rigth":
-				   aml_data[1].val1 == ICM42670S_AML_SWIPE_UP ?               "Swipe Up":
-				   aml_data[1].val1 == ICM42670S_AML_SWIPE_DOWN ?             "Swipe Down":
-				   aml_data[1].val1 == ICM42670S_AML_SWIPE_CLOCKWISE ?        "Swipe Clockwise":
-				   aml_data[1].val1 == ICM42670S_AML_SWIPE_COUNTERCLOCKWISE ? "Swipe Counter Clockwise":"");
+			if (aml_data[1].val1 != previous_status) {
+				printf("[%s]: AML Remote status: %s \n",
+					   now_str(),
+					   aml_data[1].val1 == 1 ? "Static" : "Non-static");
+				previous_status = aml_data[1].val1;
+			}
+ #endif
 #else
 			sensor_channel_get(dev, SENSOR_CHAN_ACCEL_XYZ,
 							accel);
