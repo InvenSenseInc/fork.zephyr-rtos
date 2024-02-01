@@ -281,6 +281,33 @@ int main(void)
 				previous_status = aml_data[1].val1;
 			}
  #endif
+ #ifdef CONFIG_ICM42670S_AML_GYR_OFFSET
+			struct sensor_value gyr_offset[3];
+			static struct sensor_value previous_gyr_offset[3];
+			sensor_channel_get(dev, SENSOR_CHAN_AML,
+							gyr_offset);
+			
+			if (memcmp(gyr_offset, previous_gyr_offset, sizeof(struct sensor_value)) != 0) {
+				printf("[%s]: AML Gyro biases: %f %f %f rad/s\n",
+						now_str(),
+						sensor_value_to_double(&gyr_offset[0]),
+						sensor_value_to_double(&gyr_offset[1]),
+						sensor_value_to_double(&gyr_offset[2]));
+				memcpy(previous_gyr_offset, gyr_offset, sizeof(struct sensor_value));
+			}
+ #endif
+ #ifdef CONFIG_ICM42670S_AML_QUATERNION
+			struct sensor_value quaternion[4];
+			sensor_channel_get(dev, SENSOR_CHAN_AML,
+							quaternion);
+			
+			printf("[%s]:AML Quaternion=[%f %f %f %f]\n",
+					now_str(),
+					sensor_value_to_double(&quaternion[0]),
+					sensor_value_to_double(&quaternion[1]),
+					sensor_value_to_double(&quaternion[2]),
+					sensor_value_to_double(&quaternion[3]));
+ #endif
 #else
 			sensor_channel_get(dev, SENSOR_CHAN_ACCEL_XYZ,
 							accel);

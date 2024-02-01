@@ -22,15 +22,18 @@ static int32_t gyro_mounting_matrix[9]= { 0,    1,    0,
                                           0,    0,   -1 };
 
 
-int icm42670S_aml_init(inv_imu_device_t *s, int8_t delta_gain_x, int8_t delta_gain_y)
+int icm42670S_aml_init(const struct device *dev, inv_imu_device_t *s, int8_t delta_gain_x, int8_t delta_gain_y)
 {
 	int rc = 0;
 	/* Contains algorithms configuration */
 	InvnAlgoAMLConfig config;
+	struct icm42670S_data *data = dev->data;
 	
 	/* FSR */
 	config.acc_fsr = 16;
 	config.gyr_fsr = 2000;
+	data->accel_fs = 16;
+	data->gyro_fs = 2000;
 
 	/* Delta Gain */
 	config.delta_gain[0] = delta_gain_x;
@@ -108,6 +111,11 @@ void icm42670S_aml_process(const struct device *dev)
 	if (output.status & INVN_ALGO_AML_STATUS_DELTA_COMPUTED) {
 		data->delta[0] = output.delta[0];
 		data->delta[1] = output.delta[1];
+		
+		data->quaternion[0] = output.quaternion[0];
+		data->quaternion[1] = output.quaternion[1];
+		data->quaternion[2] = output.quaternion[2];
+		data->quaternion[3] = output.quaternion[3];
 	}
 	
 	if (output.status & INVN_ALGO_AML_STATUS_STATIC) {
@@ -125,5 +133,22 @@ void icm42670S_aml_process(const struct device *dev)
 	if ((uint8_t) output.remote_position != data->remote_position) {
 		data->remote_position = (uint8_t) output.remote_position;
 	}
+	
+	if (output.status & INVN_ALGO_AML_STATUS_NEW_GYRO_OFFSET) {
+		data->gyro_offset[0] = output.gyr_offset[0];
+		data->gyro_offset[1] = output.gyr_offset[1];
+		data->gyro_offset[2] = output.gyr_offset[2];
+	}
 }
+
+void icm42670S_aml_quaternion_convert(struct sensor_value *val, int32_t raw_val)
+{
+	int64_t conv_val;
+
+	/* Converting q10 */
+	conv_val = (int64_t)(raw_val * 1000000) / (1 << 10);
+	val->val1 = conv_val / 1000000;
+	val->val2 = conv_val % 1000000;
+}
+
 #endif

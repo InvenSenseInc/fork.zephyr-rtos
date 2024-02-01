@@ -244,6 +244,19 @@ static int icm42670S_channel_get(const struct device *dev,
 		val++;
 		val->val1 = data->remote_static;
 #endif
+#ifdef CONFIG_ICM42670S_AML_GYR_OFFSET
+	} else if ((enum sensor_channel_icm42670S)chan == SENSOR_CHAN_AML) {
+		icm42670S_gyro_convert(val, data->gyro_offset[0], data->gyro_fs);
+		icm42670S_gyro_convert(val + 1, data->gyro_offset[1], data->gyro_fs);
+		icm42670S_gyro_convert(val + 2, data->gyro_offset[2], data->gyro_fs);
+#endif
+#ifdef CONFIG_ICM42670S_AML_QUATERNION
+	} else if ((enum sensor_channel_icm42670S)chan == SENSOR_CHAN_AML) {
+		icm42670S_aml_quaternion_convert(val, data->quaternion[0]);
+		icm42670S_aml_quaternion_convert(val + 1, data->quaternion[1]);
+		icm42670S_aml_quaternion_convert(val + 2, data->quaternion[2]);
+		icm42670S_aml_quaternion_convert(val + 3, data->quaternion[3]);
+#endif
 	} else {
 		return -ENOTSUP;
 	}
@@ -510,7 +523,7 @@ static int icm42670S_attr_set(const struct device *dev,
 	case SENSOR_CHAN_AML:
 		if (attr == SENSOR_ATTR_CONFIGURATION) {
 #ifdef CONFIG_ICM42670S_AML
-			err |= icm42670S_aml_init(&drv_data->driver, val->val1, val->val2);
+			err |= icm42670S_aml_init(dev, &drv_data->driver, val->val1, val->val2);
 #else
 			LOG_ERR("Not supported ATTR value");
 #endif

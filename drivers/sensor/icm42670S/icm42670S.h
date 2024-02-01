@@ -85,7 +85,7 @@ struct icm42670S_data {
 	uint8_t swipes_detected;
 	uint8_t remote_position;
 	uint8_t remote_static;
-	int16_t gyr_offset[3];
+	int16_t gyro_offset[3];
 	int32_t quaternion[4];
 #endif
 
@@ -137,8 +137,9 @@ int icm42670S_apex_wom_fetch_from_dmp(const struct device *dev);
 #endif
 
 #ifdef CONFIG_ICM42670S_AML
-int icm42670S_aml_init(inv_imu_device_t *s, int8_t delta_gain_x, int8_t delta_gain_y);
+int icm42670S_aml_init(const struct device *dev, inv_imu_device_t *s, int8_t delta_gain_x, int8_t delta_gain_y);
 void icm42670S_aml_process(const struct device *dev);
+void icm42670S_aml_quaternion_convert(struct sensor_value *val, int32_t raw_val);
 #endif
 
 #endif /* ZEPHYR_DRIVERS_SENSOR_ICM42670S_ICM42670S_H_ */

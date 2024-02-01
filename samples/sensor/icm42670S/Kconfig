@@ -32,10 +32,10 @@ endchoice
 # Enable AML support
 
 config ICM42670S_AML
-	default y
+	default n
 
 choice AML_FEATURES
-	default ICM42670S_AML_GESTURES
+	default ICM42670S_AML_POINTING
 endchoice
 
 source "Kconfig.zephyr"
