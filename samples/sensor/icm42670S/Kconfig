@@ -29,7 +29,8 @@ choice APEX_FEATURES
     default ICM42670S_APEX_PEDOMETER
 endchoice
 
-# Enable AML support
+# Enable AML features support and choice between :
+# ICM42670S_AML_POINTING, ICM42670S_AML_GESTURES, ICM42670S_AML_GYR_OFFSET or ICM42670S_AML_QUATERNION
 
 config ICM42670S_AML
 	default n
