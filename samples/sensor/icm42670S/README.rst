@@ -30,6 +30,7 @@ Air Motion Library is capable of :
 ** Gyroscope offsets calibration: Computes gyroscope offsets.
 ** Quaternion computing; Computes the orientation of the device.
 For more information, see zephyr\drivers\sensor\icm42670S\invn.algo.sw-integration.aml-42670S-gcc-zephyr-1.6.0\include\invn_algo_aml.h
+and documentation in package (InvnAlgoAML.pdf).
 
 Wiring
 *******
@@ -123,7 +124,7 @@ Found device "icm42670S@68", getting sensor data
 
 
 ## ICM42670S_AML = y
-## AML_FEATURES = ICM42670S_AML_POINTING
+## ICM42670S_AML_POINTING = y
 
 Configured for AML data collecting.
 [00:00:00.719,726] <dbg> : icm42670S_chip_init: "icm42670S@68" OK
@@ -140,7 +141,7 @@ Found device "icm42670S@68", getting sensor data
 
 
 ## ICM42670S_AML = y
-## AML_FEATURES = ICM42670S_AML_GESTURES
+## ICM42670S_AML_GESTURES = y
 
 Configured for AML data collecting.
 [00:00:00.709,442] <dbg> : icm42670S_chip_init: "icm42670S@68" OK
@@ -158,7 +159,7 @@ Found device "icm42670S@68", getting sensor data
 
 
 ## ICM42670S_AML = y
-## AML_FEATURES = ICM42670S_AML_GYR_OFFSET
+## ICM42670S_AML_GYR_OFFSET = y
 
 Configured for AML data collecting.
 [00:00:00.708,251] <dbg> : icm42670S_chip_init: "icm42670S@68" OK
@@ -170,7 +171,7 @@ Found device "icm42670S@68", getting sensor data
 
 
 ## ICM42670S_AML = y
-## AML_FEATURES = ICM42670S_AML_QUATERNION
+## ICM42670S_AML_QUATERNION = y
 
 Configured for AML data collecting.
 [00:00:00.591,735] <dbg> : icm42670S_chip_init: "icm42670S@68" OK

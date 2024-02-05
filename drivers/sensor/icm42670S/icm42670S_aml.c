@@ -13,6 +13,11 @@
 LOG_MODULE_REGISTER(ICM42670S_AML, CONFIG_SENSOR_LOG_LEVEL);
 
 #ifdef CONFIG_ICM42670S_AML
+/* ICM mounting matrix for AML referential.
+ * For AML algorithm, accelerometer data are inverted compared to ICM convention, 
+ * It expects gravity minus acceleration and ICM measures acceleration minus gravity 
+ * Refer to AML documentation 
+ */
 static int32_t accel_mounting_matrix[9]= {0,   -1,    0,
                                          -1,    0,    0,
                                           0,    0,    1 };

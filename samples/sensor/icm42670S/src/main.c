@@ -207,84 +207,87 @@ int main(void)
 		if( irq_from_device ) {
 #ifdef CONFIG_ICM42670S_APEX 
  #ifdef CONFIG_ICM42670S_APEX_PEDOMETER
-			struct sensor_value apex_pedometer[2];
+			struct sensor_value apex_pedometer[3];
 			sensor_channel_get(dev, SENSOR_CHAN_APEX_MOTION,
 							apex_pedometer);
 			
 			printf("[%s]: STEP_DET     count: %d steps  cadence: %.1f steps/s  activity: %s\n",
 				   now_str(),
 				   apex_pedometer[0].val1,
-				   sensor_value_to_double(&apex_pedometer[1]),
-				   apex_pedometer[0].val2 == 1 ? "Walk":
-				   apex_pedometer[0].val2 == 2 ? "Run":
+				   sensor_value_to_double(&apex_pedometer[2]),
+				   apex_pedometer[1].val1 == 1 ? "Walk":
+				   apex_pedometer[1].val1 == 2 ? "Run":
 											  "Unknown");
  #endif
  #ifdef CONFIG_ICM42670S_APEX_TILT
 			printf("[%s]: TILT\n", now_str());
  #endif
  #ifdef CONFIG_ICM42670S_APEX_WOM
-			struct sensor_value apex_wom[2];
+			struct sensor_value apex_wom[3];
 			sensor_channel_get(dev, SENSOR_CHAN_APEX_MOTION,
 							apex_wom);
 			
 			printf("[%s]: WOM x=%d y=%d z=%d\n", 
 					now_str(),
 					apex_wom[0].val1,
-					apex_wom[0].val2,
-					apex_wom[1].val1);
+					apex_wom[1].val1,
+					apex_wom[2].val1);
  #endif
  #ifdef CONFIG_ICM42670S_APEX_SMD
 			printf("[%s]: SMD\n", now_str());
  #endif
 #elif defined(CONFIG_ICM42670S_AML)
  #ifdef CONFIG_ICM42670S_AML_POINTING
-			struct sensor_value pointing_data;
-			sensor_channel_get(dev, SENSOR_CHAN_AML,
-							&pointing_data);
+			struct sensor_value pointing_data[2];
+			sensor_channel_get(dev, SENSOR_CHAN_AML_OUTPUT_DELTA_POINTING,
+							pointing_data);
 			
 			printf("[%s]: AML Pointing Delta=[%d, %d]\n",
 				   now_str(),
-				   pointing_data.val1, pointing_data.val2);
+				   pointing_data[0].val1, pointing_data[0].val1);
  #endif
  #ifdef CONFIG_ICM42670S_AML_GESTURES
- 			struct sensor_value aml_data[2];
+ 			struct sensor_value aml_data[3];
 			static uint8_t previous_position = 0, previous_status = 0;
-			sensor_channel_get(dev, SENSOR_CHAN_AML,
+			sensor_channel_get(dev, SENSOR_CHAN_AML_OUTPUT_GESTURES,
 							aml_data);
-
-			if (aml_data[0].val1 != 0)
-				printf("[%s]: AML Gestures: %s \n",
-					   now_str(),			   
-					   aml_data[0].val1 == ICM42670S_AML_SWIPE_LEFT ?             "Swipe Left":
-					   aml_data[0].val1 == ICM42670S_AML_SWIPE_RIGTH ?            "Swipe Rigth":
-					   aml_data[0].val1 == ICM42670S_AML_SWIPE_UP ?               "Swipe Up":
-					   aml_data[0].val1 == ICM42670S_AML_SWIPE_DOWN ?             "Swipe Down":
-					   aml_data[0].val1 == ICM42670S_AML_SWIPE_CLOCKWISE ?        "Swipe Clockwise":
-					   aml_data[0].val1 == ICM42670S_AML_SWIPE_COUNTERCLOCKWISE ? "Swipe Counter Clockwise":"Unknown");
+			   
+			if (aml_data[0].val1 & ICM42670S_AML_SWIPE_LEFT) 
+				printf("[%s]: AML Gestures: Swipe Left \n", now_str());
+			if (aml_data[0].val1 & ICM42670S_AML_SWIPE_RIGTH)
+				printf("[%s]: AML Gestures: Swipe Rigth \n", now_str());
+			if (aml_data[0].val1 & ICM42670S_AML_SWIPE_UP) 
+				printf("[%s]: AML Gestures: Swipe Up \n", now_str());
+			if (aml_data[0].val1 & ICM42670S_AML_SWIPE_DOWN)
+				printf("[%s]: AML Gestures: Swipe Down \n", now_str());
+			if (aml_data[0].val1 & ICM42670S_AML_SWIPE_CLOCKWISE)
+				printf("[%s]: AML Gestures: Swipe Clockwise \n", now_str());
+			if (aml_data[0].val1 & ICM42670S_AML_SWIPE_COUNTERCLOCKWISE)
+				printf("[%s]: AML Gestures: Swipe Counter Clockwise \n", now_str());
 				
-			if (aml_data[0].val2 != previous_position) {
+			if (aml_data[1].val1 != previous_position) {
 				printf("[%s]: AML Remote position: %s \n",
 					   now_str(),			   
-					   aml_data[0].val2 == ICM42670S_AML_TOP ?    "Top":
-					   aml_data[0].val2 == ICM42670S_AML_BOTTOM ? "Bottom":
-					   aml_data[0].val2 == ICM42670S_AML_LEFT ?   "Left":
-					   aml_data[0].val2 == ICM42670S_AML_RIGHT ?  "Right":
-					   aml_data[0].val2 == ICM42670S_AML_FRONT ?  "Front":
-					   aml_data[0].val2 == ICM42670S_AML_REAR ?   "Rear":"Unknown");
-				previous_position = aml_data[0].val2;
+					   aml_data[1].val1 == ICM42670S_AML_TOP ?    "Top":
+					   aml_data[1].val1 == ICM42670S_AML_BOTTOM ? "Bottom":
+					   aml_data[1].val1 == ICM42670S_AML_LEFT ?   "Left":
+					   aml_data[1].val1 == ICM42670S_AML_RIGHT ?  "Right":
+					   aml_data[1].val1 == ICM42670S_AML_FRONT ?  "Front":
+					   aml_data[1].val1 == ICM42670S_AML_REAR ?   "Rear":"Unknown");
+				previous_position = aml_data[1].val1;
 			}
 			
-			if (aml_data[1].val1 != previous_status) {
+			if (aml_data[2].val1 != previous_status) {
 				printf("[%s]: AML Remote status: %s \n",
 					   now_str(),
-					   aml_data[1].val1 == 1 ? "Static" : "Non-static");
-				previous_status = aml_data[1].val1;
+					   aml_data[2].val1 == 1 ? "Static" : "Non-static");
+				previous_status = aml_data[2].val1;
 			}
  #endif
  #ifdef CONFIG_ICM42670S_AML_GYR_OFFSET
 			struct sensor_value gyr_offset[3];
 			static struct sensor_value previous_gyr_offset[3];
-			sensor_channel_get(dev, SENSOR_CHAN_AML,
+			sensor_channel_get(dev, SENSOR_CHAN_AML_OUTPUT_GYRO_CALIBRATTION,
 							gyr_offset);
 			
 			if (memcmp(gyr_offset, previous_gyr_offset, sizeof(struct sensor_value)) != 0) {
@@ -298,7 +301,7 @@ int main(void)
  #endif
  #ifdef CONFIG_ICM42670S_AML_QUATERNION
 			struct sensor_value quaternion[4];
-			sensor_channel_get(dev, SENSOR_CHAN_AML,
+			sensor_channel_get(dev, SENSOR_CHAN_AML_OUTPUT_QUATERNION,
 							quaternion);
 			
 			printf("[%s]:AML Quaternion=[%f %f %f %f]\n",

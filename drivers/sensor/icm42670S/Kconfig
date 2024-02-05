@@ -33,16 +33,12 @@ config ICM42670S_APEX_WOM
 	bool "Wake on Motion (WoM): Detects motion when accelerometer samples exceed a programmable threshold"
 endchoice
 
-config ICM42670S_AML
+menuconfig ICM42670S_AML
 	bool "ICM42670S Air Motion Library (AML)"
 	default n
 
-choice AML_FEATURES
-	prompt "ICM42670S AML features"
-	depends on ICM42670S_AML
-	default ICM42670S_AML_POINTING
-	help
-		Select AML feature for ICM42670S sensor.
+if ICM42670S_AML
+
 config ICM42670S_AML_POINTING
 	bool "Delta values for pointing"
 config ICM42670S_AML_GESTURES
@@ -51,7 +47,8 @@ config ICM42670S_AML_GYR_OFFSET
 	bool "Computed 3-axis raw gyroscope offsets"
 config ICM42670S_AML_QUATERNION
 	bool "Computed W, X, Y and Z quaternion coefficients"
-endchoice
+
+endif # ICM42670S_AML
 
 config ICM42670S_THREAD_PRIORITY
 	int "Thread priority"

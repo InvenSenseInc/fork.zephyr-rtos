@@ -95,7 +95,8 @@ enum sensor_attribute_icm42670S {
  * The AML library provides pointing from ICM42670S 6-axis sensor and intended 
  * to be used in free space pointing devices to operate in-air point and click
  * navigation, just like a classic 2D mouse will do on a desk. The library 
- * additionally provides swipe motion recognition.
+ * additionally provides swipe motion recognition, gyroscope biases calibration
+ * and quaternion orientation.
  */
 enum sensor_channel_icm42670S {
 	
@@ -104,5 +105,9 @@ enum sensor_channel_icm42670S {
 	
 	/** AML */
 	SENSOR_CHAN_AML,
+	SENSOR_CHAN_AML_OUTPUT_DELTA_POINTING,
+	SENSOR_CHAN_AML_OUTPUT_GESTURES,
+	SENSOR_CHAN_AML_OUTPUT_GYRO_CALIBRATTION,
+	SENSOR_CHAN_AML_OUTPUT_QUATERNION,
 };
 #endif /* ZEPHYR_INCLUDE_DRIVERS_SENSOR_ICM42670S_H_ */
