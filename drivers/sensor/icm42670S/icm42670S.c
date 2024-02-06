@@ -394,8 +394,7 @@ static int icm42670S_attr_set(const struct device *dev,
 
 	__ASSERT_NO_MSG(val != NULL);
 
-	switch (chan) {
-	case SENSOR_CHAN_ACCEL_XYZ:
+	if (chan == SENSOR_CHAN_ACCEL_XYZ) {
 		if (attr == SENSOR_ATTR_CONFIGURATION) {
 			if (val->val1 == ICM42670S_POWER_OFF) {
 				err |= inv_imu_disable_accel(&drv_data->driver);
@@ -449,9 +448,7 @@ static int icm42670S_attr_set(const struct device *dev,
 			LOG_ERR("Not supported ATTR");
 			return -ENOTSUP;
 		}
-		break;
-		
-	case SENSOR_CHAN_GYRO_XYZ:
+	} else if (chan == SENSOR_CHAN_GYRO_XYZ) {
 		if (attr == SENSOR_ATTR_CONFIGURATION) {
 			if (val->val1 == ICM42670S_POWER_OFF) {
 				err |= inv_imu_disable_gyro(&drv_data->driver);
@@ -494,9 +491,7 @@ static int icm42670S_attr_set(const struct device *dev,
 			LOG_ERR("Not supported ATTR");
 			return -EINVAL;
 		}
-		break;
-		
-	case SENSOR_CHAN_APEX_MOTION:
+	} else if ((enum sensor_channel_icm42670S)chan == SENSOR_CHAN_APEX_MOTION) {
 		if (attr == SENSOR_ATTR_CONFIGURATION) {
 #ifdef CONFIG_ICM42670S_APEX_PEDOMETER
 			if (val->val1 == ICM42670S_APEX_PEDOMETER) {
@@ -524,12 +519,10 @@ static int icm42670S_attr_set(const struct device *dev,
 			LOG_ERR("Not supported ATTR");
 				return -EINVAL;
 		}
-		break;
-
-	case SENSOR_CHAN_AML:
+	} else if ((enum sensor_channel_icm42670S)chan == SENSOR_CHAN_AML) {
 		if (attr == SENSOR_ATTR_CONFIGURATION) {
 #ifdef CONFIG_ICM42670S_AML
-			err |= icm42670S_aml_init(dev, &drv_data->driver, val->val1, val->val2);
+			err |= icm42670S_aml_init(dev, &drv_data->driver, val[0].val1, val[1].val1);
 #else
 			LOG_ERR("Not supported ATTR value");
 #endif
@@ -537,9 +530,7 @@ static int icm42670S_attr_set(const struct device *dev,
 			LOG_ERR("Not supported ATTR");
 				return -EINVAL;
 		}
-		break;	
-
-	default:
+	} else {
 		LOG_ERR("Not supported");
 		return -EINVAL;
 	}

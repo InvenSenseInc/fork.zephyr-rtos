@@ -66,7 +66,7 @@ static const char *now_str(void)
 static void handle_icm42670S_drdy(const struct device *dev,
 				 const struct sensor_trigger *trig)
 {
-	if ((trig->type == SENSOR_TRIG_DATA_READY) || (trig->type == SENSOR_TRIG_MOTION)) {
+	if (trig->type == SENSOR_TRIG_DATA_READY) {
 		int rc = sensor_sample_fetch_chan(dev, trig->chan);
 	
 		if (rc < 0) { 
@@ -88,46 +88,13 @@ int main(void)
 		return 0;
 	}
 				
-#ifdef CONFIG_ICM42670S_APEX
-	struct sensor_value apex_mode;
+	struct sensor_value aml_config[2];
 	
-	/* Setting APEX Pedometer feature */
- #ifdef CONFIG_ICM42670S_APEX_PEDOMETER
-	apex_mode.val1 = ICM42670S_APEX_PEDOMETER;
- #endif
- #ifdef CONFIG_ICM42670S_APEX_TILT
-	apex_mode.val1 = ICM42670S_APEX_TILT;
- #endif
- #ifdef CONFIG_ICM42670S_APEX_WOM
-	apex_mode.val1 = ICM42670S_APEX_WOM;
- #endif
- #ifdef CONFIG_ICM42670S_APEX_SMD
-	apex_mode.val1 = ICM42670S_APEX_SMD;
- #endif
-	apex_mode.val2 = 0;
-	sensor_attr_set(dev, SENSOR_CHAN_APEX_MOTION,
-				SENSOR_ATTR_CONFIGURATION,
-				&apex_mode);
-	
-	data_trigger = (struct sensor_trigger) {
-		.type = SENSOR_TRIG_MOTION,
-		.chan = SENSOR_CHAN_APEX_MOTION,
-	};
-	if (sensor_trigger_set(dev, &data_trigger,
-			       handle_icm42670S_drdy) < 0) {
-		printf("Cannot configure data trigger!!!\n");
-		return 0;
-	}
-
-	printf("Configured for APEX data collecting.\n");
-#elif defined(CONFIG_ICM42670S_AML)
-	struct sensor_value aml_config;
-	
-	aml_config.val1 = 15; /* Delta Gain X */
-	aml_config.val2 = 15; /* Delta Gain Y */
+	aml_config[0].val1 = 15; /* Delta Gain X */
+	aml_config[1].val1 = 15; /* Delta Gain Y */
 	sensor_attr_set(dev, SENSOR_CHAN_AML,
 				SENSOR_ATTR_CONFIGURATION,
-				&aml_config);
+				aml_config);
 
 	data_trigger = (struct sensor_trigger) {
 		.type = SENSOR_TRIG_DATA_READY,
@@ -138,115 +105,22 @@ int main(void)
 		printf("Cannot configure data trigger!!!\n");
 		return 0;
 	}
-	
-	printf("Configured for AML data collecting.\n");
-#else
-	struct sensor_value full_scale, bw_filter, sampling_freq, mode;
-	struct sensor_value accel[3];
-	struct sensor_value gyro[3];
-	struct sensor_value temperature;
-	
-	/* Setting full scale */
-	full_scale.val1 = 2; /* G */
-	full_scale.val2 = 0;
-	sensor_attr_set(dev, SENSOR_CHAN_ACCEL_XYZ,
-				SENSOR_ATTR_FULL_SCALE,
-				&full_scale);
-	full_scale.val1 = 1000; /* dps */
-	full_scale.val2 = 0;
-	sensor_attr_set(dev, SENSOR_CHAN_GYRO_XYZ,
-				SENSOR_ATTR_FULL_SCALE,
-				&full_scale);
-				
-	/* Setting LN bandwith filtering options */
-	bw_filter.val1 = 180; /* Hz */
-	bw_filter.val2 = 0;
-	sensor_attr_set(dev, SENSOR_CHAN_ACCEL_XYZ,
-				SENSOR_ATTR_BW_FILTER_LPF,
-				&bw_filter);
-	sensor_attr_set(dev, SENSOR_CHAN_GYRO_XYZ,
-				SENSOR_ATTR_BW_FILTER_LPF,
-				&bw_filter);
-	
-	/* Setting sampling frequency */
-	sampling_freq.val1 = 100;       /* Hz */
-	sampling_freq.val2 = 0;
-	sensor_attr_set(dev, SENSOR_CHAN_ACCEL_XYZ,
-			SENSOR_ATTR_SAMPLING_FREQUENCY,
-			&sampling_freq);
-	sensor_attr_set(dev, SENSOR_CHAN_GYRO_XYZ,
-			SENSOR_ATTR_SAMPLING_FREQUENCY,
-			&sampling_freq);
-	
-	/* Setting mode 0:Off, 1:Low power (only Accel) 2:Low noise */
-	mode.val1 = ICM42670S_LOW_NOISE_MODE;	
-	sensor_attr_set(dev, SENSOR_CHAN_ACCEL_XYZ,
-			SENSOR_ATTR_CONFIGURATION,
-			&mode);
-	sensor_attr_set(dev, SENSOR_CHAN_GYRO_XYZ,
-			SENSOR_ATTR_CONFIGURATION,
-			&mode);
-	
-	data_trigger = (struct sensor_trigger) {
-		.type = SENSOR_TRIG_DATA_READY,
-		.chan = SENSOR_CHAN_ALL,
-	};
-	if (sensor_trigger_set(dev, &data_trigger,
-			       handle_icm42670S_drdy) < 0) {
-		printf("Cannot configure data trigger!!!\n");
-		return 0;
-	}
-
-	printf("Configured for IMU sampling.\n");
-#endif
 
 	k_sleep(K_MSEC(1000));
 	
 	while (1) {
 		
 		if( irq_from_device ) {
-#ifdef CONFIG_ICM42670S_APEX 
- #ifdef CONFIG_ICM42670S_APEX_PEDOMETER
-			struct sensor_value apex_pedometer[3];
-			sensor_channel_get(dev, SENSOR_CHAN_APEX_MOTION,
-							apex_pedometer);
-			
-			printf("[%s]: STEP_DET     count: %d steps  cadence: %.1f steps/s  activity: %s\n",
-				   now_str(),
-				   apex_pedometer[0].val1,
-				   sensor_value_to_double(&apex_pedometer[2]),
-				   apex_pedometer[1].val1 == 1 ? "Walk":
-				   apex_pedometer[1].val1 == 2 ? "Run":
-											  "Unknown");
- #endif
- #ifdef CONFIG_ICM42670S_APEX_TILT
-			printf("[%s]: TILT\n", now_str());
- #endif
- #ifdef CONFIG_ICM42670S_APEX_WOM
-			struct sensor_value apex_wom[3];
-			sensor_channel_get(dev, SENSOR_CHAN_APEX_MOTION,
-							apex_wom);
-			
-			printf("[%s]: WOM x=%d y=%d z=%d\n", 
-					now_str(),
-					apex_wom[0].val1,
-					apex_wom[1].val1,
-					apex_wom[2].val1);
- #endif
- #ifdef CONFIG_ICM42670S_APEX_SMD
-			printf("[%s]: SMD\n", now_str());
- #endif
-#elif defined(CONFIG_ICM42670S_AML)
- #ifdef CONFIG_ICM42670S_AML_POINTING
+#ifdef CONFIG_ICM42670S_AML_POINTING
 			struct sensor_value pointing_data[2];
 			sensor_channel_get(dev, SENSOR_CHAN_AML_OUTPUT_DELTA_POINTING,
 							pointing_data);
 			
 			printf("[%s]: AML Pointing Delta=[%d, %d]\n",
 				   now_str(),
-				   pointing_data[0].val1, pointing_data[0].val1);
- #endif
- #ifdef CONFIG_ICM42670S_AML_GESTURES
+				   pointing_data[0].val1, pointing_data[1].val1);
+#endif
+#ifdef CONFIG_ICM42670S_AML_GESTURES
  			struct sensor_value aml_data[3];
 			static uint8_t previous_position = 0, previous_status = 0;
 			sensor_channel_get(dev, SENSOR_CHAN_AML_OUTPUT_GESTURES,
@@ -283,8 +157,8 @@ int main(void)
 					   aml_data[2].val1 == 1 ? "Static" : "Non-static");
 				previous_status = aml_data[2].val1;
 			}
- #endif
- #ifdef CONFIG_ICM42670S_AML_GYR_OFFSET
+#endif
+#ifdef CONFIG_ICM42670S_AML_GYR_OFFSET
 			struct sensor_value gyr_offset[3];
 			static struct sensor_value previous_gyr_offset[3];
 			sensor_channel_get(dev, SENSOR_CHAN_AML_OUTPUT_GYRO_CALIBRATTION,
@@ -298,8 +172,8 @@ int main(void)
 						sensor_value_to_double(&gyr_offset[2]));
 				memcpy(previous_gyr_offset, gyr_offset, sizeof(struct sensor_value));
 			}
- #endif
- #ifdef CONFIG_ICM42670S_AML_QUATERNION
+#endif
+#ifdef CONFIG_ICM42670S_AML_QUATERNION
 			struct sensor_value quaternion[4];
 			sensor_channel_get(dev, SENSOR_CHAN_AML_OUTPUT_QUATERNION,
 							quaternion);
@@ -311,26 +185,6 @@ int main(void)
 					sensor_value_to_double(&quaternion[2]),
 					sensor_value_to_double(&quaternion[3]));
  #endif
-#else
-			sensor_channel_get(dev, SENSOR_CHAN_ACCEL_XYZ,
-							accel);
-			sensor_channel_get(dev, SENSOR_CHAN_GYRO_XYZ,
-							gyro);
-			sensor_channel_get(dev, SENSOR_CHAN_DIE_TEMP,
-							&temperature);
-	
-			printf("[%s]: temp %.2f Cel "
-				   "  accel %f %f %f m/s/s "
-				   "  gyro  %f %f %f rad/s\n",
-				   now_str(),
-				   sensor_value_to_double(&temperature),
-				   sensor_value_to_double(&accel[0]),
-				   sensor_value_to_double(&accel[1]),
-				   sensor_value_to_double(&accel[2]),
-				   sensor_value_to_double(&gyro[0]),
-				   sensor_value_to_double(&gyro[1]),
-				   sensor_value_to_double(&gyro[2]));
-#endif
 			irq_from_device = 0;
 		}
 	}

@@ -1,34 +1,6 @@
 # Copyright (c) 2020, TDK Invensense
 # SPDX-License-Identifier: Apache-2.0
 
-config LOG
-	default y
-
-config LOG_PRINTK
-	default y
-
-config SENSOR_LOG_LEVEL
-	default 4
-
-# Enable SPI and I2C support by default so that the sample works with
-# the device connected either way. These defaults can be overridden if
-# needed.
-config SPI
-	default y
-
-config I2C
-	default y
-
-# Enable APEX features support and choice between : 
-# ICM42670S_APEX_PEDOMETER, ICM42670S_APEX_TILT, ICM42670S_APEX_SMD or ICM42670S_APEX_WOM
-
-config ICM42670S_APEX
-	default n
-
-choice APEX_FEATURES
-    default ICM42670S_APEX_PEDOMETER
-endchoice
-
 # Enable AML features support and choose the outputs :
 # ICM42670S_AML_POINTING, Delta values for pointing 
 # ICM42670S_AML_GESTURES, Orientation of the remote and detected swipes 
