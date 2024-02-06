@@ -151,14 +151,21 @@ static int icm42670S_sample_fetch(const struct device *dev,
 	if ((enum sensor_channel_icm42670S)chan == SENSOR_CHAN_APEX_MOTION) {
 #ifdef CONFIG_ICM42670S_APEX_PEDOMETER
 		status = icm42670S_apex_pedometer_fetch_from_dmp(dev);
-#elif CONFIG_ICM42670S_APEX_TILT
+#elif defined(CONFIG_ICM42670S_APEX_TILT)
 		status = icm42670S_apex_tilt_fetch_from_dmp(dev);
-#elif CONFIG_ICM42670S_APEX_SMD
+#elif defined(CONFIG_ICM42670S_APEX_SMD)
 		status = icm42670S_apex_smd_fetch_from_dmp(dev);
-#elif CONFIG_ICM42670S_APEX_WOM
+#elif defined(CONFIG_ICM42670S_APEX_WOM)
 		status = icm42670S_apex_wom_fetch_from_dmp(dev);
 #endif
 	}
+	
+#ifdef CONFIG_ICM42670S_AML
+	if ((enum sensor_channel_icm42670S)chan == SENSOR_CHAN_AML) {
+		status = icm42670S_fetch_from_fifo(dev);
+		icm42670S_aml_process(dev);
+	}
+#endif
 	
 	if (chan == SENSOR_CHAN_ALL)
 		status = icm42670S_fetch_from_fifo(dev);
@@ -215,15 +222,46 @@ static int icm42670S_channel_get(const struct device *dev,
 #ifdef CONFIG_ICM42670S_APEX_PEDOMETER
 	} else if ((enum sensor_channel_icm42670S)chan == SENSOR_CHAN_APEX_MOTION) {
 		val->val1 = data->pedometer_cnt;
-		val->val2 = data->pedometer_activity;
-		icm42670S_apex_pedometer_cadence_convert(val + 1, data->pedometer_cadence, data->dmp_odr_hz);
+		val ++;
+		val->val1 = data->pedometer_activity;
+		icm42670S_apex_pedometer_cadence_convert(val + 2, data->pedometer_cadence, data->dmp_odr_hz);
 #endif
 #ifdef CONFIG_ICM42670S_APEX_WOM
 	} else if ((enum sensor_channel_icm42670S)chan == SENSOR_CHAN_APEX_MOTION) {
 		val->val1 = data->wom_x;
-		val->val2 = data->wom_y;
+		val ++;
+		val->val1 = data->wom_y;
 		val ++;
 		val->val1 = data->wom_z;
+#endif
+#ifdef CONFIG_ICM42670S_AML
+ #ifdef CONFIG_ICM42670S_AML_POINTING
+	} else if ((enum sensor_channel_icm42670S)chan == SENSOR_CHAN_AML_OUTPUT_DELTA_POINTING) {
+		val->val1 = data->delta[0];
+		val ++;
+		val->val1 = data->delta[1];
+ #endif
+ #ifdef CONFIG_ICM42670S_AML_GESTURES
+	} else if ((enum sensor_channel_icm42670S)chan == SENSOR_CHAN_AML_OUTPUT_GESTURES) {
+		val->val1 = data->swipes_detected;
+		val ++;
+		val->val1 = data->remote_position;
+		val++;
+		val->val1 = data->remote_static;
+ #endif
+ #ifdef CONFIG_ICM42670S_AML_GYR_OFFSET
+	} else if ((enum sensor_channel_icm42670S)chan == SENSOR_CHAN_AML_OUTPUT_GYRO_CALIBRATTION) {
+		icm42670S_gyro_convert(val, data->gyro_offset[0], data->gyro_fs);
+		icm42670S_gyro_convert(val + 1, data->gyro_offset[1], data->gyro_fs);
+		icm42670S_gyro_convert(val + 2, data->gyro_offset[2], data->gyro_fs);
+ #endif
+ #ifdef CONFIG_ICM42670S_AML_QUATERNION
+	} else if ((enum sensor_channel_icm42670S)chan == SENSOR_CHAN_AML_OUTPUT_QUATERNION) {
+		icm42670S_aml_quaternion_convert(val, data->quaternion[0]);
+		icm42670S_aml_quaternion_convert(val + 1, data->quaternion[1]);
+		icm42670S_aml_quaternion_convert(val + 2, data->quaternion[2]);
+		icm42670S_aml_quaternion_convert(val + 3, data->quaternion[3]);
+ #endif
 #endif
 	} else {
 		return -ENOTSUP;
@@ -465,17 +503,17 @@ static int icm42670S_attr_set(const struct device *dev,
 				err |= icm42670S_apex_enable(&drv_data->driver);
 				err |= icm42670S_apex_enable_pedometer(dev, &drv_data->driver);
 			}
-#elif CONFIG_ICM42670S_APEX_TILT
+#elif defined(CONFIG_ICM42670S_APEX_TILT)
 			if (val->val1 == ICM42670S_APEX_TILT) {
 				err |= icm42670S_apex_enable(&drv_data->driver);
 				err |= icm42670S_apex_enable_tilt(&drv_data->driver);
 			}
-#elif CONFIG_ICM42670S_APEX_SMD
+#elif defined(CONFIG_ICM42670S_APEX_SMD)
 			if (val->val1 == ICM42670S_APEX_SMD) {
 				err |= icm42670S_apex_enable(&drv_data->driver);
 				err |= icm42670S_apex_enable_smd(&drv_data->driver);
 			}
-#elif CONFIG_ICM42670S_APEX_WOM
+#elif defined(CONFIG_ICM42670S_APEX_WOM)
 			if (val->val1 == ICM42670S_APEX_WOM) {
 				err |= icm42670S_apex_enable_wom(&drv_data->driver);
 			}
@@ -487,6 +525,19 @@ static int icm42670S_attr_set(const struct device *dev,
 				return -EINVAL;
 		}
 		break;
+
+	case SENSOR_CHAN_AML:
+		if (attr == SENSOR_ATTR_CONFIGURATION) {
+#ifdef CONFIG_ICM42670S_AML
+			err |= icm42670S_aml_init(dev, &drv_data->driver, val->val1, val->val2);
+#else
+			LOG_ERR("Not supported ATTR value");
+#endif
+		} else {
+			LOG_ERR("Not supported ATTR");
+				return -EINVAL;
+		}
+		break;	
 
 	default:
 		LOG_ERR("Not supported");
@@ -535,9 +586,7 @@ static int icm42670S_chip_init(const struct device *dev)
 		return err;
 	}
 
-	if (data->chip_id == INV_IMU_WHOAMI) {
-		LOG_DBG("ID OK");
-	} else {
+	if (data->chip_id != INV_IMU_WHOAMI) {
 		LOG_DBG("bad chip id 0x%x", data->chip_id);
 		return -ENOTSUP;
 	}

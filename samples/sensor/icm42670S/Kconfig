@@ -19,11 +19,32 @@ config SPI
 config I2C
 	default y
 
+# Enable APEX features support and choice between : 
+# ICM42670S_APEX_PEDOMETER, ICM42670S_APEX_TILT, ICM42670S_APEX_SMD or ICM42670S_APEX_WOM
+
 config ICM42670S_APEX
 	default n
 
 choice APEX_FEATURES
     default ICM42670S_APEX_PEDOMETER
 endchoice
+
+# Enable AML features support and choose the outputs :
+# ICM42670S_AML_POINTING, Delta values for pointing 
+# ICM42670S_AML_GESTURES, Orientation of the remote and detected swipes 
+# ICM42670S_AML_GYR_OFFSET, Computed 3-axis raw gyroscope offsets
+# ICM42670S_AML_QUATERNION, Computed W, X, Y and Z quaternion coefficients
+
+config ICM42670S_AML
+	default y
+
+config ICM42670S_AML_POINTING
+	default y
+config ICM42670S_AML_GESTURES
+	default n
+config ICM42670S_AML_GYR_OFFSET
+	default n
+config ICM42670S_AML_QUATERNION
+	default n
 
 source "Kconfig.zephyr"

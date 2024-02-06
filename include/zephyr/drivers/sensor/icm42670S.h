@@ -29,6 +29,22 @@
 #define ICM42670S_APEX_SMD          (3)
 #define ICM42670S_APEX_WOM          (4)
 
+/** ICM42670S swipes gesture */
+#define ICM42670S_AML_SWIPE_LEFT                0x1
+#define ICM42670S_AML_SWIPE_RIGTH               0x2
+#define ICM42670S_AML_SWIPE_UP                  0x4
+#define ICM42670S_AML_SWIPE_DOWN                0x8
+#define ICM42670S_AML_SWIPE_CLOCKWISE           0x10
+#define ICM42670S_AML_SWIPE_COUNTERCLOCKWISE    0x20
+
+/** ICM42670S remote position */
+#define ICM42670S_AML_TOP      (0)
+#define ICM42670S_AML_BOTTOM   (1)
+#define ICM42670S_AML_LEFT     (2)
+#define ICM42670S_AML_RIGHT    (3)
+#define ICM42670S_AML_FRONT    (4)
+#define ICM42670S_AML_REAR     (5)
+
 /**
  * @brief Extended sensor attributes for ICM42670S 6-axis MEMS sensor
  *
@@ -72,10 +88,26 @@ enum sensor_attribute_icm42670S {
  * operation from sleep mode.
  * ** Significant Motion Detector (SMD): Detects significant motion based on
  * accelerometer data.
+ *
+ * This also exposes sensor channel for the ICM42670S which can be used for
+ * getting the Air Motion Library (AML) data.
+ *
+ * The AML library provides pointing from ICM42670S 6-axis sensor and intended 
+ * to be used in free space pointing devices to operate in-air point and click
+ * navigation, just like a classic 2D mouse will do on a desk. The library 
+ * additionally provides swipe motion recognition, gyroscope biases calibration
+ * and quaternion orientation.
  */
 enum sensor_channel_icm42670S {
-	/** APEX features */
 	
+	/** APEX features */
 	SENSOR_CHAN_APEX_MOTION = SENSOR_CHAN_PRIV_START,
+	
+	/** AML */
+	SENSOR_CHAN_AML,
+	SENSOR_CHAN_AML_OUTPUT_DELTA_POINTING,
+	SENSOR_CHAN_AML_OUTPUT_GESTURES,
+	SENSOR_CHAN_AML_OUTPUT_GYRO_CALIBRATTION,
+	SENSOR_CHAN_AML_OUTPUT_QUATERNION,
 };
 #endif /* ZEPHYR_INCLUDE_DRIVERS_SENSOR_ICM42670S_H_ */

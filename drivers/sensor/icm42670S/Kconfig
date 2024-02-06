@@ -3,7 +3,7 @@
 # SPDX-License-Identifier: Apache-2.0
 
 menuconfig ICM42670S
-	bool "ICM42670S Six-Axis Motion Tracking Device"
+	bool "ICM42670S 6-Axis Motion Tracking Device"
 	default y
 	depends on DT_HAS_INVENSENSE_ICM42670S_ENABLED
 	select I2C if $(dt_compat_on_bus,$(DT_COMPAT_INVENSENSE_ICM42670S),i2c)
@@ -22,7 +22,7 @@ choice APEX_FEATURES
 	depends on ICM42670S_APEX
 	default ICM42670S_APEX_PEDOMETER
 	help
-	  Select APEX features for ICM42670S sensor.
+	  Select APEX feature for ICM42670S sensor.
 config ICM42670S_APEX_PEDOMETER
 	bool "Pedometer: Tracks step count"
 config ICM42670S_APEX_TILT
@@ -32,6 +32,23 @@ config ICM42670S_APEX_SMD
 config ICM42670S_APEX_WOM
 	bool "Wake on Motion (WoM): Detects motion when accelerometer samples exceed a programmable threshold"
 endchoice
+
+menuconfig ICM42670S_AML
+	bool "ICM42670S Air Motion Library (AML)"
+	default n
+
+if ICM42670S_AML
+
+config ICM42670S_AML_POINTING
+	bool "Delta values for pointing"
+config ICM42670S_AML_GESTURES
+	bool "Orientation of the remote and detected swipes"
+config ICM42670S_AML_GYR_OFFSET
+	bool "Computed 3-axis raw gyroscope offsets"
+config ICM42670S_AML_QUATERNION
+	bool "Computed W, X, Y and Z quaternion coefficients"
+
+endif # ICM42670S_AML
 
 config ICM42670S_THREAD_PRIORITY
 	int "Thread priority"
