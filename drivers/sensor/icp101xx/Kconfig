@@ -1,0 +1,12 @@
+# ICP101xx High Accuracy, Low Power, Waterproof Barometric Pressure and Temperature Sensor option
+
+# SPDX-License-Identifier: Apache-2.0
+
+menuconfig ICP101XX
+	bool "ICP101xx Barometric Pressure and Temperature Sensor"
+	default y
+	depends on DT_HAS_INVENSENSE_ICP101XX_ENABLED
+	select I2C
+	help
+	  Enable driver for ICP101xx Barometric Pressure and Temperature Sensor.
+
