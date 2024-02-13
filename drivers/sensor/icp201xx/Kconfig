@@ -1,0 +1,27 @@
+# ICP201xx High Accuracy, Low Power, Barometric Pressure and Temperature Sensor IC
+
+# SPDX-License-Identifier: Apache-2.0
+
+menuconfig ICP201XX
+	bool "ICP201xx Barometric Pressure and Temperature Sensor"
+	default y
+	depends on DT_HAS_INVENSENSE_ICP201XX_ENABLED
+	select I2C if $(dt_compat_on_bus,$(DT_COMPAT_INVENSENSE_ICP201XX),i2c)
+	select SPI if $(dt_compat_on_bus,$(DT_COMPAT_INVENSENSE_ICP201XX),spi)
+	help
+	  Enable driver for ICP101xx Barometric Pressure and Temperature Sensor.
+
+if ICP201XX
+config ICP201XX_THREAD_PRIORITY
+	int "Thread priority"
+	default 10
+	help
+	  Priority of thread used by the driver to handle interrupts.
+
+config ICP201XX_THREAD_STACK_SIZE
+	int "Thread stack size"
+	default 1024
+	help
+	  Stack size of thread used by the driver to handle interrupts.
+
+endif # ICP201XX
