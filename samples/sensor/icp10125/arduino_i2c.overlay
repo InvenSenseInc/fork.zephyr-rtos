@@ -1,0 +1,30 @@
+/*
+ * Copyright (c) 2024, TDK Invensense
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
+/*
+ * Example configuration of a icp10125 device on an Arduino I2C bus.
+ *
+ * Device address 0x68 is assumed. Your device may have a different
+ * address; check your device documentation if unsure.
+ */
+&arduino_i2c {
+	status = "okay";
+	icp10125@63 {
+		compatible = "invensense,icp10125";
+		reg = <0x63>;
+		temperature-measurement-mode="low-noise";
+		pressure-measurement-mode="low-noise";
+	};
+};
+
+/*
+ * Increase native UART speed to report sensor data.
+ */
+&uart0 {
+	compatible = "nordic,nrf-uarte";
+	status = "okay";
+	current-speed = <1000000>;
+};

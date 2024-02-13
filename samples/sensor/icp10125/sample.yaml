@@ -1,0 +1,9 @@
+sample:
+  name: ICP10125 Sensor data sample
+tests:
+  sample.sensor.icp10125
+    harness: console
+    tags: sensors
+    integration_platforms:
+      - arduino_zero
+      - nrf52dk_nrf52832
