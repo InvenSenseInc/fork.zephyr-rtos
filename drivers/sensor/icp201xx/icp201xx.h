@@ -4,34 +4,43 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-#ifndef ZEPHYR_DRIVERS_SENSOR_ICP101XXX_ICP101XXX_H_
-#define ZEPHYR_DRIVERS_SENSOR_ICP101XXX_ICP101XXX_H_
+#ifndef ZEPHYR_DRIVERS_SENSOR_ICP201XXX_ICP101XXX_H_
+#define ZEPHYR_DRIVERS_SENSOR_ICP201XXX_ICP101XXX_H_
 
 #include <zephyr/types.h>
 #include <zephyr/device.h>
 #include <zephyr/devicetree.h>
 #include <zephyr/drivers/i2c.h>
 #include <zephyr/drivers/sensor.h>
-#include "Devices\Drivers\ICP101xx\Icp101xx.h"
-#include "Devices\Drivers\ICP101xx\Icp101xxSerif.h"
+#include "ICP201xx/Icp201xx.h"
+#include "ICP201xx/Icp201xxSerif.h"
 
-#define DT_DRV_COMPAT invensense_icp101xx
+#define DT_DRV_COMPAT invensense_icp201xx
 
 #define ICP201XX_BUS_I2C DT_ANY_INST_ON_BUS_STATUS_OKAY(i2c)
 #define ICP201XX_BUS_SPI DT_ANY_INST_ON_BUS_STATUS_OKAY(spi)
 
 typedef struct {
-	int raw_pressure;
-	int raw_temperature;
-	float pressure;
-	float temperature;
-	uint64_t last_start;
-	inv_icp101xx_t icp_device;
-} icp101xx_data;
+	int32_t raw_pressure;
+	int32_t raw_temperature;
+	inv_icp201xx_t icp_device;
+	struct gpio_callback gpio_cb;
 
-struct icp101xx_config {
+	const struct sensor_trigger *data_ready_trigger;
+	sensor_trigger_handler_t data_ready_handler;
+
+	K_KERNEL_STACK_MEMBER(thread_stack, CONFIG_ICP201XX_THREAD_STACK_SIZE);
+	struct k_thread thread;
+	struct k_sem gpio_sem;
+} icp201xx_data;
+
+struct icp201xx_config {
 	struct i2c_dt_spec i2c;
-	int mode;
+	struct gpio_dt_spec gpio_int;
 };
+
+int icp201xx_trigger_set(const struct device *dev,
+			 const struct sensor_trigger *trig,
+			 sensor_trigger_handler_t handler);
 
 #endif

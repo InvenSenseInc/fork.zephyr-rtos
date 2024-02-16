@@ -321,7 +321,7 @@ static void inv_icp201xx_enable_write_switch_OTP_read(inv_icp201xx_t * s)
 	volatile uint8_t reg_value = 0;
 	
 	/*5) set to power mode. Bring the ASIC in power mode to activate the OTP power domain and get access to the main registers
-	•	mode_select.power_mode = 1 */
+		mode_select.power_mode = 1 */
 	reg_value = BIT_POWER_MODE_MASK;
 	inv_icp201xx_wr_mode_select(&(s->serif),reg_value);
 	
@@ -329,15 +329,15 @@ static void inv_icp201xx_enable_write_switch_OTP_read(inv_icp201xx_t * s)
 	
 	/* 
 	6)	Unlock the main registers
-	•	master_lock.lock 	= 0x1f
+		master_lock.lock 	= 0x1f
 	*/
 	inv_icp201xx_wr_master_lock(&(s->serif),0x1f);
 
 	/*
 	7)	Enable the OTP and the write switch
-	•	otp_config1.otp_enable = 1;
-	•	otp_config1.otp_write_switch = 1;
-	•	wait 10us;
+		otp_config1.otp_enable = 1;
+		otp_config1.otp_write_switch = 1;
+		wait 10us;
 	*/
 	inv_icp201xx_wr_otp_enable(&(s->serif),0x01);
 	inv_icp201xx_wr_otp_write_switch(&(s->serif),0x01);
@@ -347,10 +347,10 @@ static void inv_icp201xx_enable_write_switch_OTP_read(inv_icp201xx_t * s)
 	/*
 	
 	8)	Toggle the OTP reset pin
-	•	otp_dbg2.reset = 1
-	•	wait 10us
-	•	otp_dbg2.reset = 0
-	•	wait 10us
+		otp_dbg2.reset = 1
+		wait 10us
+		otp_dbg2.reset = 0
+		wait 10us
 	
 	*/
 	
@@ -364,12 +364,12 @@ static void inv_icp201xx_enable_write_switch_OTP_read(inv_icp201xx_t * s)
 	
 	/*
 	9)	Program redundant read
-	•	otp_mra_lsb		= 0x04
-	•	otp_mra_msb		= 0x04
-	•	otp_mrb_lsb		= 0x21
-	•	otp_mrb_msb		= 0x20
-	•	otp_mr_lsb		= 0x10
-	•	otp_mr_msb		= 0x80
+		otp_mra_lsb		= 0x04
+		otp_mra_msb		= 0x04
+		otp_mrb_lsb		= 0x21
+		otp_mrb_msb		= 0x20
+		otp_mr_lsb		= 0x10
+		otp_mr_msb		= 0x80
 	*/
 	inv_icp201xx_wr_otp_mra_lsb(&(s->serif),0x04);
 	inv_icp201xx_wr_otp_mra_msb(&(s->serif),0x04);
@@ -419,16 +419,16 @@ int inv_icp201xx_OTP_bootup_cfg(inv_icp201xx_t * s)
 	/****************************************************************************/
 	/*
 	10)	Write the address content and read command
-	•	otp_address_reg.address		= 8’hF8 	// for offset
-	•	otp_command_reg.address		= 4’h0
-	•	otp_command_reg.command	    = 1    // read action
+		otp_address_reg.address		= 8`hF8 	// for offset
+		otp_command_reg.address		= 4`h0
+		otp_command_reg.command	    = 1    // read action
 	*/
 	inv_icp201xx_wr_otp_addr(&(s->serif),0xf8);   // for offset
 	inv_icp201xx_wr_otp_cmd(&(s->serif),0x10);
 	
 	/*
 	11)	Wait for the OTP read to finish
-	•	Monitor otp_status.busy to be 0
+		Monitor otp_status.busy to be 0
 	*/
 	do 	{
 		inv_icp201xx_rd_otp_status(&(s->serif),&otp_status);
@@ -448,16 +448,16 @@ int inv_icp201xx_OTP_bootup_cfg(inv_icp201xx_t * s)
 	/* 3 bit gain (OTP 249 [2:0] to MAIN, TRIM2_MSB [6:4]
 	
 	13)	Write the address content and read command
-	•	otp_address_reg.address		= 8’hF9	// for gain
-	•	otp_command_reg.address		= 4’h0
-	•	otp_command_reg.command	    = 1    // read action
+		otp_address_reg.address		= 8`hF9	// for gain
+		otp_command_reg.address		= 4`h0
+		otp_command_reg.command	    = 1    // read action
 	*/
 	inv_icp201xx_wr_otp_addr(&(s->serif),0xf9); // for gain
 	inv_icp201xx_wr_otp_cmd(&(s->serif),0x10);
 	
 	/*
 	14)	Wait for the OTP read to finish
-	•	Monitor otp_status.busy to be 0
+		Monitor otp_status.busy to be 0
 	*/
 	do
 	{
@@ -477,16 +477,16 @@ int inv_icp201xx_OTP_bootup_cfg(inv_icp201xx_t * s)
 	/* HFOSC */
 	/* 16)
 		Write the address content and read command
-	•	otp_address_reg.address		= 8’hFA	// for HFosc
-	•	otp_command_reg.address		= 4’h0
-	•	otp_command_reg.command	    = 1    // read action
+		otp_address_reg.address		= 8`hFA	// for HFosc
+		otp_command_reg.address		= 4`h0
+		otp_command_reg.command	    = 1    // read action
 	*/
 	inv_icp201xx_wr_otp_addr(&(s->serif),0xFA); // for HFosc
 	inv_icp201xx_wr_otp_cmd(&(s->serif),0x10);
 	
 	/*
 	17)	Wait for the OTP read to finish
-	•	Monitor otp_status.busy to be 0
+		Monitor otp_status.busy to be 0
 	*/
 	do
 	{
