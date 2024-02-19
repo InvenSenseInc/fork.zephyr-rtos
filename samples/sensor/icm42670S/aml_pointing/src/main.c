@@ -83,12 +83,11 @@ static void handle_icm42670S_drdy(const struct device *dev,
 int main(void)
 {
 	const struct device *dev = get_icm42670S_device();
-
+	struct sensor_value aml_config[2];
+	
 	if (dev == NULL) {
 		return 0;
 	}
-				
-	struct sensor_value aml_config[2];
 	
 	aml_config[0].val1 = 15; /* Delta Gain X */
 	aml_config[1].val1 = 15; /* Delta Gain Y */
