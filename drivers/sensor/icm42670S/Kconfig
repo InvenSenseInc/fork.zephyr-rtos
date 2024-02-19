@@ -13,6 +13,10 @@ menuconfig ICM42670S
 
 if ICM42670S
 
+config ICM42670S_ATTR_RUNTIME
+	bool "ICM42670S set attributes at runtime (full-scale, ODR, filtering, power mode)"
+	default n
+
 config ICM42670S_APEX
 	bool "ICM42670S APEX features"
 	default n

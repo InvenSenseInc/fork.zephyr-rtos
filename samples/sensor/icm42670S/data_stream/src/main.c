@@ -83,7 +83,6 @@ static void handle_icm42670S_drdy(const struct device *dev,
 int main(void)
 {
 	const struct device *dev = get_icm42670S_device();
-	struct sensor_value full_scale, bw_filter, sampling_freq, mode;
 	struct sensor_value accel[3];
 	struct sensor_value gyro[3];
 	struct sensor_value temperature;
@@ -91,47 +90,6 @@ int main(void)
 	if (dev == NULL) {
 		return 0;
 	}
-	
-	/* Setting full scale */
-	full_scale.val1 = 2; /* G */
-	full_scale.val2 = 0;
-	sensor_attr_set(dev, SENSOR_CHAN_ACCEL_XYZ,
-				SENSOR_ATTR_FULL_SCALE,
-				&full_scale);
-	full_scale.val1 = 1000; /* dps */
-	full_scale.val2 = 0;
-	sensor_attr_set(dev, SENSOR_CHAN_GYRO_XYZ,
-				SENSOR_ATTR_FULL_SCALE,
-				&full_scale);
-				
-	/* Setting LN bandwith filtering options */
-	bw_filter.val1 = 180; /* Hz */
-	bw_filter.val2 = 0;
-	sensor_attr_set(dev, SENSOR_CHAN_ACCEL_XYZ,
-				SENSOR_ATTR_BW_FILTER_LPF,
-				&bw_filter);
-	sensor_attr_set(dev, SENSOR_CHAN_GYRO_XYZ,
-				SENSOR_ATTR_BW_FILTER_LPF,
-				&bw_filter);
-	
-	/* Setting sampling frequency */
-	sampling_freq.val1 = 100;       /* Hz */
-	sampling_freq.val2 = 0;
-	sensor_attr_set(dev, SENSOR_CHAN_ACCEL_XYZ,
-			SENSOR_ATTR_SAMPLING_FREQUENCY,
-			&sampling_freq);
-	sensor_attr_set(dev, SENSOR_CHAN_GYRO_XYZ,
-			SENSOR_ATTR_SAMPLING_FREQUENCY,
-			&sampling_freq);
-	
-	/* Setting mode 0:Off, 1:Low power (only Accel) 2:Low noise */
-	mode.val1 = ICM42670S_LOW_NOISE_MODE;	
-	sensor_attr_set(dev, SENSOR_CHAN_ACCEL_XYZ,
-			SENSOR_ATTR_CONFIGURATION,
-			&mode);
-	sensor_attr_set(dev, SENSOR_CHAN_GYRO_XYZ,
-			SENSOR_ATTR_CONFIGURATION,
-			&mode);
 	
 	data_trigger = (struct sensor_trigger) {
 		.type = SENSOR_TRIG_DATA_READY,

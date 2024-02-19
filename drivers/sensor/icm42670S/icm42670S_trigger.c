@@ -11,7 +11,7 @@
 #include <zephyr/drivers/sensor.h>
 #include <zephyr/logging/log.h>
 #include "icm42670S.h"
-//#include "icm42605_setup.h"
+
 
 LOG_MODULE_DECLARE(ICM42670S, CONFIG_SENSOR_LOG_LEVEL);
 

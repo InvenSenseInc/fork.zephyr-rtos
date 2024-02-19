@@ -68,6 +68,11 @@ struct icm42670S_data {
 
 	uint8_t accel_fs;
 	uint16_t gyro_fs;
+#ifdef CONFIG_ICM42670S_ATTR_RUNTIME
+	uint16_t accel_hz;
+	uint16_t gyro_hz;
+	uint8_t accel_pwr_mode;
+#endif
 	
 #ifdef CONFIG_ICM42670S_APEX_PEDOMETER
 	uint8_t dmp_odr_hz;
@@ -104,6 +109,15 @@ struct icm42670S_config {
 	union icm42670S_bus bus;
 	const struct icm42670S_bus_io *bus_io;
 	struct gpio_dt_spec gpio_int;	
+	uint8_t accel_fs;
+	uint16_t accel_hz;
+	uint16_t accel_avg;
+	uint16_t accel_filt_bw;
+	uint16_t gyro_fs;
+	uint16_t gyro_hz;
+	uint16_t gyro_avg;
+	uint16_t gyro_filt_bw;
+	uint8_t accel_pwr_mode;
 };
 
 int icm42670S_trigger_set(const struct device *dev,
