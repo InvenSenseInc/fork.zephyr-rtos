@@ -16,6 +16,11 @@
 		compatible = "invensense,icm42670S";
 		reg = <0x68>;
 		int-gpios = <&arduino_header 8 GPIO_ACTIVE_HIGH>; /* D2 */
+		
+		power-mode = "low power";
+		accel-hz = <25>;
+		gyro-hz = <0>;
+		accel-avg = <2>;
 	};
 };
 

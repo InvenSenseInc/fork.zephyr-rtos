@@ -278,18 +278,19 @@ static uint16_t convert_enum_to_freq(uint8_t val)
 	uint16_t freq;
 	
 	switch(val) {
-		case 0:  freq = 0;
-		case 1:  freq = 1600;
-		case 2:  freq = 800;
-		case 3:  freq = 400;
-		case 4:  freq = 200;
-		case 5:  freq = 100;
-		case 6:  freq = 50;
-		case 7:  freq = 25;
-		case 8:  freq = 12;
-		case 9:  freq = 6;
-		case 10: freq = 3;
-		case 11: freq = 1;
+		case 0:  freq = 0;    break;
+		case 1:  freq = 1600; break;
+		case 2:  freq = 800;  break;
+		case 3:  freq = 400;  break;
+		case 4:  freq = 200;  break;
+		case 5:  freq = 100;  break;
+		case 6:  freq = 50;   break;
+		case 7:  freq = 25;   break;
+		case 8:  freq = 12;   break;
+		case 9:  freq = 6;    break;
+		case 10: freq = 3;    break;
+		case 11: freq = 1;    break;
+		default: freq = 0;    break;
 	}
 	return freq;
 }
