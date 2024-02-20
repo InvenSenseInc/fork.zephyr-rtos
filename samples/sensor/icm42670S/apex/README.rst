@@ -8,19 +8,26 @@ Ovreview
 
 This sample application starts the APEX (Advanced Pedometer 
 and Event Detection) features. It consists of:
-** Pedometer: Tracks step count.
-** Tilt Detection: Detects the Tilt angle exceeds 35 degrees during 4s still. 
-** Wake on Motion (WoM): Detects motion when accelerometer samples exceed 
-a programmable threshold. This motion event can be used to enable device 
-operation from sleep mode.
-** Significant Motion Detector (SMD): Detects significant motion based on
-accelerometer data.
+** Pedometer: Tracks step count, and provide details such as the cadence 
+and the estimated activity type (Walk, Run, Unknown).
+** Tilt Detection: Detects the Tilt when tilting the board with an angle 
+of 30 degrees or more. The tilt event is generated when the 
+position is held for 4 seconds.
+** Wake on Motion (WoM): Detects motion per axis exceeding 195 mg threshold.
+** Significant Motion Detector (SMD): Detects when the user has moved 
+significantly.
 Each feature is enabled through KConfig choice.
+
+Driver configuration
+********************
+
+The APEX is based on accelerometer data only. The ICM42670S driver configures
+accelerometer low power mode and the APEX operating frequency (25Hz or 50Hz).
 
 Wiring
 *******
 
-This sample uses an external breakout for the sensor.  A devicetree
+This sample uses an external breakout for the sensor. A devicetree
 overlay must be provided to identify the SPI or I2C bus and the interrupt 
 sensor GPIO.
 

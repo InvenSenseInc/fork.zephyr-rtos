@@ -19,9 +19,8 @@
  */
 
 /** ICM42670S power mode */
-#define ICM42670S_POWER_OFF         (0)
+#define ICM42670S_LOW_NOISE_MODE    (0)
 #define ICM42670S_LOW_POWER_MODE    (1)
-#define ICM42670S_LOW_NOISE_MODE    (2)
 
 /** ICM42670S APEX features */
 #define ICM42670S_APEX_PEDOMETER    (1)
