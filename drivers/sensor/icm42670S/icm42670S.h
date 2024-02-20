@@ -115,7 +115,6 @@ struct icm42670S_config {
 	uint16_t accel_filt_bw;
 	uint16_t gyro_fs;
 	uint16_t gyro_hz;
-	uint16_t gyro_avg;
 	uint16_t gyro_filt_bw;
 	uint8_t accel_pwr_mode;
 };

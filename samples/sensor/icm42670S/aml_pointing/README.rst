@@ -26,6 +26,13 @@ For more information, see documentation:
 		icm42670S\invn.algo.sw-integration.aml-42670S-gcc-zephyr-1.6.0\
 		  InvnAlgoAML.pdf
 
+Driver configuration
+********************
+
+The Air Motion Library is bonded to the ICM42670S device. At initialization 
+stage, the driver configures the highest FSR for accelerometer and gyroscope
+and the algorithm operating frequency to 100Hz. 
+
 Wiring
 *******
 
