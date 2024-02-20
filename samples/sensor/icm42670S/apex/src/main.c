@@ -41,7 +41,6 @@ static const struct device *get_icm42670S_device(void)
 	return dev;
 }
 
-
 static const char *now_str(void)
 {
 	static char buf[16]; /* ...HH:MM:SS.MMM */
@@ -58,18 +57,16 @@ static const char *now_str(void)
 	now /= 60U;
 	h = now;
 
-	snprintf(buf, sizeof(buf), "%u:%02u:%02u.%03u",
-		 h, min, s, ms);
+	snprintf(buf, sizeof(buf), "%u:%02u:%02u.%03u", h, min, s, ms);
 	return buf;
 }
 
-static void handle_icm42670S_drdy(const struct device *dev,
-				 const struct sensor_trigger *trig)
+static void handle_icm42670S_drdy(const struct device *dev, const struct sensor_trigger *trig)
 {
 	if (trig->type == SENSOR_TRIG_MOTION) {
 		int rc = sensor_sample_fetch_chan(dev, trig->chan);
-	
-		if (rc < 0) { 
+
+		if (rc < 0) {
 			printf("sample fetch failed: %d\n", rc);
 			printf("cancelling trigger due to failure: %d\n", rc);
 			(void)sensor_trigger_set(dev, trig, NULL);
@@ -84,11 +81,11 @@ int main(void)
 {
 	const struct device *dev = get_icm42670S_device();
 	struct sensor_value apex_mode;
-	
+
 	if (dev == NULL) {
 		return 0;
 	}
-	
+
 	/* Setting APEX Pedometer feature */
 #ifdef CONFIG_ICM42670S_APEX_PEDOMETER
 	apex_mode.val1 = ICM42670S_APEX_PEDOMETER;
@@ -103,16 +100,13 @@ int main(void)
 	apex_mode.val1 = ICM42670S_APEX_SMD;
 #endif
 	apex_mode.val2 = 0;
-	sensor_attr_set(dev, SENSOR_CHAN_APEX_MOTION,
-				SENSOR_ATTR_CONFIGURATION,
-				&apex_mode);
-	
-	data_trigger = (struct sensor_trigger) {
+	sensor_attr_set(dev, SENSOR_CHAN_APEX_MOTION, SENSOR_ATTR_CONFIGURATION, &apex_mode);
+
+	data_trigger = (struct sensor_trigger){
 		.type = SENSOR_TRIG_MOTION,
 		.chan = SENSOR_CHAN_APEX_MOTION,
 	};
-	if (sensor_trigger_set(dev, &data_trigger,
-			       handle_icm42670S_drdy) < 0) {
+	if (sensor_trigger_set(dev, &data_trigger, handle_icm42670S_drdy) < 0) {
 		printf("Cannot configure data trigger!!!\n");
 		return 0;
 	}
@@ -120,36 +114,31 @@ int main(void)
 	printf("Configured for APEX data collecting.\n");
 
 	k_sleep(K_MSEC(1000));
-	
+
 	while (1) {
-		
-		if( irq_from_device ) {
+
+		if (irq_from_device) {
 #ifdef CONFIG_ICM42670S_APEX_PEDOMETER
 			struct sensor_value apex_pedometer[3];
-			sensor_channel_get(dev, SENSOR_CHAN_APEX_MOTION,
-							apex_pedometer);
-			
-			printf("[%s]: STEP_DET     count: %d steps  cadence: %.1f steps/s  activity: %s\n",
-				   now_str(),
-				   apex_pedometer[0].val1,
-				   sensor_value_to_double(&apex_pedometer[2]),
-				   apex_pedometer[1].val1 == 1 ? "Walk":
-				   apex_pedometer[1].val1 == 2 ? "Run":
-											  "Unknown");
+			sensor_channel_get(dev, SENSOR_CHAN_APEX_MOTION, apex_pedometer);
+
+			printf("[%s]: STEP_DET     count: %d steps  cadence: %.1f steps/s  "
+			       "activity: %s\n",
+			       now_str(), apex_pedometer[0].val1,
+			       sensor_value_to_double(&apex_pedometer[2]),
+			       apex_pedometer[1].val1 == 1   ? "Walk"
+			       : apex_pedometer[1].val1 == 2 ? "Run"
+							     : "Unknown");
 #endif
 #ifdef CONFIG_ICM42670S_APEX_TILT
 			printf("[%s]: TILT\n", now_str());
 #endif
 #ifdef CONFIG_ICM42670S_APEX_WOM
 			struct sensor_value apex_wom[3];
-			sensor_channel_get(dev, SENSOR_CHAN_APEX_MOTION,
-							apex_wom);
-			
-			printf("[%s]: WOM x=%d y=%d z=%d\n", 
-					now_str(),
-					apex_wom[0].val1,
-					apex_wom[1].val1,
-					apex_wom[2].val1);
+			sensor_channel_get(dev, SENSOR_CHAN_APEX_MOTION, apex_wom);
+
+			printf("[%s]: WOM x=%d y=%d z=%d\n", now_str(), apex_wom[0].val1,
+			       apex_wom[1].val1, apex_wom[2].val1);
 #endif
 #ifdef CONFIG_ICM42670S_APEX_SMD
 			printf("[%s]: SMD\n", now_str());

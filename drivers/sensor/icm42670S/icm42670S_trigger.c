@@ -12,12 +12,10 @@
 #include <zephyr/logging/log.h>
 #include "icm42670S.h"
 
-
 LOG_MODULE_DECLARE(ICM42670S, CONFIG_SENSOR_LOG_LEVEL);
 
-int icm42670S_trigger_set(const struct device *dev,
-			 const struct sensor_trigger *trig,
-			 sensor_trigger_handler_t handler)
+int icm42670S_trigger_set(const struct device *dev, const struct sensor_trigger *trig,
+			  sensor_trigger_handler_t handler)
 {
 	struct icm42670S_data *drv_data = dev->data;
 	const struct icm42670S_config *cfg = dev->config;
@@ -45,11 +43,10 @@ int icm42670S_trigger_set(const struct device *dev,
 	return 0;
 }
 
-static void icm42670S_gpio_callback(const struct device *dev,
-				   struct gpio_callback *cb, uint32_t pins)
+static void icm42670S_gpio_callback(const struct device *dev, struct gpio_callback *cb,
+				    uint32_t pins)
 {
-	struct icm42670S_data *drv_data =
-		CONTAINER_OF(cb, struct icm42670S_data, gpio_cb);
+	struct icm42670S_data *drv_data = CONTAINER_OF(cb, struct icm42670S_data, gpio_cb);
 	const struct icm42670S_config *cfg = drv_data->dev->config;
 
 	ARG_UNUSED(pins);
@@ -65,8 +62,7 @@ static void icm42670S_thread_cb(const struct device *dev)
 	const struct icm42670S_config *cfg = dev->config;
 
 	if (drv_data->data_ready_handler != NULL) {
-		drv_data->data_ready_handler(dev,
-					     drv_data->data_ready_trigger);
+		drv_data->data_ready_handler(dev, drv_data->data_ready_trigger);
 	}
 
 	gpio_pin_interrupt_configure_dt(&cfg->gpio_int, GPIO_INT_EDGE_TO_ACTIVE);
