@@ -14,26 +14,22 @@ LOG_MODULE_REGISTER(ICM42670S_AML, CONFIG_SENSOR_LOG_LEVEL);
 
 #ifdef CONFIG_ICM42670S_AML
 /* ICM mounting matrix for AML referential.
- * For AML algorithm, accelerometer data are inverted compared to ICM convention, 
- * It expects gravity minus acceleration and ICM measures acceleration minus gravity 
- * Refer to AML documentation 
+ * For AML algorithm, accelerometer data are inverted compared to ICM convention,
+ * It expects gravity minus acceleration and ICM measures acceleration minus gravity
+ * Refer to AML documentation
  */
-static int32_t accel_mounting_matrix[9]= {0,   -1,    0,
-                                         -1,    0,    0,
-                                          0,    0,    1 };
+static int32_t accel_mounting_matrix[9] = {0, -1, 0, -1, 0, 0, 0, 0, 1};
 
-static int32_t gyro_mounting_matrix[9]= { 0,    1,    0,
-                                          1,    0,    0,
-                                          0,    0,   -1 };
+static int32_t gyro_mounting_matrix[9] = {0, 1, 0, 1, 0, 0, 0, 0, -1};
 
-
-int icm42670S_aml_init(const struct device *dev, inv_imu_device_t *s, int8_t delta_gain_x, int8_t delta_gain_y)
+int icm42670S_aml_init(const struct device *dev, inv_imu_device_t *s, int8_t delta_gain_x,
+		       int8_t delta_gain_y)
 {
 	int rc = 0;
 	/* Contains algorithms configuration */
 	InvnAlgoAMLConfig config;
 	struct icm42670S_data *data = dev->data;
-	
+
 	/* FSR */
 	config.acc_fsr = 16;
 	config.gyr_fsr = 2000;
@@ -43,7 +39,7 @@ int icm42670S_aml_init(const struct device *dev, inv_imu_device_t *s, int8_t del
 	/* Delta Gain */
 	config.delta_gain[0] = delta_gain_x;
 	config.delta_gain[1] = delta_gain_y;
-	
+
 	config.gestures_auto_reset = 1;
 
 	/* Initialize AML algorithms */
@@ -54,23 +50,23 @@ int icm42670S_aml_init(const struct device *dev, inv_imu_device_t *s, int8_t del
 	} else {
 		LOG_DBG("Algorithm init OK");
 	}
-	
+
 	/* Configure ICM device */
 	rc |= inv_imu_set_accel_fsr(s, ACCEL_CONFIG0_FS_SEL_16g);
 	rc |= inv_imu_set_gyro_fsr(s, GYRO_CONFIG0_FS_SEL_2000dps);
 
-	/* Set frequencies */ 
+	/* Set frequencies */
 	rc |= inv_imu_set_accel_frequency(s, ACCEL_CONFIG0_ODR_100_HZ);
 	rc |= inv_imu_set_gyro_frequency(s, GYRO_CONFIG0_ODR_100_HZ);
 
 	/* Enable sensors */
 	rc |= inv_imu_enable_accel_low_noise_mode(s);
 	rc |= inv_imu_enable_gyro_low_noise_mode(s);
-	
+
 	if (rc != 0) {
 		LOG_ERR("Error while configuring ICM device");
 	}
-	
+
 	return rc;
 }
 
@@ -78,11 +74,11 @@ static void apply_mounting_matrix(const int32_t matrix[9], int16_t raw[3])
 {
 	unsigned i;
 	int16_t out_raw[3];
-	
-	for(i = 0; i < 3; i++) {
-		out_raw[i] =  ((int16_t)matrix[3*i+0] * raw[0]);
-		out_raw[i] += ((int16_t)matrix[3*i+1] * raw[1]);
-		out_raw[i] += ((int16_t)matrix[3*i+2] * raw[2]);
+
+	for (i = 0; i < 3; i++) {
+		out_raw[i] = ((int16_t)matrix[3 * i + 0] * raw[0]);
+		out_raw[i] += ((int16_t)matrix[3 * i + 1] * raw[1]);
+		out_raw[i] += ((int16_t)matrix[3 * i + 2] * raw[2]);
 	}
 
 	raw[0] = out_raw[0];
@@ -93,50 +89,50 @@ static void apply_mounting_matrix(const int32_t matrix[9], int16_t raw[3])
 void icm42670S_aml_process(const struct device *dev)
 {
 	struct icm42670S_data *data = dev->data;
-	
+
 	static InvnAlgoAMLInput input;
 	static InvnAlgoAMLOutput output;
-	
+
 	input.racc_data[0] = data->accel[0];
 	input.racc_data[1] = data->accel[1];
 	input.racc_data[2] = data->accel[2];
-	
+
 	input.rgyr_data[0] = data->gyro[0];
 	input.rgyr_data[1] = data->gyro[1];
 	input.rgyr_data[2] = data->gyro[2];
-	
+
 	apply_mounting_matrix(accel_mounting_matrix, input.racc_data);
 	apply_mounting_matrix(gyro_mounting_matrix, input.rgyr_data);
 
 	/* Process the AML algo */
 	invn_algo_aml_process(&input, &output);
-	
+
 	if (output.status & INVN_ALGO_AML_STATUS_DELTA_COMPUTED) {
 		data->delta[0] = output.delta[0];
 		data->delta[1] = output.delta[1];
-		
+
 		data->quaternion[0] = output.quaternion[0];
 		data->quaternion[1] = output.quaternion[1];
 		data->quaternion[2] = output.quaternion[2];
 		data->quaternion[3] = output.quaternion[3];
 	}
-	
+
 	if (output.status & INVN_ALGO_AML_STATUS_STATIC) {
 		data->remote_static = 1;
 	} else {
 		data->remote_static = 0;
 	}
-	
+
 	data->swipes_detected = 0;
 	if (output.swipes_detected != 0) {
 		data->swipes_detected = output.swipes_detected;
 		output.swipes_detected = 0;
 	}
-	
-	if ((uint8_t) output.remote_position != data->remote_position) {
-		data->remote_position = (uint8_t) output.remote_position;
+
+	if ((uint8_t)output.remote_position != data->remote_position) {
+		data->remote_position = (uint8_t)output.remote_position;
 	}
-	
+
 	if (output.status & INVN_ALGO_AML_STATUS_NEW_GYRO_OFFSET) {
 		data->gyro_offset[0] = output.gyr_offset[0];
 		data->gyro_offset[1] = output.gyr_offset[1];

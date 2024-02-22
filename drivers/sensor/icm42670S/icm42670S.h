@@ -37,10 +37,10 @@ typedef void (*tap_fetch_t)(const struct device *dev);
 int icm42670S_tap_fetch(const struct device *dev);
 
 typedef int (*icm42670S_bus_check_fn)(const union icm42670S_bus *bus);
-typedef int (*icm42670S_reg_read_fn)(const union icm42670S_bus *bus,
-				  uint8_t reg, uint8_t *buf, uint32_t size);
-typedef int (*icm42670S_reg_write_fn)(const union icm42670S_bus *bus,
-				   uint8_t reg, uint8_t *buf, uint32_t size);
+typedef int (*icm42670S_reg_read_fn)(const union icm42670S_bus *bus, uint8_t reg, uint8_t *buf,
+				     uint32_t size);
+typedef int (*icm42670S_reg_write_fn)(const union icm42670S_bus *bus, uint8_t reg, uint8_t *buf,
+				      uint32_t size);
 
 struct icm42670S_bus_io {
 	icm42670S_bus_check_fn check;
@@ -49,8 +49,7 @@ struct icm42670S_bus_io {
 };
 
 #if ICM42670S_BUS_SPI
-#define ICM42670S_SPI_OPERATION (SPI_WORD_SET(8) | SPI_TRANSFER_MSB |	\
-			      SPI_MODE_CPOL | SPI_MODE_CPHA)
+#define ICM42670S_SPI_OPERATION (SPI_WORD_SET(8) | SPI_TRANSFER_MSB | SPI_MODE_CPOL | SPI_MODE_CPHA)
 extern const struct icm42670S_bus_io icm42670S_bus_io_spi;
 #endif
 
@@ -73,7 +72,7 @@ struct icm42670S_data {
 	uint16_t gyro_hz;
 	uint8_t accel_pwr_mode;
 #endif
-	
+
 #ifdef CONFIG_ICM42670S_APEX_PEDOMETER
 	uint8_t dmp_odr_hz;
 	uint64_t pedometer_cnt;
@@ -86,7 +85,7 @@ struct icm42670S_data {
 	uint8_t wom_z;
 #endif
 #ifdef CONFIG_ICM42670S_AML
-	int8_t  delta[2];
+	int8_t delta[2];
 	uint8_t swipes_detected;
 	uint8_t remote_position;
 	uint8_t remote_static;
@@ -108,7 +107,7 @@ struct icm42670S_data {
 struct icm42670S_config {
 	union icm42670S_bus bus;
 	const struct icm42670S_bus_io *bus_io;
-	struct gpio_dt_spec gpio_int;	
+	struct gpio_dt_spec gpio_int;
 	uint8_t accel_fs;
 	uint16_t accel_hz;
 	uint16_t accel_avg;
@@ -119,9 +118,8 @@ struct icm42670S_config {
 	uint8_t accel_pwr_mode;
 };
 
-int icm42670S_trigger_set(const struct device *dev,
-			 const struct sensor_trigger *trig,
-			 sensor_trigger_handler_t handler);
+int icm42670S_trigger_set(const struct device *dev, const struct sensor_trigger *trig,
+			  sensor_trigger_handler_t handler);
 
 int icm42670S_init_interrupt(const struct device *dev);
 
@@ -129,7 +127,8 @@ int icm42670S_init_interrupt(const struct device *dev);
 int icm42670S_apex_enable(inv_imu_device_t *s);
 int icm42670S_apex_enable_pedometer(const struct device *dev, inv_imu_device_t *s);
 int icm42670S_apex_pedometer_fetch_from_dmp(const struct device *dev);
-void icm42670S_apex_pedometer_cadence_convert(struct sensor_value *val, uint8_t raw_val, uint8_t dmp_odr_hz);
+void icm42670S_apex_pedometer_cadence_convert(struct sensor_value *val, uint8_t raw_val,
+					      uint8_t dmp_odr_hz);
 #endif
 
 #ifdef CONFIG_ICM42670S_APEX_TILT
@@ -150,7 +149,8 @@ int icm42670S_apex_wom_fetch_from_dmp(const struct device *dev);
 #endif
 
 #ifdef CONFIG_ICM42670S_AML
-int icm42670S_aml_init(const struct device *dev, inv_imu_device_t *s, int8_t delta_gain_x, int8_t delta_gain_y);
+int icm42670S_aml_init(const struct device *dev, inv_imu_device_t *s, int8_t delta_gain_x,
+		       int8_t delta_gain_y);
 void icm42670S_aml_process(const struct device *dev);
 void icm42670S_aml_quaternion_convert(struct sensor_value *val, int32_t raw_val);
 #endif

@@ -41,7 +41,6 @@ static const struct device *get_icm42670S_device(void)
 	return dev;
 }
 
-
 static const char *now_str(void)
 {
 	static char buf[16]; /* ...HH:MM:SS.MMM */
@@ -58,18 +57,16 @@ static const char *now_str(void)
 	now /= 60U;
 	h = now;
 
-	snprintf(buf, sizeof(buf), "%u:%02u:%02u.%03u",
-		 h, min, s, ms);
+	snprintf(buf, sizeof(buf), "%u:%02u:%02u.%03u", h, min, s, ms);
 	return buf;
 }
 
-static void handle_icm42670S_drdy(const struct device *dev,
-				 const struct sensor_trigger *trig)
+static void handle_icm42670S_drdy(const struct device *dev, const struct sensor_trigger *trig)
 {
 	if (trig->type == SENSOR_TRIG_DATA_READY) {
 		int rc = sensor_sample_fetch_chan(dev, trig->chan);
-	
-		if (rc < 0) { 
+
+		if (rc < 0) {
 			printf("sample fetch failed: %d\n", rc);
 			printf("cancelling trigger due to failure: %d\n", rc);
 			(void)sensor_trigger_set(dev, trig, NULL);
@@ -86,44 +83,36 @@ int main(void)
 	struct sensor_value accel[3];
 	struct sensor_value gyro[3];
 	struct sensor_value temperature;
-	
+
 	if (dev == NULL) {
 		return 0;
 	}
-	
-	data_trigger = (struct sensor_trigger) {
+
+	data_trigger = (struct sensor_trigger){
 		.type = SENSOR_TRIG_DATA_READY,
 		.chan = SENSOR_CHAN_ALL,
 	};
-	if (sensor_trigger_set(dev, &data_trigger,
-			       handle_icm42670S_drdy) < 0) {
+	if (sensor_trigger_set(dev, &data_trigger, handle_icm42670S_drdy) < 0) {
 		printf("Cannot configure data trigger!!!\n");
 		return 0;
 	}
 
 	k_sleep(K_MSEC(1000));
-	
+
 	while (1) {
-		
-		if( irq_from_device ) {
-			sensor_channel_get(dev, SENSOR_CHAN_ACCEL_XYZ,
-							accel);
-			sensor_channel_get(dev, SENSOR_CHAN_GYRO_XYZ,
-							gyro);
-			sensor_channel_get(dev, SENSOR_CHAN_DIE_TEMP,
-							&temperature);
-	
+
+		if (irq_from_device) {
+			sensor_channel_get(dev, SENSOR_CHAN_ACCEL_XYZ, accel);
+			sensor_channel_get(dev, SENSOR_CHAN_GYRO_XYZ, gyro);
+			sensor_channel_get(dev, SENSOR_CHAN_DIE_TEMP, &temperature);
+
 			printf("[%s]: temp %.2f Cel "
-				   "  accel %f %f %f m/s/s "
-				   "  gyro  %f %f %f rad/s\n",
-				   now_str(),
-				   sensor_value_to_double(&temperature),
-				   sensor_value_to_double(&accel[0]),
-				   sensor_value_to_double(&accel[1]),
-				   sensor_value_to_double(&accel[2]),
-				   sensor_value_to_double(&gyro[0]),
-				   sensor_value_to_double(&gyro[1]),
-				   sensor_value_to_double(&gyro[2]));
+			       "  accel %f %f %f m/s/s "
+			       "  gyro  %f %f %f rad/s\n",
+			       now_str(), sensor_value_to_double(&temperature),
+			       sensor_value_to_double(&accel[0]), sensor_value_to_double(&accel[1]),
+			       sensor_value_to_double(&accel[2]), sensor_value_to_double(&gyro[0]),
+			       sensor_value_to_double(&gyro[1]), sensor_value_to_double(&gyro[2]));
 			irq_from_device = 0;
 		}
 	}
