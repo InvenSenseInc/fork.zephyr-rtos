@@ -426,9 +426,10 @@ static uint32_t convert_ln_bw_to_bitfield(uint32_t val)
 	} else if (val == 180) {
 		bitfield = ACCEL_CONFIG1_ACCEL_FILT_BW_180; /* (= GYRO_CONFIG1_GYRO_FILT_BW_180) */
 	} else if (val == 0) {
-		bitfield = ACCEL_CONFIG1_ACCEL_FILT_BW_NO_FILTER; /* (=
-								     GYRO_CONFIG1_GYRO_FILT_BW_NO_FILTER)
-								   */
+		bitfield =
+			ACCEL_CONFIG1_ACCEL_FILT_BW_NO_FILTER; /* (=
+								  GYRO_CONFIG1_GYRO_FILT_BW_NO_FILTER)
+								*/
 	}
 	return bitfield;
 }
@@ -486,6 +487,194 @@ static uint16_t convert_bitfield_to_gyr_fs(uint8_t bitfield)
 	return gyr_fs;
 }
 
+#ifdef CONFIG_ICM42670S_ATTR_RUNTIME
+static int icm42670S_accel_power_mode_set(struct icm42670S_data *drv_data,
+					  const struct sensor_value *val)
+{
+	int err;
+
+	if ((val->val1 == ICM42670S_LOW_POWER_MODE) &&
+	    (drv_data->accel_pwr_mode != ICM42670S_LOW_POWER_MODE)) {
+		if (drv_data->accel_hz != 0) {
+			if (drv_data->accel_hz <= 400) {
+				err |= inv_imu_enable_accel_low_power_mode(&drv_data->driver);
+			} else {
+				LOG_ERR("Not supported ATTR value");
+				return -EINVAL;
+			}
+		}
+		drv_data->accel_pwr_mode = val->val1;
+	} else if ((val->val1 == ICM42670S_LOW_NOISE_MODE) &&
+		   (drv_data->accel_pwr_mode != ICM42670S_LOW_NOISE_MODE)) {
+		if (drv_data->accel_hz != 0) {
+			if (drv_data->accel_hz >= 12) {
+				err |= inv_imu_enable_accel_low_noise_mode(&drv_data->driver);
+			} else {
+				LOG_ERR("Not supported ATTR value");
+				return -EINVAL;
+			}
+		}
+		drv_data->accel_pwr_mode = val->val1;
+	} else {
+		LOG_ERR("Not supported ATTR value");
+		return -EINVAL;
+	}
+	return err;
+}
+
+static int icm42670S_accel_odr_set(struct icm42670S_data *drv_data, const struct sensor_value *val)
+{
+	int err;
+
+	if (val->val1 <= 1600 && val->val1 >= 1) {
+		if (drv_data->accel_hz == 0) {
+			err |= inv_imu_set_accel_frequency(
+				&drv_data->driver,
+				convert_freq_to_bitfield(val->val1, &drv_data->accel_hz));
+			if (drv_data->accel_pwr_mode == ICM42670S_LOW_POWER_MODE) {
+				err |= inv_imu_enable_accel_low_power_mode(&drv_data->driver);
+			} else if (drv_data->accel_pwr_mode == ICM42670S_LOW_NOISE_MODE) {
+				err |= inv_imu_enable_accel_low_noise_mode(&drv_data->driver);
+			}
+		} else {
+			err |= inv_imu_set_accel_frequency(
+				&drv_data->driver,
+				convert_freq_to_bitfield(val->val1, &drv_data->accel_hz));
+		}
+	} else if (val->val1 == 0) {
+		err |= inv_imu_disable_accel(&drv_data->driver);
+		drv_data->accel_hz = val->val1;
+	} else {
+		LOG_ERR("Incorrect sampling value");
+		return -EINVAL;
+	}
+	return err;
+}
+
+static int icm42670S_accel_range_set(struct icm42670S_data *drv_data,
+				     const struct sensor_value *val)
+{
+	int err;
+
+	if (val->val1 > 16 || val->val1 < 2) {
+		LOG_ERR("Incorrect fullscale value");
+		return -EINVAL;
+	} else {
+		err |= inv_imu_set_accel_fsr(
+			&drv_data->driver,
+			convert_acc_fs_to_bitfield(val->val1, &drv_data->accel_fs));
+		LOG_DBG("Set accel full scale to: %d G", drv_data->accel_fs);
+	}
+	return err;
+}
+
+static int icm42670S_accel_config(struct icm42670S_data *drv_data, enum sensor_attribute attr,
+				  const struct sensor_value *val)
+{
+	int err;
+
+	if (attr == SENSOR_ATTR_CONFIGURATION) {
+		icm42670S_accel_power_mode_set(drv_data, val);
+
+	} else if (attr == SENSOR_ATTR_SAMPLING_FREQUENCY) {
+		icm42670S_accel_odr_set(drv_data, val);
+
+	} else if (attr == SENSOR_ATTR_FULL_SCALE) {
+		icm42670S_accel_range_set(drv_data, val);
+
+	} else if ((enum sensor_attribute_icm42670S)attr == SENSOR_ATTR_BW_FILTER_LPF) {
+		if (val->val1 > 180) {
+			LOG_ERR("Incorrect low pass filter bandwith value");
+			return -EINVAL;
+		} else {
+			err |= inv_imu_set_accel_ln_bw(&drv_data->driver,
+						       convert_ln_bw_to_bitfield(val->val1));
+		}
+
+	} else if ((enum sensor_attribute_icm42670S)attr == SENSOR_ATTR_AVERAGING) {
+		if (val->val1 > 64 || val->val1 < 2) {
+			LOG_ERR("Incorrect averaging filter value");
+			return -EINVAL;
+		} else {
+			err |= inv_imu_set_accel_lp_avg(&drv_data->driver,
+							convert_lp_avg_to_bitfield(val->val1));
+		}
+	} else {
+		LOG_ERR("Not supported ATTR");
+		return -ENOTSUP;
+	}
+	return err;
+}
+
+static int icm42670S_gyro_odr_set(struct icm42670S_data *drv_data, const struct sensor_value *val)
+{
+	int err;
+
+	if (val->val1 <= 1600 && val->val1 > 12) {
+		if (drv_data->gyro_hz == 0) {
+			err |= inv_imu_set_gyro_frequency(
+				&drv_data->driver,
+				convert_freq_to_bitfield(val->val1, &drv_data->gyro_hz));
+			err |= inv_imu_enable_gyro_low_noise_mode(&drv_data->driver);
+		} else {
+			err |= inv_imu_set_gyro_frequency(
+				&drv_data->driver,
+				convert_freq_to_bitfield(val->val1, &drv_data->gyro_hz));
+		}
+	} else if (val->val1 == 0) {
+		err |= inv_imu_disable_gyro(&drv_data->driver);
+		drv_data->gyro_hz = val->val1;
+	} else {
+		LOG_ERR("Incorrect sampling value");
+		return -EINVAL;
+	}
+	return err;
+}
+
+static int icm42670S_gyro_range_set(struct icm42670S_data *drv_data, const struct sensor_value *val)
+{
+	int err;
+
+	if (val->val1 > 2000 || val->val1 < 250) {
+		LOG_ERR("Incorrect fullscale value");
+		return -EINVAL;
+	} else {
+		err |= inv_imu_set_gyro_fsr(
+			&drv_data->driver,
+			convert_gyr_fs_to_bitfield(val->val1, &drv_data->gyro_fs));
+		LOG_DBG("Set gyro fullscale to: %d dps", drv_data->gyro_fs);
+	}
+	return err;
+}
+
+static int icm42670S_gyro_config(struct icm42670S_data *drv_data, enum sensor_attribute attr,
+				 const struct sensor_value *val)
+{
+	int err;
+
+	if (attr == SENSOR_ATTR_SAMPLING_FREQUENCY) {
+		icm42670S_gyro_odr_set(drv_data, val);
+
+	} else if (attr == SENSOR_ATTR_FULL_SCALE) {
+		icm42670S_gyro_range_set(drv_data, val);
+
+	} else if ((enum sensor_attribute_icm42670S)attr == SENSOR_ATTR_BW_FILTER_LPF) {
+		if (val->val1 > 180) {
+			LOG_ERR("Incorrect low pass filter bandwith value");
+			return -EINVAL;
+		} else {
+			err |= inv_imu_set_gyro_ln_bw(&drv_data->driver,
+						      convert_ln_bw_to_bitfield(val->val1));
+		}
+
+	} else {
+		LOG_ERR("Not supported ATTR");
+		return -EINVAL;
+	}
+	return err;
+}
+#endif
+
 static int icm42670S_attr_set(const struct device *dev, enum sensor_channel chan,
 			      enum sensor_attribute attr, const struct sensor_value *val)
 {
@@ -535,145 +724,11 @@ static int icm42670S_attr_set(const struct device *dev, enum sensor_channel chan
 		}
 #ifdef CONFIG_ICM42670S_ATTR_RUNTIME
 	} else if (chan == SENSOR_CHAN_ACCEL_XYZ) {
-		if (attr == SENSOR_ATTR_CONFIGURATION) {
-			if ((val->val1 == ICM42670S_LOW_POWER_MODE) &&
-			    (drv_data->accel_pwr_mode != ICM42670S_LOW_POWER_MODE)) {
-				if (drv_data->accel_hz != 0) {
-					if (drv_data->accel_hz <= 400) {
-						err |= inv_imu_enable_accel_low_power_mode(
-							&drv_data->driver);
-					} else {
-						LOG_ERR("Not supported ATTR value");
-						return -EINVAL;
-					}
-				}
-				drv_data->accel_pwr_mode = val->val1;
-			} else if ((val->val1 == ICM42670S_LOW_NOISE_MODE) &&
-				   (drv_data->accel_pwr_mode != ICM42670S_LOW_NOISE_MODE)) {
-				if (drv_data->accel_hz != 0) {
-					if (drv_data->accel_hz >= 12) {
-						err |= inv_imu_enable_accel_low_noise_mode(
-							&drv_data->driver);
-					} else {
-						LOG_ERR("Not supported ATTR value");
-						return -EINVAL;
-					}
-				}
-				drv_data->accel_pwr_mode = val->val1;
-			} else {
-				LOG_ERR("Not supported ATTR value");
-				return -EINVAL;
-			}
+		icm42670S_accel_config(drv_data, attr, val);
 
-		} else if (attr == SENSOR_ATTR_SAMPLING_FREQUENCY) {
-			if (val->val1 <= 1600 && val->val1 >= 1) {
-				if (drv_data->accel_hz == 0) {
-					err |= inv_imu_set_accel_frequency(
-						&drv_data->driver,
-						convert_freq_to_bitfield(val->val1,
-									 &drv_data->accel_hz));
-					if (drv_data->accel_pwr_mode == ICM42670S_LOW_POWER_MODE) {
-						err |= inv_imu_enable_accel_low_power_mode(
-							&drv_data->driver);
-					} else if (drv_data->accel_pwr_mode ==
-						   ICM42670S_LOW_NOISE_MODE) {
-						err |= inv_imu_enable_accel_low_noise_mode(
-							&drv_data->driver);
-					}
-				} else {
-					err |= inv_imu_set_accel_frequency(
-						&drv_data->driver,
-						convert_freq_to_bitfield(val->val1,
-									 &drv_data->accel_hz));
-				}
-			} else if (val->val1 == 0) {
-				err |= inv_imu_disable_accel(&drv_data->driver);
-				drv_data->accel_hz = val->val1;
-			} else {
-				LOG_ERR("Incorrect sampling value");
-				return -EINVAL;
-			}
-
-		} else if (attr == SENSOR_ATTR_FULL_SCALE) {
-			if (val->val1 > 16 || val->val1 < 2) {
-				LOG_ERR("Incorrect fullscale value");
-				return -EINVAL;
-			} else {
-				err |= inv_imu_set_accel_fsr(
-					&drv_data->driver,
-					convert_acc_fs_to_bitfield(val->val1, &drv_data->accel_fs));
-				LOG_DBG("Set accel full scale to: %d G", drv_data->accel_fs);
-			}
-
-		} else if ((enum sensor_attribute_icm42670S)attr == SENSOR_ATTR_BW_FILTER_LPF) {
-			if (val->val1 > 180) {
-				LOG_ERR("Incorrect low pass filter bandwith value");
-				return -EINVAL;
-			} else {
-				err |= inv_imu_set_accel_ln_bw(
-					&drv_data->driver, convert_ln_bw_to_bitfield(val->val1));
-			}
-
-		} else if ((enum sensor_attribute_icm42670S)attr == SENSOR_ATTR_AVERAGING) {
-			if (val->val1 > 64 || val->val1 < 2) {
-				LOG_ERR("Incorrect averaging filter value");
-				return -EINVAL;
-			} else {
-				err |= inv_imu_set_accel_lp_avg(
-					&drv_data->driver, convert_lp_avg_to_bitfield(val->val1));
-			}
-		} else {
-			LOG_ERR("Not supported ATTR");
-			return -ENOTSUP;
-		}
 	} else if (chan == SENSOR_CHAN_GYRO_XYZ) {
-		if (attr == SENSOR_ATTR_SAMPLING_FREQUENCY) {
-			if (val->val1 <= 1600 && val->val1 > 12) {
-				if (drv_data->gyro_hz == 0) {
-					err |= inv_imu_set_gyro_frequency(
-						&drv_data->driver,
-						convert_freq_to_bitfield(val->val1,
-									 &drv_data->gyro_hz));
-					err |= inv_imu_enable_gyro_low_noise_mode(
-						&drv_data->driver);
-				} else {
-					err |= inv_imu_set_gyro_frequency(
-						&drv_data->driver,
-						convert_freq_to_bitfield(val->val1,
-									 &drv_data->gyro_hz));
-				}
-			} else if (val->val1 == 0) {
-				err |= inv_imu_disable_gyro(&drv_data->driver);
-				drv_data->gyro_hz = val->val1;
-			} else {
-				LOG_ERR("Incorrect sampling value");
-				return -EINVAL;
-			}
+		icm42670S_gyro_config(drv_data, attr, val);
 
-		} else if (attr == SENSOR_ATTR_FULL_SCALE) {
-			if (val->val1 > 2000 || val->val1 < 250) {
-				LOG_ERR("Incorrect fullscale value");
-				return -EINVAL;
-			} else {
-				err |= inv_imu_set_gyro_fsr(
-					&drv_data->driver,
-					convert_gyr_fs_to_bitfield(val->val1, &drv_data->gyro_fs));
-				LOG_DBG("Set gyro fullscale to: %d dps", drv_data->gyro_fs);
-			}
-
-		} else if ((enum sensor_attribute_icm42670S)attr == SENSOR_ATTR_BW_FILTER_LPF) {
-			if (val->val1 > 180) {
-				LOG_ERR("Incorrect low pass filter bandwith value");
-				return -EINVAL;
-			} else {
-				err |= inv_imu_set_gyro_ln_bw(&drv_data->driver,
-							      convert_ln_bw_to_bitfield(val->val1));
-			}
-
-		} else {
-			LOG_ERR("Not supported ATTR");
-			return -EINVAL;
-		}
 #endif
 	} else {
 		LOG_ERR("Not supported");
