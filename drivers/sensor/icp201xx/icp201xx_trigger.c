@@ -15,56 +15,36 @@
 
 LOG_MODULE_DECLARE(ICP201XX, CONFIG_SENSOR_LOG_LEVEL);
 
-int icp201xx_trigger_set(const struct device *dev,
-			 const struct sensor_trigger *trig,
-			 sensor_trigger_handler_t handler)
-{
-	icp201xx_data *drv_data = dev->data;
-	const struct icp201xx_config *cfg = dev->config;
 
-	gpio_pin_interrupt_configure_dt(&cfg->gpio_int, GPIO_INT_DISABLE);
-
-	if (handler == NULL) {
-		return 0;
-	}
-
-	if (trig->type == SENSOR_TRIG_DATA_READY) {
-		drv_data->data_ready_handler = handler;
-		drv_data->data_ready_trigger = trig;
-	} else {
-		return -ENOTSUP;
-	}
-
-	gpio_pin_interrupt_configure_dt(&cfg->gpio_int, GPIO_INT_EDGE_TO_ACTIVE);
-
-	return 0;
-}
 
 static void icp201xx_gpio_callback(const struct device *dev,
 				   struct gpio_callback *cb, uint32_t pins)
 {
 	icp201xx_data *drv_data =
 		CONTAINER_OF(cb, icp201xx_data, gpio_cb);
-	const struct icp201xx_config *cfg = dev->config;
 
 	ARG_UNUSED(pins);
 
-	gpio_pin_interrupt_configure_dt(&cfg->gpio_int, GPIO_INT_DISABLE);
+	gpio_pin_interrupt_configure_dt(drv_data->gpio_int_p, GPIO_INT_DISABLE);
 
 	k_sem_give(&drv_data->gpio_sem);
+
 }
 
 static void icp201xx_thread_cb(const struct device *dev)
 {
 	icp201xx_data *drv_data = dev->data;
 	const struct icp201xx_config *cfg = dev->config;
+	uint8_t i_status;
 
 	if (drv_data->data_ready_handler != NULL) {
 		drv_data->data_ready_handler(dev,
 					     drv_data->data_ready_trigger);
 	}
-
-	gpio_pin_interrupt_configure_dt(&cfg->gpio_int, GPIO_INT_EDGE_TO_ACTIVE);
+	inv_icp201xx_get_int_status(&drv_data->icp_device,&i_status);
+	if ( i_status )
+		inv_icp201xx_clear_int_status(&drv_data->icp_device,i_status);
+	gpio_pin_interrupt_configure_dt(&cfg->gpio_int, GPIO_INT_LEVEL_LOW);
 }
 
 static void icp201xx_thread(void *p1, void *p2, void *p3)
@@ -90,6 +70,8 @@ int icp201xx_init_interrupt(const struct device *dev)
 		LOG_ERR("gpio_int gpio not ready");
 		return -ENODEV;
 	}
+	
+	drv_data->gpio_int_p = &cfg->gpio_int;
 
 	gpio_pin_configure_dt(&cfg->gpio_int, GPIO_INPUT);
 	gpio_init_callback(&drv_data->gpio_cb, icp201xx_gpio_callback, BIT(cfg->gpio_int.pin));
@@ -103,10 +85,43 @@ int icp201xx_init_interrupt(const struct device *dev)
 	k_sem_init(&drv_data->gpio_sem, 0, K_SEM_MAX_LIMIT);
 
 	k_thread_create(&drv_data->thread, drv_data->thread_stack,
-			CONFIG_ICP201XX_THREAD_STACK_SIZE, icp201xx_thread, dev, NULL, NULL,
+			CONFIG_ICP201XX_THREAD_STACK_SIZE, icp201xx_thread, (struct device *)dev, NULL, NULL,
 			K_PRIO_COOP(CONFIG_ICP201XX_THREAD_PRIORITY), 0, K_NO_WAIT);
 
-	gpio_pin_interrupt_configure_dt(&cfg->gpio_int, GPIO_INT_EDGE_TO_INACTIVE);
 
 	return 0;
 }
+
+int icp201xx_trigger_set(const struct device *dev,
+			 const struct sensor_trigger *trig,
+			 sensor_trigger_handler_t handler)
+{
+	int rc = 0;
+	icp201xx_data *drv_data = dev->data;
+	const struct icp201xx_config *cfg = dev->config;
+
+	gpio_pin_interrupt_configure_dt(&cfg->gpio_int, GPIO_INT_DISABLE);
+
+	if (handler == NULL) {
+		return -1;
+	}
+
+	if (trig->type == SENSOR_TRIG_DATA_READY) {
+		drv_data->data_ready_handler = handler;
+		drv_data->data_ready_trigger = trig;
+		
+		rc |= icp201xx_init_interrupt(dev);
+		if (rc < 0) {
+			LOG_ERR("Failed to initialize interrupt.");
+			return rc;
+		}
+		rc = icp201xx_fifo_interrupt(dev,1);
+	} else {
+		return -ENOTSUP;
+	}
+
+	gpio_pin_interrupt_configure_dt(&cfg->gpio_int, GPIO_INT_LEVEL_LOW);
+
+	return 0;
+}
+

@@ -122,21 +122,19 @@ static int icp201xx_sample_fetch(const struct device *dev, const enum sensor_cha
 	if ( inv_icp201xx_get_fifo_count(&(data->icp_device),&fifo_packets) )
 		return -2;
 
-	if (fifo_packets)
+	for (int i = 0; i < fifo_packets; i++)
 	{
 		inv_icp201xx_get_fifo_data(&(data->icp_device),1,fifo_data);
 #if ICP201XX_BUS_I2C
 		/* Perform dummy read to 0x00 register as last transaction after FIFO read for I2C interface */
 		do{
 			uint8_t dummy_reg = 0;
-			inv_io_hal_read_reg(dev, 0, &dummy_reg, 1);
+			inv_io_hal_read_reg((struct device *)dev, 0, &dummy_reg, 1);
 		}while(0);
 #endif
-		inv_icp201xx_process_raw_data(&(data->icp_device),1,fifo_data,&data->raw_pressure,&data->raw_temperature);
-
-		return 0;
 	}
-	return -1;
+	inv_icp201xx_process_raw_data(&(data->icp_device),1,fifo_data,&data->raw_pressure,&data->raw_temperature);
+	return 0;
 }
 
 
@@ -184,6 +182,21 @@ static int icp201xx_channel_get(const struct device *dev, enum sensor_channel ch
 	return 0;
 }
 
+int icp201xx_fifo_interrupt(const struct device *dev, uint8_t fifo_watermark)
+{
+	int rc = 0;
+	icp201xx_data* data = (icp201xx_data*)dev->data;
+
+	rc = inv_icp201xx_soft_reset(&(data->icp_device));
+	inv_icp201xx_flush_fifo(&(data->icp_device));
+	rc |= inv_icp201xx_config(&(data->icp_device),ICP201XX_OP_MODE0,ICP201XX_FIFO_READOUT_MODE_PRES_TEMP);
+	rc |= inv_icp201xx_set_press_notification_config(&(data->icp_device), 0, 0, 0);
+	rc |= inv_icp201xx_set_fifo_notification_config(&(data->icp_device), ICP201XX_INT_MASK_FIFO_WMK_HIGH,fifo_watermark,0);
+
+	inv_icp201xx_app_warmup(&(data->icp_device),ICP201XX_OP_MODE0,ICP201XX_MEAS_MODE_CONTINUOUS);
+	return rc;
+}
+
 static int icp201xx_init(const struct device *dev)
 {
 	icp201xx_data* data = (icp201xx_data*)dev->data;
@@ -192,7 +205,6 @@ static int icp201xx_init(const struct device *dev)
 	uint8_t who_am_i;
 	uint8_t icp_version;
 
-LOG_INF("ICI");
 #if ICP201XX_BUS_I2C
 	icp_serif.if_mode = ICP201XX_IF_I2C;
 #else
@@ -210,15 +222,12 @@ LOG_INF("ICI");
 		LOG_ERR("Init error");
 		return rc;
 	}
-LOG_INF("LA");
 
 	rc = inv_icp201xx_soft_reset(&(data->icp_device));
-LOG_INF("LA");
 	if (rc != INV_ERROR_SUCCESS) {
 		LOG_ERR("Reset error");
 		return rc;
 	}
-LOG_INF("HERE");
 
 	/* Check WHOAMI */
 	rc =  inv_icp201xx_get_devid_version(&(data->icp_device),&who_am_i,&icp_version);
@@ -226,13 +235,11 @@ LOG_INF("HERE");
 		LOG_ERR("Device id error");
 		return -2;
 	}
-	LOG_INF("THERE");
 
 	if (who_am_i != EXPECTED_DEVICE_ID) {
 		LOG_ERR("Wrong device id");
 		return -3;
 	}
-LOG_INF("HERE AGAIN");
 
 	/* Boot up OTP config */
 	rc = inv_icp201xx_OTP_bootup_cfg(&(data->icp_device));
@@ -251,6 +258,7 @@ LOG_INF("HERE AGAIN");
 		return rc;
 	}
 	inv_icp201xx_app_warmup(&(data->icp_device),ICP201XX_OP_MODE0,ICP201XX_MEAS_MODE_CONTINUOUS);
+
 	// successful init, return 0
 	return 0;
 }
