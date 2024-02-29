@@ -54,7 +54,7 @@ static int inv_io_hal_write_reg(void* ctx, uint8_t reg,
 #define PRESSURE_TO_HEIGHT_COEFF 29.27127 // R / (M*g) = 8,31432 / (0,0289644 * 9,80665)
 #define LOG_ATMOSPHERICAL_PRESSURE 4.61833 // ln(101.325)
 
-float convertToHeight(float pressure_kp, float temperature_C)
+static float convertToHeight(float pressure_kp, float temperature_C)
 {
 	return PRESSURE_TO_HEIGHT_COEFF * TO_KELVIN(temperature_C) * (LOG_ATMOSPHERICAL_PRESSURE - log(pressure_kp));
 }
@@ -97,13 +97,30 @@ static int icp201xx_attr_set(const struct device *dev,
 	{
 		if (attr == SENSOR_ATTR_CONFIGURATION) {
 			if ((val->val1 >= ICP201XX_OP_MODE0)&&(val->val1 <= ICP201XX_OP_MODE4)) {
+				data->op_mode = val->val1;
 				err = inv_icp201xx_soft_reset(&(data->icp_device));
-				err = inv_icp201xx_config(&(data->icp_device),val->val1,ICP201XX_FIFO_READOUT_MODE_PRES_TEMP);
-				inv_icp201xx_app_warmup(&(data->icp_device),ICP201XX_OP_MODE0,ICP201XX_MEAS_MODE_CONTINUOUS);			} else {
+				err = inv_icp201xx_config(&(data->icp_device),data->op_mode,ICP201XX_FIFO_READOUT_MODE_PRES_TEMP);
+				inv_icp201xx_app_warmup(&(data->icp_device),data->op_mode,ICP201XX_MEAS_MODE_CONTINUOUS);
+			} else {
 				LOG_ERR("Not supported ATTR value");
 				return -EINVAL;
 			}
-			
+		} else if (attr == SENSOR_ATTR_SLOPE_TH) {
+			float pressure_change = sensor_value_to_float(val);
+			if (pressure_change > 0) {
+				data->pressure_change = pressure_change;
+			} else {
+				LOG_ERR("Not supported ATTR value");
+				return -EINVAL;
+			}
+		} else if ((attr == SENSOR_ATTR_LOWER_THRESH)||(attr == SENSOR_ATTR_UPPER_THRESH)) {
+			float pressure_threshold = sensor_value_to_float(val);
+			if (pressure_threshold > 0) {
+				data->pressure_threshold = pressure_threshold;
+			} else {
+				LOG_ERR("Not supported ATTR value");
+				return -EINVAL;
+			}
 		} else {
 			LOG_ERR("Not supported ATTR");
 			return -EINVAL;
@@ -165,16 +182,12 @@ static int icp201xx_channel_get(const struct device *dev, enum sensor_channel ch
 		temperature = ((float)( raw_temperature )*65 /262144 ) + 25;
 	}
 	if (chan == SENSOR_CHAN_AMBIENT_TEMP) {
-
-		val->val1 = temperature;
-		val->val2 = (temperature - val->val1) *1000000;
+		sensor_value_from_float(val,temperature);
 	} else if (chan == SENSOR_CHAN_PRESS) {
-		val->val1 = pressure;
-		val->val2 = (pressure - val->val1) *1000000;
+		sensor_value_from_float(val,pressure);
 	} else if (chan == SENSOR_CHAN_ALTITUDE) {
 		float altitude = convertToHeight(pressure,temperature);
-		val->val1 = altitude;
-		val->val2 = (altitude - val->val1) *1000000;
+		sensor_value_from_float(val,altitude);
 	} else {
 		return -ENOTSUP;
 	}
@@ -189,17 +202,44 @@ int icp201xx_fifo_interrupt(const struct device *dev, uint8_t fifo_watermark)
 
 	rc = inv_icp201xx_soft_reset(&(data->icp_device));
 	inv_icp201xx_flush_fifo(&(data->icp_device));
-	rc |= inv_icp201xx_config(&(data->icp_device),ICP201XX_OP_MODE0,ICP201XX_FIFO_READOUT_MODE_PRES_TEMP);
+	rc |= inv_icp201xx_config(&(data->icp_device),data->op_mode,ICP201XX_FIFO_READOUT_MODE_PRES_TEMP);
 	rc |= inv_icp201xx_set_press_notification_config(&(data->icp_device), 0, 0, 0);
 	rc |= inv_icp201xx_set_fifo_notification_config(&(data->icp_device), ICP201XX_INT_MASK_FIFO_WMK_HIGH,fifo_watermark,0);
 
-	inv_icp201xx_app_warmup(&(data->icp_device),ICP201XX_OP_MODE0,ICP201XX_MEAS_MODE_CONTINUOUS);
+	inv_icp201xx_app_warmup(&(data->icp_device),data->op_mode,ICP201XX_MEAS_MODE_CONTINUOUS);
+	return rc;
+}
+
+int icp201xx_pressure_interrupt(const struct device *dev, float pressure) {
+	int16_t pressure_value;
+	int rc = 0;
+	icp201xx_data* data = (icp201xx_data*)dev->data;
+
+	rc = inv_icp201xx_soft_reset(&(data->icp_device));
+	rc |= inv_icp201xx_config(&(data->icp_device),data->op_mode,ICP201XX_FIFO_READOUT_MODE_PRES_TEMP);
+	rc |= inv_icp201xx_set_fifo_notification_config(&(data->icp_device), 0,0,0);
+	pressure_value = round((8192.0)*(pressure-70.0)/40);
+	rc |= inv_icp201xx_set_press_notification_config(&(data->icp_device), ICP201XX_INT_MASK_PRESS_ABS, pressure_value, 0);
+	return rc;
+}
+
+int icp201xx_pressure_change_interrupt(const struct device *dev,  float pressure_delta) {
+	int16_t pressure_delta_value;
+	int rc = 0;
+	icp201xx_data* data = (icp201xx_data*)dev->data;
+
+	rc = inv_icp201xx_soft_reset(&(data->icp_device));
+	rc |= inv_icp201xx_config(&(data->icp_device),data->op_mode,ICP201XX_FIFO_READOUT_MODE_PRES_TEMP);
+	rc |= inv_icp201xx_set_fifo_notification_config(&(data->icp_device), 0,0,0);
+	pressure_delta_value = round((16384.0 * pressure_delta)/80);
+	rc |= inv_icp201xx_set_press_notification_config(&(data->icp_device), ICP201XX_INT_MASK_PRESS_DELTA,0, pressure_delta_value);
 	return rc;
 }
 
 static int icp201xx_init(const struct device *dev)
 {
 	icp201xx_data* data = (icp201xx_data*)dev->data;
+	struct icp201xx_config* config = (struct icp201xx_config*)dev->config;
 	inv_icp201xx_serif_t icp_serif;
 	int rc = 0;
 	uint8_t who_am_i;
@@ -216,6 +256,8 @@ static int icp201xx_init(const struct device *dev)
 	icp_serif.write_reg = inv_io_hal_write_reg;
 	icp_serif.max_read  = 2048; /* maximum number of bytes allowed per serial read */
 	icp_serif.max_write = 2048; /* maximum number of bytes allowed per serial write */
+
+	data->op_mode = config->op_mode;;
 
 	rc = inv_icp201xx_init(&(data->icp_device), &icp_serif);
 	if (rc != INV_ERROR_SUCCESS) {
@@ -252,12 +294,12 @@ static int icp201xx_init(const struct device *dev)
 		LOG_ERR("Reset error");
 		return rc;
 	}
-	rc = inv_icp201xx_config(&(data->icp_device),ICP201XX_OP_MODE0,ICP201XX_FIFO_READOUT_MODE_PRES_TEMP);
+	rc = inv_icp201xx_config(&(data->icp_device),data->op_mode,ICP201XX_FIFO_READOUT_MODE_PRES_TEMP);
 	if(rc != 0) {
 		LOG_ERR("Config error");
 		return rc;
 	}
-	inv_icp201xx_app_warmup(&(data->icp_device),ICP201XX_OP_MODE0,ICP201XX_MEAS_MODE_CONTINUOUS);
+	inv_icp201xx_app_warmup(&(data->icp_device),data->op_mode,ICP201XX_MEAS_MODE_CONTINUOUS);
 
 	// successful init, return 0
 	return 0;

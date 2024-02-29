@@ -79,7 +79,6 @@ int main(void)
 	if (dev == NULL) {
 		return 0;
 	}
-	printf("Who are u\n");
 		data_trigger = (struct sensor_trigger){
 		.type = SENSOR_TRIG_DATA_READY,
 		.chan = SENSOR_CHAN_ALL,
@@ -88,7 +87,7 @@ int main(void)
 		printf("Cannot configure data trigger!!!\n");
 		return 0;
 	}
-	LOG_INF("Starting ICP201xx sample.\n");
+	LOG_INF("Starting ICP201xx fifo interrupt sample.\n");
 	
 	return 0;
 }

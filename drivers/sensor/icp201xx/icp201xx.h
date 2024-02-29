@@ -23,6 +23,9 @@
 typedef struct {
 	int32_t raw_pressure;
 	int32_t raw_temperature;
+	icp201xx_op_mode_t op_mode;
+	float pressure_change;
+	float pressure_threshold;
 	inv_icp201xx_t icp_device;
 	struct gpio_callback gpio_cb;
 	const struct gpio_dt_spec *gpio_int_p;
@@ -38,6 +41,7 @@ typedef struct {
 struct icp201xx_config {
 	struct i2c_dt_spec i2c;
 	struct gpio_dt_spec gpio_int;
+	icp201xx_op_mode_t op_mode;
 };
 
 int icp201xx_trigger_set(const struct device *dev,
@@ -45,5 +49,7 @@ int icp201xx_trigger_set(const struct device *dev,
 			 sensor_trigger_handler_t handler);
 
 int icp201xx_fifo_interrupt(const struct device *dev, uint8_t fifo_watermark);
+int icp201xx_pressure_interrupt(const struct device *dev, float pressure);
+int icp201xx_pressure_change_interrupt(const struct device *dev,  float pressure_delta);
 
 #endif

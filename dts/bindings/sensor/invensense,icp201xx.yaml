@@ -14,3 +14,17 @@ properties:
       The INT signal default configuration is active-high. The
       property value should ensure the flags properly describe the
       signal that is presented to the driver.
+
+  op-mode:
+    type: int
+    required: false
+    default: 0
+    description: |
+      Default mode for sensor.
+      Maps to icp201xx_op_mode_t
+    enum:
+      - 0
+      - 1
+      - 2
+      - 3
+      - 4

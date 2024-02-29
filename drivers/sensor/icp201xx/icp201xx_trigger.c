@@ -106,18 +106,24 @@ int icp201xx_trigger_set(const struct device *dev,
 		return -1;
 	}
 
-	if (trig->type == SENSOR_TRIG_DATA_READY) {
-		drv_data->data_ready_handler = handler;
-		drv_data->data_ready_trigger = trig;
-		
-		rc |= icp201xx_init_interrupt(dev);
-		if (rc < 0) {
-			LOG_ERR("Failed to initialize interrupt.");
-			return rc;
-		}
-		rc = icp201xx_fifo_interrupt(dev,1);
-	} else {
+	if ((trig->type != SENSOR_TRIG_DATA_READY)&&(trig->type != SENSOR_TRIG_DELTA)&&(trig->type != SENSOR_TRIG_THRESHOLD))
+	{
 		return -ENOTSUP;
+	}
+	drv_data->data_ready_handler = handler;
+	drv_data->data_ready_trigger = trig;
+	
+	rc |= icp201xx_init_interrupt(dev);
+	if (rc < 0) {
+		LOG_ERR("Failed to initialize interrupt.");
+		return rc;
+	}
+	if (trig->type == SENSOR_TRIG_DATA_READY) {
+		rc = icp201xx_fifo_interrupt(dev,1);
+	} else if (trig->type == SENSOR_TRIG_DELTA) {
+		rc = icp201xx_pressure_change_interrupt(dev,drv_data->pressure_change);
+	} else if (trig->type == SENSOR_TRIG_THRESHOLD) {
+		rc = icp201xx_pressure_interrupt(dev,drv_data->pressure_threshold);
 	}
 
 	gpio_pin_interrupt_configure_dt(&cfg->gpio_int, GPIO_INT_LEVEL_LOW);
