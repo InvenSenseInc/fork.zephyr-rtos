@@ -33,6 +33,7 @@ int inv_imu_init(inv_imu_device_t *s, const struct inv_imu_serif *serif,
                  void (*sensor_event_cb)(inv_imu_sensor_event_t *event))
 {
 	int status = 0;
+	uint8_t chip_id;
 
 	memset(s, 0, sizeof(*s));
 
@@ -50,6 +51,9 @@ int inv_imu_init(inv_imu_device_t *s, const struct inv_imu_serif *serif,
 
 	/* Make sure `need_mclk_cnt` is cleared */
 	s->transport.need_mclk_cnt = 0;
+	
+	/* */
+	inv_imu_get_who_am_i(s, &chip_id);
 
 	/* Configure serial interface so we can trigger device reset */
 	status |= configure_serial_interface(s);

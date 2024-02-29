@@ -766,7 +766,8 @@ static int icm42670S_chip_init(const struct device *dev)
 	data->serif.write_reg = inv_io_hal_write_reg;
 	data->serif.max_read = 1024 * 32;
 	data->serif.max_write = 1024 * 32;
-	data->serif.serif_type = UI_I2C;
+	data->serif.serif_type = UI_SPI4;
+	
 	err = inv_imu_init(&data->driver, &data->serif, NULL);
 	if (err < 0) {
 		LOG_DBG("Init failed: %d", err);

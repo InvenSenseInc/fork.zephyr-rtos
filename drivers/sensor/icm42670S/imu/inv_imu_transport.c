@@ -65,7 +65,8 @@ int inv_imu_read_reg(void *t, uint32_t reg, uint32_t len, uint8_t *buf)
 			buf[i] = *cache_addr;
 		} else {
 			if (!(reg & 0x10000)) {
-				rc |= read_mclk_reg(t, ((reg + i) & 0xFFFF), 1, &buf[i]);
+				//rc |= read_mclk_reg(t, ((reg + i) & 0xFFFF), 1, &buf[i]);
+				rc |= read_sreg(t, (uint8_t)(reg + i), len - i, &buf[i]);
 			} else {
 				rc |= read_sreg(t, (uint8_t)(reg + i), len - i, &buf[i]);
 				break;
