@@ -37,9 +37,9 @@ static void icp201xx_thread_cb(const struct device *dev)
 	const struct icp201xx_config *cfg = dev->config;
 	uint8_t i_status;
 
-	if (drv_data->data_ready_handler != NULL) {
-		drv_data->data_ready_handler(dev,
-					     drv_data->data_ready_trigger);
+	if (drv_data->irq_handler != NULL) {
+		drv_data->irq_handler(dev,
+					     drv_data->irq_trigger);
 	}
 	inv_icp201xx_get_int_status(&drv_data->icp_device,&i_status);
 	if ( i_status )
@@ -110,8 +110,8 @@ int icp201xx_trigger_set(const struct device *dev,
 	{
 		return -ENOTSUP;
 	}
-	drv_data->data_ready_handler = handler;
-	drv_data->data_ready_trigger = trig;
+	drv_data->irq_handler = handler;
+	drv_data->irq_trigger = trig;
 	
 	rc |= icp201xx_init_interrupt(dev);
 	if (rc < 0) {

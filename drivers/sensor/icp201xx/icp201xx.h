@@ -30,8 +30,8 @@ typedef struct {
 	struct gpio_callback gpio_cb;
 	const struct gpio_dt_spec *gpio_int_p;
 
-	const struct sensor_trigger *data_ready_trigger;
-	sensor_trigger_handler_t data_ready_handler;
+	const struct sensor_trigger *irq_trigger;
+	sensor_trigger_handler_t irq_handler;
 
 	K_KERNEL_STACK_MEMBER(thread_stack, CONFIG_ICP201XX_THREAD_STACK_SIZE);
 	struct k_thread thread;

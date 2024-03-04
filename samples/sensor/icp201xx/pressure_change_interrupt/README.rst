@@ -1,16 +1,15 @@
 .. _icp201xx:
 
-ICP201xx: Pressure interrupt sample
+ICP201xx: Pressure change interrupt sample
 ############################################
 
 Description
 ***********
 
-This sample application measures the pressure and temperature
-at reset and estimates the corresponding altitude.
-It sets the pressure interrupt from ICP201XX sensor to detect
-the pressure corresponding to a 50cm higher altitude.
-A message is printed on the UART when the sensor is moved 50cm higher.
+This sample application sets the icp201xx pressure change
+interrupt to detect a pressure change between 2 samples
+greater than 10 Pa. A message is printed on the UART when
+the sensor detect a this pressure change.
 
 Wiring
 *******
@@ -39,8 +38,8 @@ Sample Output
 
 *** Booting Zephyr OS build zephyr-v3.5.0-3418-g42ed70b772b8 ***
 Found device "icp201xx@63", getting sensor data
-[00:00:01.124,877] <inf> ICP201XX_SAMPLE: Starting ICP201xx threshold interrupt sample.
-[00:00:43.961,303] <inf> ICP201XX_SAMPLE: THRESHOLD INTERRUPT
-[00:00:47.716,583] <inf> ICP201XX_SAMPLE: THRESHOLD INTERRUPT
+[00:00:01.122,528] <inf> ICP201XX_SAMPLE: Starting ICP201xx pressure change interrupt sample.
+[00:00:05.899,810] <inf> ICP201XX_SAMPLE: PRESSURE CHANGE INTERRUPT
+[00:00:10.014,221] <inf> ICP201XX_SAMPLE: PRESSURE CHANGE INTERRUPT
 
-
+<repeats endlessly>
