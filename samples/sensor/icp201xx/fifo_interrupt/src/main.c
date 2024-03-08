@@ -52,25 +52,21 @@ static void handle_icp201xx(const struct device *dev, const struct sensor_trigge
 			(void)sensor_trigger_set(dev, trig, NULL);
 			return;
 		} else if (rc == 0) {
-	
+
 			struct sensor_value pressure;
 			struct sensor_value temperature;
 			struct sensor_value altitude;
-			sensor_channel_get(dev, SENSOR_CHAN_PRESS,
-							&pressure);
-			sensor_channel_get(dev, SENSOR_CHAN_AMBIENT_TEMP,
-							&temperature);
-			sensor_channel_get(dev, SENSOR_CHAN_ALTITUDE,
-							&altitude);
+			sensor_channel_get(dev, SENSOR_CHAN_PRESS, &pressure);
+			sensor_channel_get(dev, SENSOR_CHAN_AMBIENT_TEMP, &temperature);
+			sensor_channel_get(dev, SENSOR_CHAN_ALTITUDE, &altitude);
 
 			LOG_INF("temp %.2f Cel, pressure %f kPa, altitude %f m",
-										   sensor_value_to_double(&temperature),
-										   sensor_value_to_double(&pressure),
-										   sensor_value_to_double(&altitude));
+				sensor_value_to_double(&temperature),
+				sensor_value_to_double(&pressure),
+				sensor_value_to_double(&altitude));
 		}
 	}
 }
-
 
 int main(void)
 {
@@ -79,7 +75,7 @@ int main(void)
 	if (dev == NULL) {
 		return 0;
 	}
-		data_trigger = (struct sensor_trigger){
+	data_trigger = (struct sensor_trigger){
 		.type = SENSOR_TRIG_DATA_READY,
 		.chan = SENSOR_CHAN_ALL,
 	};
@@ -88,6 +84,6 @@ int main(void)
 		return 0;
 	}
 	LOG_INF("Starting ICP201xx fifo interrupt sample.\n");
-	
+
 	return 0;
 }

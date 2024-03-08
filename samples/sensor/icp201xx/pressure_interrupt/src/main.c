@@ -48,21 +48,20 @@ static void handle_icp201xx(const struct device *dev, const struct sensor_trigge
 
 		LOG_INF("THRESHOLD INTERRUPT");
 		k_sleep(K_MSEC(500));
-
 	}
 }
 
-
 #define ATMOSPHERICAL_PRESSURE_KPA 101.325
-#define TO_KELVIN(temp_C) (273.15 + temp_C)
-#define HEIGHT_TO_PRESSURE_COEFF 0.03424 // M*g/R = (0,0289644 * 9,80665 / 8,31432)
+#define TO_KELVIN(temp_C)          (273.15 + temp_C)
+#define HEIGHT_TO_PRESSURE_COEFF   0.03424 /* M*g/R = (0,0289644 * 9,80665 / 8,31432) */
 
-#define PRESSURE_TO_HEIGHT_COEFF 29.27127 // R / (M*g) = 8,31432 / (0,0289644 * 9,80665)
-#define LOG_ATMOSPHERICAL_PRESSURE 4.61833 // ln(101.325)
+#define PRESSURE_TO_HEIGHT_COEFF   29.27127 /* R / (M*g) = 8,31432 / (0,0289644 * 9,80665) */
+#define LOG_ATMOSPHERICAL_PRESSURE 4.61833  /* ln(101.325) */
 
 static float convertToPressure(float height_m, float temperature_C)
 {
-    return ATMOSPHERICAL_PRESSURE_KPA * exp(-HEIGHT_TO_PRESSURE_COEFF*height_m/TO_KELVIN(temperature_C));
+	return ATMOSPHERICAL_PRESSURE_KPA *
+	       exp(-HEIGHT_TO_PRESSURE_COEFF * height_m / TO_KELVIN(temperature_C));
 }
 
 int main(void)
@@ -82,21 +81,21 @@ int main(void)
 
 	/* Read current altitude and temperature */
 	sensor_sample_fetch_chan(dev, SENSOR_CHAN_ALL);
-	sensor_channel_get(dev, SENSOR_CHAN_ALTITUDE,&val);
+	sensor_channel_get(dev, SENSOR_CHAN_ALTITUDE, &val);
 	altitude = sensor_value_to_float(&val);
-	sensor_channel_get(dev, SENSOR_CHAN_AMBIENT_TEMP,&val);
+	sensor_channel_get(dev, SENSOR_CHAN_AMBIENT_TEMP, &val);
 	temperature = sensor_value_to_float(&val);
-	
-	pressure_threshold = convertToPressure(altitude+0.5, temperature);
+
+	pressure_threshold = convertToPressure(altitude + 0.5, temperature);
 	sensor_value_from_float(&val, pressure_threshold);
-	sensor_attr_set(dev,SENSOR_CHAN_PRESS,SENSOR_ATTR_LOWER_THRESH,&val);
-	
+	sensor_attr_set(dev, SENSOR_CHAN_PRESS, SENSOR_ATTR_LOWER_THRESH, &val);
+
 	if (sensor_trigger_set(dev, &irq_trigger, handle_icp201xx) < 0) {
 		printf("Cannot configure threshold trigger!!!\n");
 		return 0;
 	}
 	LOG_INF("Starting ICP201xx threshold interrupt sample.\n");
-	LOG_INF("Altitude at reset %.2fm, interrupt sets at %.2fm.\n",altitude,altitude+0.5);
+	LOG_INF("Altitude at reset %.2fm, interrupt sets at %.2fm.\n", altitude, altitude + 0.5);
 
 	return 0;
 }

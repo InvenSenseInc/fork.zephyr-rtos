@@ -44,12 +44,11 @@ struct icp201xx_config {
 	icp201xx_op_mode_t op_mode;
 };
 
-int icp201xx_trigger_set(const struct device *dev,
-			 const struct sensor_trigger *trig,
+int icp201xx_trigger_set(const struct device *dev, const struct sensor_trigger *trig,
 			 sensor_trigger_handler_t handler);
 
 int icp201xx_fifo_interrupt(const struct device *dev, uint8_t fifo_watermark);
 int icp201xx_pressure_interrupt(const struct device *dev, float pressure);
-int icp201xx_pressure_change_interrupt(const struct device *dev,  float pressure_delta);
+int icp201xx_pressure_change_interrupt(const struct device *dev, float pressure_delta);
 
 #endif

@@ -48,7 +48,6 @@ static void handle_icp201xx(const struct device *dev, const struct sensor_trigge
 
 		LOG_INF("PRESSURE CHANGE INTERRUPT\n");
 		k_sleep(K_MSEC(500));
-
 	}
 }
 
@@ -66,13 +65,13 @@ int main(void)
 	};
 
 	sensor_value_from_float(&val, 0.01);
-	sensor_attr_set(dev,SENSOR_CHAN_PRESS,SENSOR_ATTR_SLOPE_TH,&val);
-	
+	sensor_attr_set(dev, SENSOR_CHAN_PRESS, SENSOR_ATTR_SLOPE_TH, &val);
+
 	if (sensor_trigger_set(dev, &irq_trigger, handle_icp201xx) < 0) {
 		printf("Cannot configure threshold trigger!!!\n");
 		return 0;
 	}
 	LOG_INF("Starting ICP201xx pressure change interrupt sample.\n");
-	
+
 	return 0;
 }

@@ -42,5 +42,3 @@ Found device "icp201xx@63", getting sensor data
 [00:00:01.124,877] <inf> ICP201XX_SAMPLE: Starting ICP201xx threshold interrupt sample.
 [00:00:43.961,303] <inf> ICP201XX_SAMPLE: THRESHOLD INTERRUPT
 [00:00:47.716,583] <inf> ICP201XX_SAMPLE: THRESHOLD INTERRUPT
-
-

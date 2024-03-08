@@ -1,9 +1,11 @@
 sample:
-  name: ICP201XX Sensor data sample
+  name: ICP201XX Sensor polling
 tests:
-  sample.sensor.icp201xx
-    harness: console
+  sample.sensor.icp201xx:
+    build_only: true
+    depends_on: i2c
     tags: sensors
     integration_platforms:
-      - arduino_zero
-      - nrf52dk_nrf52832
+      - nrf52dk/nrf52832
+    platform_exclude:
+      - tdk_robokit1

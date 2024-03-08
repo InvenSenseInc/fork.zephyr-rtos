@@ -49,24 +49,18 @@ int main(void)
 	struct sensor_value temperature;
 	struct sensor_value altitude;
 
-
 	LOG_INF("Starting ICP101xx sample.\n");
-	
+
 	while (1) {
-			sensor_sample_fetch_chan(dev, SENSOR_CHAN_ALL);
-			sensor_channel_get(dev, SENSOR_CHAN_PRESS,
-							&pressure);
-			sensor_channel_get(dev, SENSOR_CHAN_AMBIENT_TEMP,
-							&temperature);
-			sensor_channel_get(dev, SENSOR_CHAN_ALTITUDE,
-							&altitude);
+		sensor_sample_fetch_chan(dev, SENSOR_CHAN_ALL);
+		sensor_channel_get(dev, SENSOR_CHAN_PRESS, &pressure);
+		sensor_channel_get(dev, SENSOR_CHAN_AMBIENT_TEMP, &temperature);
+		sensor_channel_get(dev, SENSOR_CHAN_ALTITUDE, &altitude);
 
-	LOG_INF("temp %.2f Cel, pressure %f kPa, altitude %f m",
-                                   sensor_value_to_double(&temperature),
-                                   sensor_value_to_double(&pressure),
-								   sensor_value_to_double(&altitude));
+		LOG_INF("temp %.2f Cel, pressure %f kPa, altitude %f m",
+			sensor_value_to_double(&temperature), sensor_value_to_double(&pressure),
+			sensor_value_to_double(&altitude));
 		k_sleep(K_USEC(40000));
-
 	}
 	return 0;
 }

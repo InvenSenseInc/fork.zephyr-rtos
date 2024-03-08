@@ -1,10 +1,10 @@
 /*
  *
  * Copyright (c) [2020] by InvenSense, Inc.
- * 
+ *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted.
- * 
+ *
  * THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
  * WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
  * MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY
@@ -27,11 +27,11 @@ typedef int inv_bool_t;
 #ifndef __cplusplus
 
 #ifndef true
-	#define true    1
+#define true 1
 #endif
 
 #ifndef false
-	#define false   0
+#define false 0
 #endif
 
 #endif /* __cplusplus */
