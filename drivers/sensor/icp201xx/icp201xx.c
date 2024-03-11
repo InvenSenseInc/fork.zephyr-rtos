@@ -155,6 +155,7 @@ static int icp201xx_sample_fetch(const struct device *dev, const enum sensor_cha
 		 */
 		do {
 			uint8_t dummy_reg = 0;
+
 			inv_io_hal_read_reg((struct device *)dev, 0, &dummy_reg, 1);
 		} while (0);
 #endif

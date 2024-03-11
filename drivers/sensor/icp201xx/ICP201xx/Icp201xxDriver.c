@@ -42,6 +42,7 @@ int inv_icp201xx_wr_pefe_offset_trim(inv_icp201xx_serif_t *s, uint8_t new_value)
 {
 	int status;
 	uint8_t reg_value;
+
 	status = inv_icp201xx_serif_read_reg(s, MPUREG_TRIM1_MSB, 1, &reg_value);
 
 	if (status) {
@@ -59,6 +60,7 @@ int inv_icp201xx_wr_pefe_gain_trim(inv_icp201xx_serif_t *s, uint8_t new_value)
 {
 	int status;
 	uint8_t reg_value;
+
 	status = inv_icp201xx_serif_read_reg(s, MPUREG_TRIM2_MSB, 1, &reg_value);
 
 	if (status) {
@@ -77,6 +79,7 @@ int inv_icp201xx_wr_hfosc_trim(inv_icp201xx_serif_t *s, uint8_t new_value)
 {
 	int status;
 	uint8_t reg_value;
+
 	status = inv_icp201xx_serif_read_reg(s, MPUREG_TRIM2_LSB, 1, &reg_value);
 
 	if (status) {
@@ -104,6 +107,7 @@ int inv_icp201xx_wr_otp_write_switch(inv_icp201xx_serif_t *s, uint8_t new_value)
 {
 	int status;
 	uint8_t reg_value = 0;
+
 	status = inv_icp201xx_serif_read_reg(s, MPUREG_OTP_MTP_OTP_CFG1, 1, &reg_value);
 
 	if (status) {
@@ -122,6 +126,7 @@ int inv_icp201xx_wr_otp_enable(inv_icp201xx_serif_t *s, uint8_t new_value)
 {
 	int status;
 	uint8_t reg_value = 0;
+
 	status = inv_icp201xx_serif_read_reg(s, MPUREG_OTP_MTP_OTP_CFG1, 1, &reg_value);
 
 	if (status) {
@@ -273,6 +278,7 @@ int inv_icp201xx_wr_otp_dbg2_reset(inv_icp201xx_serif_t *s, uint8_t new_value)
 {
 	int status;
 	uint8_t reg_value = 0;
+
 	status = inv_icp201xx_serif_read_reg(s, MPUREG_OTP_DEBUG2, 1, &reg_value);
 
 	if (status) {
@@ -308,6 +314,7 @@ int inv_icp201xx_rd_boot_up_status(inv_icp201xx_serif_t *s, uint8_t *value)
 {
 	int status;
 	uint8_t reg_value = 0;
+
 	status = inv_icp201xx_serif_read_reg(s, MPUREG_OTP_MTP_OTP_STATUS2, 1, &reg_value);
 	if (status) {
 		return status;
@@ -322,6 +329,7 @@ int inv_icp201xx_wr_boot_up_status(inv_icp201xx_serif_t *s, uint8_t new_value)
 {
 	int status;
 	uint8_t reg_value = 0;
+
 	status = inv_icp201xx_serif_read_reg(s, MPUREG_OTP_MTP_OTP_STATUS2, 1, &reg_value);
 	if (status) {
 		return status;
@@ -370,6 +378,7 @@ int inv_icp201xx_wr_meas_config(inv_icp201xx_serif_t *s, icp201xx_op_mode_t new_
 	int status;
 	uint8_t reg_value = 0;
 	uint8_t read_value = 0;
+
 	status = inv_icp201xx_serif_read_reg(s, MPUREG_MODE_SELECT, 1, &reg_value);
 
 	if (status) {
@@ -396,6 +405,7 @@ int inv_icp201xx_rd_meas_config(inv_icp201xx_serif_t *s, icp201xx_op_mode_t *val
 {
 	int status;
 	uint8_t reg_value = 0;
+
 	status = inv_icp201xx_serif_read_reg(s, MPUREG_MODE_SELECT, 1, &reg_value);
 
 	if (status) {
@@ -412,6 +422,7 @@ int inv_icp201xx_wr_forced_meas_trigger(inv_icp201xx_serif_t *s,
 {
 	int status;
 	uint8_t reg_value = 0, read_value = 0;
+
 	status = inv_icp201xx_serif_read_reg(s, MPUREG_MODE_SELECT, 1, &reg_value);
 
 	if (status) {
@@ -439,6 +450,7 @@ int inv_icp201xx_rd_forced_meas_trigger(inv_icp201xx_serif_t *s,
 {
 	int status;
 	uint8_t reg_value;
+
 	status = inv_icp201xx_serif_read_reg(s, MPUREG_MODE_SELECT, 1, &reg_value);
 
 	if (status) {
@@ -455,6 +467,7 @@ int inv_icp201xx_wr_meas_mode(inv_icp201xx_serif_t *s, icp201xx_meas_mode_t new_
 {
 	int status;
 	uint8_t reg_value = 0, read_value = 0;
+
 	status = inv_icp201xx_serif_read_reg(s, MPUREG_MODE_SELECT, 1, &reg_value);
 
 	if (status) {
@@ -479,6 +492,7 @@ int inv_icp201xx_rd_meas_mode(inv_icp201xx_serif_t *s, icp201xx_meas_mode_t *val
 {
 	int status;
 	uint8_t reg_value = 0;
+
 	status = inv_icp201xx_serif_read_reg(s, MPUREG_MODE_SELECT, 1, &reg_value);
 
 	if (status) {
@@ -495,6 +509,7 @@ int inv_icp201xx_wr_pow_mode(inv_icp201xx_serif_t *s, icp201xx_power_mode_t new_
 {
 	int status;
 	uint8_t reg_value = 0, read_value = 0;
+
 	status = inv_icp201xx_serif_read_reg(s, MPUREG_MODE_SELECT, 1, &reg_value);
 
 	if (status) {
@@ -520,6 +535,7 @@ int inv_icp201xx_rd_pow_mode(inv_icp201xx_serif_t *s, icp201xx_power_mode_t *val
 {
 	int status;
 	uint8_t reg_value = 0;
+
 	status = inv_icp201xx_serif_read_reg(s, MPUREG_MODE_SELECT, 1, &reg_value);
 
 	if (status) {
@@ -537,6 +553,7 @@ int inv_icp201xx_wr_fifo_readout_mode(inv_icp201xx_serif_t *s,
 {
 	int status;
 	uint8_t reg_value = 0, read_value = 0;
+
 	status = inv_icp201xx_serif_read_reg(s, MPUREG_MODE_SELECT, 1, &reg_value);
 
 	if (status) {
@@ -563,6 +580,7 @@ int inv_icp201xx_rd_fifo_readout_mode(inv_icp201xx_serif_t *s, icp201xx_FIFO_rea
 {
 	int status;
 	uint8_t reg_value = 0;
+
 	status = inv_icp201xx_serif_read_reg(s, MPUREG_MODE_SELECT, 1, &reg_value);
 
 	if (status) {
@@ -607,6 +625,7 @@ int inv_icp201xx_wr_fifo_wm_high(inv_icp201xx_serif_t *s, uint8_t new_value)
 {
 	int status;
 	uint8_t reg_value = 0;
+
 	status = inv_icp201xx_serif_read_reg(s, MPUREG_FIFO_CONFIG, 1, &reg_value);
 
 	if (status) {
@@ -621,6 +640,7 @@ int inv_icp201xx_rd_fifo_wm_high(inv_icp201xx_serif_t *s, uint8_t *value)
 {
 	int status;
 	uint8_t reg_value = 0;
+
 	status = inv_icp201xx_serif_read_reg(s, MPUREG_FIFO_CONFIG, 1, &reg_value);
 
 	if (status) {
@@ -635,6 +655,7 @@ int inv_icp201xx_wr_fifo_wm_low(inv_icp201xx_serif_t *s, uint8_t new_value)
 {
 	int status;
 	uint8_t reg_value = 0;
+
 	status = inv_icp201xx_serif_read_reg(s, MPUREG_FIFO_CONFIG, 1, &reg_value);
 
 	if (status) {
@@ -652,6 +673,7 @@ int inv_icp201xx_rd_fifo_wm_low(inv_icp201xx_serif_t *s, uint8_t *value)
 {
 	int status;
 	uint8_t reg_value = 0;
+
 	status = inv_icp201xx_serif_read_reg(s, MPUREG_FIFO_CONFIG, 1, &reg_value);
 
 	if (status) {
@@ -672,6 +694,7 @@ int inv_icp201xx_wr_spi_mode(inv_icp201xx_serif_t *s, icp201xx_spi_mode_t new_va
 {
 	int status;
 	uint8_t reg_value = 0;
+
 	status = inv_icp201xx_serif_read_reg(s, MPUREG_SPI_MODE, 1, &reg_value);
 
 	if (status) {
@@ -689,6 +712,7 @@ int inv_icp201xx_rd_spi_mode(inv_icp201xx_serif_t *s, icp201xx_spi_mode_t *value
 {
 	int status;
 	uint8_t reg_value = 0;
+
 	status = inv_icp201xx_serif_read_reg(s, MPUREG_SPI_MODE, 1, &reg_value);
 
 	if (status) {

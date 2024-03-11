@@ -56,6 +56,7 @@ static void handle_icp201xx(const struct device *dev, const struct sensor_trigge
 			struct sensor_value pressure;
 			struct sensor_value temperature;
 			struct sensor_value altitude;
+
 			sensor_channel_get(dev, SENSOR_CHAN_PRESS, &pressure);
 			sensor_channel_get(dev, SENSOR_CHAN_AMBIENT_TEMP, &temperature);
 			sensor_channel_get(dev, SENSOR_CHAN_ALTITUDE, &altitude);

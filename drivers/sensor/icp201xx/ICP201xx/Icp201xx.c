@@ -29,6 +29,7 @@ int INV_EXPORT inv_icp201xx_soft_reset(inv_icp201xx_t *s)
 {
 	int status = INV_ERROR_SUCCESS;
 	uint8_t int_status;
+
 	status |= inv_icp201xx_wr_mode_select(&(s->serif), 0);
 	inv_icp201xx_sleep_us(2000);
 
@@ -47,6 +48,7 @@ int INV_EXPORT inv_icp201xx_soft_reset(inv_icp201xx_t *s)
 int inv_icp201xx_init(inv_icp201xx_t *s, const inv_icp201xx_serif_t *serif)
 {
 	int status = INV_ERROR_SUCCESS;
+
 	s->serif = *serif;
 	if (s->serif.if_mode == ICP201XX_IF_3_WIRE_SPI) {
 		status |= inv_icp201xx_wr_spi_mode(&(s->serif), ICP201XX_SPI_MODE_3_WIRE);
@@ -73,6 +75,7 @@ int inv_icp201xx_config(inv_icp201xx_t *s, icp201xx_op_mode_t op_mode,
 {
 	uint8_t reg_value = 0;
 	int status = INV_ERROR_SUCCESS;
+
 	if (op_mode >= ICP201XX_OP_MODE_MAX) {
 		return INV_ERROR;
 	}
@@ -109,6 +112,7 @@ int inv_icp201xx_adv_config(inv_icp201xx_t *s, icp201xx_op_mode_t op_mode,
 {
 	uint8_t reg_value = 0;
 	int status = INV_ERROR_SUCCESS;
+
 	if (op_mode >= ICP201XX_OP_MODE_MAX) {
 		return INV_ERROR;
 	}
@@ -142,6 +146,7 @@ int inv_icp201xx_trigger_meas(inv_icp201xx_t *s)
 int inv_icp201xx_set_standby(inv_icp201xx_t *s)
 {
 	int status = INV_ERROR_SUCCESS;
+
 	status |= inv_icp201xx_wr_forced_meas_trigger(&(s->serif), ICP201XX_FORCE_MEAS_STANDBY);
 
 	status |= inv_icp201xx_wr_pow_mode(&(s->serif), ICP201XX_POWER_MODE_NORMAL);
@@ -351,7 +356,7 @@ static void inv_icp201xx_enable_write_switch_OTP_read(inv_icp201xx_t *s)
 
 	/*
 	 * 6)	Unlock the main registers
-	 * master_lock.lock 	= 0x1f
+	 * master_lock.lock	= 0x1f
 	 */
 	inv_icp201xx_wr_master_lock(&(s->serif), 0x1f);
 
@@ -441,7 +446,7 @@ int inv_icp201xx_OTP_bootup_cfg(inv_icp201xx_t *s)
 	/****************************************************************************/
 	/*
 	 * 10)	Write the address content and read command
-	 * otp_address_reg.address		= 8`hF8 	-- for offset
+	 * otp_address_reg.address		= 8`hF8	-- for offset
 	 * otp_command_reg.address		= 4`h0
 	 * otp_command_reg.command	    = 1    -- read action
 	 */

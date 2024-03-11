@@ -37,7 +37,7 @@
  */
 int inv_icp201xx_serif_read_reg(inv_icp201xx_serif_t *s, uint8_t reg, uint32_t len, uint8_t *buf)
 {
-	if (0 == s) {
+	if (s == 0) {
 		return INV_ERROR_BAD_ARG;
 	}
 
@@ -47,6 +47,7 @@ int inv_icp201xx_serif_read_reg(inv_icp201xx_serif_t *s, uint8_t reg, uint32_t l
 
 	if (s->if_mode == ICP201XX_IF_3_WIRE_SPI || s->if_mode == ICP201XX_IF_4_WIRE_SPI) {
 		uint8_t cmd_buf[2] = {0};
+
 		cmd_buf[0] = ICP201XX_SERIF_SPI_REG_READ_CMD;
 		cmd_buf[1] = reg;
 
@@ -72,7 +73,7 @@ int inv_icp201xx_serif_read_reg(inv_icp201xx_serif_t *s, uint8_t reg, uint32_t l
 int inv_icp201xx_serif_write_reg(inv_icp201xx_serif_t *s, uint8_t reg, uint32_t len,
 				 const uint8_t *buf)
 {
-	if (0 == s) {
+	if (s == 0) {
 		return INV_ERROR_BAD_ARG;
 	}
 
@@ -82,6 +83,7 @@ int inv_icp201xx_serif_write_reg(inv_icp201xx_serif_t *s, uint8_t reg, uint32_t 
 
 	if (s->if_mode == ICP201XX_IF_3_WIRE_SPI || s->if_mode == ICP201XX_IF_4_WIRE_SPI) {
 		uint8_t cmd_buf[2] = {0};
+
 		cmd_buf[0] = ICP201XX_SERIF_SPI_REG_WRITE_CMD;
 		cmd_buf[1] = reg;
 
