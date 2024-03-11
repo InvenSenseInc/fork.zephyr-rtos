@@ -7,7 +7,7 @@ Description
 ***********
 
 This sample application periodically measures the sensor
-temperature and pressure, displaying the 
+temperature and pressure, displaying the
 values on the console along with a timestamp since startup.
 It also displays the estimated altitude.
 
