@@ -33,6 +33,7 @@ static int inv_io_hal_read_reg(void *ctx, uint8_t reg, uint8_t *rbuffer, uint32_
 {
 	struct device *dev = (struct device *)ctx;
 	const struct icp201xx_config *cfg = (const struct icp201xx_config *)dev->config;
+
 	return i2c_burst_read_dt(&cfg->i2c, reg, (uint8_t *)rbuffer, rlen);
 }
 
@@ -40,6 +41,7 @@ static int inv_io_hal_write_reg(void *ctx, uint8_t reg, const uint8_t *wbuffer, 
 {
 	struct device *dev = (struct device *)ctx;
 	const struct icp201xx_config *cfg = (const struct icp201xx_config *)dev->config;
+
 	return i2c_burst_write_dt(&cfg->i2c, reg, (uint8_t *)wbuffer, wlen);
 }
 #endif
@@ -57,10 +59,12 @@ static float convertToHeight(float pressure_kp, float temperature_C)
 	       (LOG_ATMOSPHERICAL_PRESSURE - log(pressure_kp));
 }
 
-/* ICP201xx warm up.
+/*
+ * ICP201xx warm up.
  * If FIR filter is enabled, it will cause a settling effect on the first 14 pressure values.
  * Therefore the first 14 pressure output values are discarded.
- **/
+ *
+ */
 static void inv_icp201xx_app_warmup(inv_icp201xx_t *icp_device, icp201xx_op_mode_t op_mode,
 				    icp201xx_meas_mode_t meas_mode)
 {
@@ -72,6 +76,7 @@ static void inv_icp201xx_app_warmup(inv_icp201xx_t *icp_device, icp201xx_op_mode
 		if (!inv_icp201xx_get_fifo_count(icp_device, (uint8_t *)&fifo_packets) &&
 		    (fifo_packets >= fifo_packets_to_skip)) {
 			uint8_t i_status = 0;
+
 			inv_icp201xx_flush_fifo(icp_device);
 
 			inv_icp201xx_get_int_status(icp_device, &i_status);
@@ -89,6 +94,7 @@ static int icp201xx_attr_set(const struct device *dev, enum sensor_channel chan,
 {
 	int err = 0;
 	icp201xx_data *data = (icp201xx_data *)dev->data;
+
 	__ASSERT_NO_MSG(val != NULL);
 	if (chan == SENSOR_CHAN_PRESS) {
 		if (attr == SENSOR_ATTR_CONFIGURATION) {
@@ -105,6 +111,7 @@ static int icp201xx_attr_set(const struct device *dev, enum sensor_channel chan,
 			}
 		} else if (attr == SENSOR_ATTR_SLOPE_TH) {
 			float pressure_change = sensor_value_to_float(val);
+
 			if (pressure_change > 0) {
 				data->pressure_change = pressure_change;
 			} else {
@@ -114,6 +121,7 @@ static int icp201xx_attr_set(const struct device *dev, enum sensor_channel chan,
 		} else if ((attr == SENSOR_ATTR_LOWER_THRESH) ||
 			   (attr == SENSOR_ATTR_UPPER_THRESH)) {
 			float pressure_threshold = sensor_value_to_float(val);
+
 			if (pressure_threshold > 0) {
 				data->pressure_threshold = pressure_threshold;
 			} else {
@@ -141,8 +149,10 @@ static int icp201xx_sample_fetch(const struct device *dev, const enum sensor_cha
 	for (int i = 0; i < fifo_packets; i++) {
 		inv_icp201xx_get_fifo_data(&(data->icp_device), 1, fifo_data);
 #if ICP201XX_BUS_I2C
-		/* Perform dummy read to 0x00 register as last transaction after FIFO read for I2C
-		 * interface */
+		/*
+		 * Perform dummy read to 0x00 register as last transaction after FIFO read for I2C
+		 * interface
+		 */
 		do {
 			uint8_t dummy_reg = 0;
 			inv_io_hal_read_reg((struct device *)dev, 0, &dummy_reg, 1);
@@ -188,6 +198,7 @@ static int icp201xx_channel_get(const struct device *dev, enum sensor_channel ch
 		sensor_value_from_float(val, pressure);
 	} else if (chan == SENSOR_CHAN_ALTITUDE) {
 		float altitude = convertToHeight(pressure, temperature);
+
 		sensor_value_from_float(val, altitude);
 	} else {
 		return -ENOTSUP;

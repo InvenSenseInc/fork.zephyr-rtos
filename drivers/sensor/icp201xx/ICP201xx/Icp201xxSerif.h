@@ -48,10 +48,12 @@ typedef struct inv_icp201xx_serif {
 	void *context; /*!< reserved */
 	int (*read_reg)(void *context, uint8_t reg, uint8_t *buf,
 			uint32_t len); /*!< function pointer to the low-level serial interface read
-					  function implemented by application layer */
+					* function implemented by application layer
+					*/
 	int (*write_reg)(void *context, uint8_t reg, const uint8_t *buf,
 			 uint32_t len); /*!< function pointer to the low-level serial interface
-					   write function implemented by application laye*/
+					 * write function implemented by application laye
+					 */
 	uint32_t max_read;              /*!< maximum number of bytes allowed per serial read */
 	uint32_t max_write;             /*!< maximum number of bytes allowed per serial write */
 	icp201xx_if_t if_mode;          /*!< Interface mode */

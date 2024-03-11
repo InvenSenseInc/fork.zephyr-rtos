@@ -62,20 +62,26 @@ typedef enum icp201xx_meas_mode {
 } icp201xx_meas_mode_t;
 
 typedef enum icp201xx_power_mode {
-	ICP201XX_POWER_MODE_NORMAL = 0, /* Normal Mode: Device is in standby and goes to active mode
-					   during the execution of a measurement */
+	ICP201XX_POWER_MODE_NORMAL = 0, /*
+					 * Normal Mode: Device is in standby and goes to active mode
+					 * during the execution of a measurement
+					 */
 	ICP201XX_POWER_MODE_ACTIVE =
 		1 /* Active Mode: Power on DVDD and enable the high frequency clock */
 } icp201xx_power_mode_t;
 
 typedef enum icp201xx_FIFO_readout_mode {
 	ICP201XX_FIFO_READOUT_MODE_PRES_TEMP =
-		0, /* Pressure and temperature as pair and address wraps to the start address of the
-		      Pressure value ( pressure first ) */
+		0,                                /*
+						   * Pressure and temperature as pair and address wraps to the start address of the
+						   * Pressure value ( pressure first )
+						   */
 	ICP201XX_FIFO_READOUT_MODE_TEMP_ONLY = 1, /* Temperature only reporting */
 	ICP201XX_FIFO_READOUT_MODE_TEMP_PRES =
-		2, /* Pressure and temperature as pair and address wraps to the start address of the
-		      Temperature value ( Temperature first ) */
+		2,                               /*
+						  * Pressure and temperature as pair and address wraps to the start address of the
+						  * Temperature value ( Temperature first )
+						  */
 	ICP201XX_FIFO_READOUT_MODE_PRES_ONLY = 3 /* Pressure only reporting */
 } icp201xx_FIFO_readout_mode_t;
 

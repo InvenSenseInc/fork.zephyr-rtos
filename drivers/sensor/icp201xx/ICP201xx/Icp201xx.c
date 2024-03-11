@@ -54,7 +54,8 @@ int inv_icp201xx_init(inv_icp201xx_t *s, const inv_icp201xx_serif_t *serif)
 		status |= inv_icp201xx_wr_spi_mode(&(s->serif), ICP201XX_SPI_MODE_4_WIRE);
 	} else if (s->serif.if_mode == ICP201XX_IF_I2C || s->serif.if_mode == ICP201XX_IF_I3C) {
 		/** dummy write transaction to address 0xEE to make sure we give enough time for
-		 * ICP201xx to init **/
+		 * ICP201xx to init *
+		 */
 		do {
 			status = inv_icp201xx_wr_reg(&(s->serif), 0xEE, 0xf0);
 			if (!status) {
@@ -265,22 +266,22 @@ int inv_icp201xx_get_fifo_notification_config(inv_icp201xx_t *s, uint8_t *fifo_i
 
 int inv_icp201xx_flush_fifo(inv_icp201xx_t *s)
 {
-	return (inv_icp201xx_wr_flush_fifo(&(s->serif)));
+	return inv_icp201xx_wr_flush_fifo(&(s->serif));
 }
 
 int inv_icp201xx_get_int_status(inv_icp201xx_t *s, uint8_t *int_status)
 {
-	return (inv_icp201xx_rd_int_status(&(s->serif), int_status));
+	return inv_icp201xx_rd_int_status(&(s->serif), int_status);
 }
 
 int inv_icp201xx_clear_int_status(inv_icp201xx_t *s, uint8_t int_status)
 {
-	return (inv_icp201xx_wr_int_status(&(s->serif), int_status));
+	return inv_icp201xx_wr_int_status(&(s->serif), int_status);
 }
 
 int inv_icp201xx_get_device_status(inv_icp201xx_t *s, uint8_t *dev_status)
 {
-	return (inv_icp201xx_rd_device_status(&(s->serif), dev_status));
+	return inv_icp201xx_rd_device_status(&(s->serif), dev_status);
 }
 
 int inv_icp201xx_get_fifo_count(inv_icp201xx_t *s, uint8_t *fifo_cnt)
@@ -299,7 +300,7 @@ int inv_icp201xx_get_fifo_data(inv_icp201xx_t *s, uint8_t req_packet_cnt, uint8_
 			      (s->fifo_readout_mode == ICP201XX_FIFO_READOUT_MODE_TEMP_ONLY))
 				     ? (req_packet_cnt * 1 * 3)
 				     : (req_packet_cnt * 2 * 3);
-	return (inv_icp201xx_rd_fifo(&(s->serif), packet_cnt, data, fifo_read_offset));
+	return inv_icp201xx_rd_fifo(&(s->serif), packet_cnt, data, fifo_read_offset);
 }
 
 int inv_icp201xx_process_raw_data(inv_icp201xx_t *s, uint8_t packet_cnt, uint8_t *data,
@@ -339,39 +340,39 @@ static void inv_icp201xx_enable_write_switch_OTP_read(inv_icp201xx_t *s)
 {
 	volatile uint8_t reg_value = 0;
 
-	/*5) set to power mode. Bring the ASIC in power mode to activate the OTP power domain and
-	   get access to the main registers mode_select.power_mode = 1 */
+	/*
+	 * 5) set to power mode. Bring the ASIC in power mode to activate the OTP power domain and
+	 * get access to the main registers mode_select.power_mode = 1
+	 */
 	reg_value = BIT_POWER_MODE_MASK;
 	inv_icp201xx_wr_mode_select(&(s->serif), reg_value);
 
 	inv_icp201xx_sleep_us(4000);
 
 	/*
-	6)	Unlock the main registers
-		master_lock.lock 	= 0x1f
-	*/
+	 * 6)	Unlock the main registers
+	 * master_lock.lock 	= 0x1f
+	 */
 	inv_icp201xx_wr_master_lock(&(s->serif), 0x1f);
 
 	/*
-	7)	Enable the OTP and the write switch
-		otp_config1.otp_enable = 1;
-		otp_config1.otp_write_switch = 1;
-		wait 10us;
-	*/
+	 * 7)	Enable the OTP and the write switch
+	 * otp_config1.otp_enable = 1;
+	 * otp_config1.otp_write_switch = 1;
+	 * wait 10us;
+	 */
 	inv_icp201xx_wr_otp_enable(&(s->serif), 0x01);
 	inv_icp201xx_wr_otp_write_switch(&(s->serif), 0x01);
 
 	inv_icp201xx_sleep_us(10);
 
 	/*
-
-	8)	Toggle the OTP reset pin
-		otp_dbg2.reset = 1
-		wait 10us
-		otp_dbg2.reset = 0
-		wait 10us
-
-	*/
+	 * 8)	Toggle the OTP reset pin
+	 * otp_dbg2.reset = 1
+	 * wait 10us
+	 * otp_dbg2.reset = 0
+	 * wait 10us
+	 */
 
 	inv_icp201xx_wr_otp_dbg2_reset(&(s->serif), 1);
 
@@ -382,14 +383,14 @@ static void inv_icp201xx_enable_write_switch_OTP_read(inv_icp201xx_t *s)
 	inv_icp201xx_sleep_us(10);
 
 	/*
-	9)	Program redundant read
-		otp_mra_lsb		= 0x04
-		otp_mra_msb		= 0x04
-		otp_mrb_lsb		= 0x21
-		otp_mrb_msb		= 0x20
-		otp_mr_lsb		= 0x10
-		otp_mr_msb		= 0x80
-	*/
+	 * 9)	Program redundant read
+	 * otp_mra_lsb		= 0x04
+	 * otp_mra_msb		= 0x04
+	 * otp_mrb_lsb		= 0x21
+	 * otp_mrb_msb		= 0x20
+	 * otp_mr_lsb		= 0x10
+	 * otp_mr_msb		= 0x80
+	 */
 	inv_icp201xx_wr_otp_mra_lsb(&(s->serif), 0x04);
 	inv_icp201xx_wr_otp_mra_msb(&(s->serif), 0x04);
 
@@ -407,17 +408,20 @@ int inv_icp201xx_OTP_bootup_cfg(inv_icp201xx_t *s)
 	uint8_t offset = 0, gain = 0, Hfosc = 0;
 	uint8_t version = 0;
 	volatile uint8_t bootup_status = 0;
-	/* 	1)	Power-on the ASIC ( Asic is already powered on )
-	    2)  Do init ( already initialized )
-		*/
+	/*
+	 * 1)	Power-on the ASIC ( Asic is already powered on )
+	 * 2)  Do init ( already initialized )
+	 */
 	/*3) read version register */
 	status = inv_icp201xx_rd_version(&(s->serif), &version);
 	if (status) {
 		return status;
 	}
 	if (version == 0xB2) {
-		/* B2 version Asic is detected. Boot up sequence is not required for B2 Asic, so
-		 * returning */
+		/*
+		 * B2 version Asic is detected. Boot up sequence is not required for B2 Asic, so
+		 * returning
+		 */
 		return INV_ERROR_SUCCESS;
 	}
 
@@ -436,18 +440,18 @@ int inv_icp201xx_OTP_bootup_cfg(inv_icp201xx_t *s)
 
 	/****************************************************************************/
 	/*
-	10)	Write the address content and read command
-		otp_address_reg.address		= 8`hF8 	-- for offset
-		otp_command_reg.address		= 4`h0
-		otp_command_reg.command	    = 1    -- read action
-	*/
+	 * 10)	Write the address content and read command
+	 * otp_address_reg.address		= 8`hF8 	-- for offset
+	 * otp_command_reg.address		= 4`h0
+	 * otp_command_reg.command	    = 1    -- read action
+	 */
 	inv_icp201xx_wr_otp_addr(&(s->serif), 0xf8); /* for offset */
 	inv_icp201xx_wr_otp_cmd(&(s->serif), 0x10);
 
 	/*
-	11)	Wait for the OTP read to finish
-		Monitor otp_status.busy to be 0
-	*/
+	 * 11)	Wait for the OTP read to finish
+	 * Monitor otp_status.busy to be 0
+	 */
 	do {
 		inv_icp201xx_rd_otp_status(&(s->serif), &otp_status);
 		if (otp_status == 0) {
@@ -456,26 +460,26 @@ int inv_icp201xx_OTP_bootup_cfg(inv_icp201xx_t *s)
 		inv_icp201xx_sleep_us(1);
 	} while (1);
 	/*
-	12)	Read the data from register otp_rdata_reg.value
-	*/
+	 * 12)	Read the data from register otp_rdata_reg.value
+	 */
 
 	status |= inv_icp201xx_rd_otp_reg_data(&(s->serif), &offset);
 
 	/****************************************************************************/
-	/* 3 bit gain (OTP 249 [2:0] to MAIN, TRIM2_MSB [6:4]
-
-	13)	Write the address content and read command
-		otp_address_reg.address		= 8`hF9	-- for gain
-		otp_command_reg.address		= 4`h0
-		otp_command_reg.command	    = 1    -- read action
-	*/
+	/*
+	 * 3 bit gain (OTP 249 [2:0] to MAIN, TRIM2_MSB [6:4]
+	 * 13)	Write the address content and read command
+	 * otp_address_reg.address		= 8`hF9	-- for gain
+	 * otp_command_reg.address		= 4`h0
+	 * otp_command_reg.command	    = 1    -- read action
+	 */
 	inv_icp201xx_wr_otp_addr(&(s->serif), 0xf9); /* for gain */
 	inv_icp201xx_wr_otp_cmd(&(s->serif), 0x10);
 
 	/*
-	14)	Wait for the OTP read to finish
-		Monitor otp_status.busy to be 0
-	*/
+	 * 14)	Wait for the OTP read to finish
+	 * Monitor otp_status.busy to be 0
+	 */
 	do {
 		inv_icp201xx_rd_otp_status(&(s->serif), &otp_status);
 		if (otp_status == 0) {
@@ -484,25 +488,26 @@ int inv_icp201xx_OTP_bootup_cfg(inv_icp201xx_t *s)
 		inv_icp201xx_sleep_us(1);
 	} while (1);
 	/*
-	15)	Read the data from register otp_rdata_reg.value
-	*/
+	 * 15)	Read the data from register otp_rdata_reg.value
+	 */
 	status |= inv_icp201xx_rd_otp_reg_data(&(s->serif), &gain);
 
 	/****************************************************************************/
 	/* HFOSC */
-	/* 16)
-		Write the address content and read command
-		otp_address_reg.address		= 8`hFA	-- for HFosc
-		otp_command_reg.address		= 4`h0
-		otp_command_reg.command	    = 1    -- read action
-	*/
+	/*
+	 * 16)
+	 * Write the address content and read command
+	 * otp_address_reg.address		= 8`hFA	-- for HFosc
+	 * otp_command_reg.address		= 4`h0
+	 * otp_command_reg.command	    = 1    -- read action
+	 */
 	inv_icp201xx_wr_otp_addr(&(s->serif), 0xFA); /* for HFosc */
 	inv_icp201xx_wr_otp_cmd(&(s->serif), 0x10);
 
 	/*
-	17)	Wait for the OTP read to finish
-		Monitor otp_status.busy to be 0
-	*/
+	 * 17)	Wait for the OTP read to finish
+	 * Monitor otp_status.busy to be 0
+	 */
 	do {
 		inv_icp201xx_rd_otp_status(&(s->serif), &otp_status);
 		if (otp_status == 0) {
@@ -511,12 +516,12 @@ int inv_icp201xx_OTP_bootup_cfg(inv_icp201xx_t *s)
 		inv_icp201xx_sleep_us(1);
 	} while (1);
 	/*
-	18)	Read the data from register otp_rdata_reg.value
-	*/
+	 * 18)	Read the data from register otp_rdata_reg.value
+	 */
 	status |= inv_icp201xx_rd_otp_reg_data(&(s->serif), &Hfosc);
 
 	/*
-	 19) Disable OTP and write switch
+	 * 19) Disable OTP and write switch
 	 */
 	inv_icp201xx_wr_otp_enable(&(s->serif), 0x0);
 	inv_icp201xx_wr_otp_write_switch(&(s->serif), 0x00);
