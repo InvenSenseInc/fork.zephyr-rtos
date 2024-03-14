@@ -11,6 +11,7 @@
 #include <zephyr/device.h>
 #include <zephyr/devicetree.h>
 #include <zephyr/drivers/i2c.h>
+#include <zephyr/drivers/spi.h>
 #include <zephyr/drivers/sensor.h>
 #include "ICP201xx/Icp201xx.h"
 #include "ICP201xx/Icp201xxSerif.h"
@@ -39,7 +40,11 @@ typedef struct {
 } icp201xx_data;
 
 struct icp201xx_config {
+#if ICP201XX_BUS_I2C
 	struct i2c_dt_spec i2c;
+#elif ICP201XX_BUS_SPI
+	struct spi_dt_spec spi;
+#endif
 	struct gpio_dt_spec gpio_int;
 	icp201xx_op_mode_t op_mode;
 };

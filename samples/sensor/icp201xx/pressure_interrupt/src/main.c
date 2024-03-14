@@ -51,17 +51,17 @@ static void handle_icp201xx(const struct device *dev, const struct sensor_trigge
 	}
 }
 
-#define ATMOSPHERICAL_PRESSURE_KPA 101.325
-#define TO_KELVIN(temp_C)          (273.15 + temp_C)
-#define HEIGHT_TO_PRESSURE_COEFF   0.03424 /* M*g/R = (0,0289644 * 9,80665 / 8,31432) */
+#define ATMOSPHERICAL_PRESSURE_KPA ((float)101.325)
+#define TO_KELVIN(temp_C)          (((float)273.15) + temp_C)
+#define HEIGHT_TO_PRESSURE_COEFF   ((float)0.03424) /* M*g/R = (0,0289644 * 9,80665 / 8,31432) */
 
-#define PRESSURE_TO_HEIGHT_COEFF   29.27127 /* R / (M*g) = 8,31432 / (0,0289644 * 9,80665) */
-#define LOG_ATMOSPHERICAL_PRESSURE 4.61833  /* ln(101.325) */
+#define PRESSURE_TO_HEIGHT_COEFF   ((float)29.27127) /* R / (M*g) = 8,31432 / (0,0289644 * 9,80665) */
+#define LOG_ATMOSPHERICAL_PRESSURE ((float)4.61833)  /* ln(101.325) */
 
 static float convertToPressure(float height_m, float temperature_C)
 {
 	return ATMOSPHERICAL_PRESSURE_KPA *
-	       exp(-HEIGHT_TO_PRESSURE_COEFF * height_m / TO_KELVIN(temperature_C));
+	       expf(-HEIGHT_TO_PRESSURE_COEFF * height_m / TO_KELVIN(temperature_C));
 }
 
 int main(void)
@@ -86,7 +86,7 @@ int main(void)
 	sensor_channel_get(dev, SENSOR_CHAN_AMBIENT_TEMP, &val);
 	temperature = sensor_value_to_float(&val);
 
-	pressure_threshold = convertToPressure(altitude + 0.5, temperature);
+	pressure_threshold = convertToPressure(altitude + (float)0.5, temperature);
 	sensor_value_from_float(&val, pressure_threshold);
 	sensor_attr_set(dev, SENSOR_CHAN_PRESS, SENSOR_ATTR_LOWER_THRESH, &val);
 
@@ -95,7 +95,7 @@ int main(void)
 		return 0;
 	}
 	LOG_INF("Starting ICP201xx threshold interrupt sample.\n");
-	LOG_INF("Altitude at reset %.2fm, interrupt sets at %.2fm.\n", altitude, altitude + 0.5);
+	LOG_INF("Altitude at reset %.2fm, interrupt sets at %.2fm.\n", (double)altitude, (double)altitude + 0.5);
 
 	return 0;
 }
