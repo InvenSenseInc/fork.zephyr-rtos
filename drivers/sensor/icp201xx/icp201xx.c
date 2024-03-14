@@ -25,10 +25,13 @@ LOG_MODULE_REGISTER(ICP201XX, CONFIG_SENSOR_LOG_LEVEL);
 
 #define ATMOSPHERICAL_PRESSURE_KPA ((float)101.325)
 #define TO_KELVIN(temp_C)          (((float)273.15) + temp_C)
-#define HEIGHT_TO_PRESSURE_COEFF   ((float)0.03424) /* M*g/R = (0,0289644 * 9,80665 / 8,31432) */
+/* M*g/R = (0,0289644 * 9,80665 / 8,31432) */
+#define HEIGHT_TO_PRESSURE_COEFF   ((float)0.03424)
 
-#define PRESSURE_TO_HEIGHT_COEFF   ((float)29.27127) /* R / (M*g) = 8,31432 / (0,0289644 * 9,80665) */
-#define LOG_ATMOSPHERICAL_PRESSURE ((float)4.61833)  /* ln(101.325) */
+/* R / (M*g) = 8,31432 / (0,0289644 * 9,80665) */
+#define PRESSURE_TO_HEIGHT_COEFF   ((float)29.27127)
+/* ln(101.325) */
+#define LOG_ATMOSPHERICAL_PRESSURE ((float)4.61833)
 
 void inv_icp201xx_sleep_us(int us)
 {
@@ -56,14 +59,13 @@ static int inv_io_hal_write_reg(void *ctx, uint8_t reg, const uint8_t *wbuffer, 
 #define ICP201XX_SERIF_SPI_REG_READ_CMD  0X3C
 static int inv_io_hal_read_reg(void *ctx, uint8_t reg, uint8_t *rbuffer, uint32_t rlen)
 {
-	if (reg !=0)
-	{
+	if (reg != 0) {
 		int rc = 0;
 
-		uint8_t cmd[] = {ICP201XX_SERIF_SPI_REG_READ_CMD,reg};
+		uint8_t cmd[] = {ICP201XX_SERIF_SPI_REG_READ_CMD, reg};
 		const struct spi_buf tx_buf = {.buf = cmd, .len = 2};
 		const struct spi_buf_set tx = {.buffers = &tx_buf, .count = 1};
-		struct spi_buf rx_buf[] = {{.buf = NULL, .len = 2},{.buf = rbuffer, .len = rlen}};
+		struct spi_buf rx_buf[] = {{.buf = NULL, .len = 2}, {.buf = rbuffer, .len = rlen}};
 		const struct spi_buf_set rx = {.buffers = rx_buf, .count = 2};
 		struct device *dev = (struct device *)ctx;
 		const struct icp201xx_config *cfg = (const struct icp201xx_config *)dev->config;
@@ -77,11 +79,11 @@ static int inv_io_hal_read_reg(void *ctx, uint8_t reg, uint8_t *rbuffer, uint32_
 
 static int inv_io_hal_write_reg(void *ctx, uint8_t reg, const uint8_t *wbuffer, uint32_t wlen)
 {
-	if (reg !=0)
-	{
+	if (reg != 0) {
 		int rc = 0;
-		uint8_t cmd[] = {ICP201XX_SERIF_SPI_REG_WRITE_CMD,reg};
-		const struct spi_buf tx_buf[] = {{.buf = cmd, .len = 2},{.buf = (uint8_t*)wbuffer, .len = wlen}};
+		uint8_t cmd[] = {ICP201XX_SERIF_SPI_REG_WRITE_CMD, reg};
+		const struct spi_buf tx_buf[] = {{.buf = cmd, .len = 2},
+						 {.buf = (uint8_t *)wbuffer, .len = wlen}};
 		const struct spi_buf_set tx = {.buffers = tx_buf, .count = 2};
 		struct device *dev = (struct device *)ctx;
 		const struct icp201xx_config *cfg = (const struct icp201xx_config *)dev->config;
@@ -92,7 +94,6 @@ static int inv_io_hal_write_reg(void *ctx, uint8_t reg, const uint8_t *wbuffer, 
 	return 0;
 }
 #endif
-
 
 static float convertToHeight(float pressure_kp, float temperature_C)
 {
@@ -375,16 +376,20 @@ static const struct sensor_driver_api icp201xx_api_funcs = {.sample_fetch = icp2
 
 #if ICP201XX_BUS_I2C
 /* Initializes a struct icp201xx_config for an instance on an I2C bus. */
-#define ICP201XX_CONFIG(inst)                                                                 \
-	{                             \
+#define ICP201XX_CONFIG(inst)                                                                      \
+	{                                                                                          \
 		.i2c = I2C_DT_SPEC_INST_GET(inst),                                                 \
 		.gpio_int = GPIO_DT_SPEC_INST_GET(inst, int_gpios),                                \
 	}
 #elif ICP201XX_BUS_SPI
 /* Initializes a struct icm42670S_config for an instance on a SPI bus. */
-#define ICP201XX_CONFIG(inst)                                                                 \
+#define ICP201XX_CONFIG(inst)                                                                      \
 	{                                                                                          \
-		.spi = SPI_DT_SPEC_INST_GET(inst,(SPI_OP_MODE_MASTER| SPI_WORD_SET(8) | SPI_TRANSFER_MSB | SPI_FULL_DUPLEX | SPI_MODE_CPHA | SPI_MODE_CPOL),0),                                                 \
+		.spi = SPI_DT_SPEC_INST_GET(inst,                                                  \
+					    (SPI_OP_MODE_MASTER | SPI_WORD_SET(8) |                \
+					     SPI_TRANSFER_MSB | SPI_FULL_DUPLEX | SPI_MODE_CPHA |  \
+					     SPI_MODE_CPOL),                                       \
+					    0),                                                    \
 		.gpio_int = GPIO_DT_SPEC_INST_GET(inst, int_gpios),                                \
 	}
 #endif
@@ -394,7 +399,7 @@ static const struct sensor_driver_api icp201xx_api_funcs = {.sample_fetch = icp2
  */
 #define ICP201XX_DEFINE(inst)                                                                      \
 	static icp201xx_data icp201xx_drv_##inst;                                                  \
-	static const struct icp201xx_config icp201xx_config_##inst = ICP201XX_CONFIG(inst);                                                                                         \
+	static const struct icp201xx_config icp201xx_config_##inst = ICP201XX_CONFIG(inst);        \
 	DEVICE_DT_INST_DEFINE(inst, icp201xx_init, NULL, &icp201xx_drv_##inst,                     \
 			      &icp201xx_config_##inst, POST_KERNEL, CONFIG_SENSOR_INIT_PRIORITY,   \
 			      &icp201xx_api_funcs);

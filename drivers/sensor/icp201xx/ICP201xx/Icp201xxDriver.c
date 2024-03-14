@@ -97,12 +97,13 @@ int inv_icp201xx_rd_device_id(inv_icp201xx_serif_t *s, uint8_t *value)
 	return inv_icp201xx_serif_read_reg(s, MPUREG_DEVICE_ID, 1, value);
 }
 
-/******************************************
- * Register Name: OTP Config 1
- * Register Type: READ/WRITE
- * Register Address: 172 (Decimal); AC (Hex)
- *******************************************
- */
+/*
+*****************************************
+* Register Name: OTP Config 1
+* Register Type: READ/WRITE
+* Register Address: 172 (Decimal); AC (Hex)
+*******************************************
+*/
 int inv_icp201xx_wr_otp_write_switch(inv_icp201xx_serif_t *s, uint8_t new_value)
 {
 	int status;
@@ -140,34 +141,37 @@ int inv_icp201xx_wr_otp_enable(inv_icp201xx_serif_t *s, uint8_t new_value)
 	return status;
 }
 
-/******************************************
- * Register Name: OTP MR LSB
- * Register Type: READ/WRITE
- * Register Address: 173 (Decimal); AD (Hex)
- *******************************************
- */
+/*
+*****************************************
+* Register Name: OTP MR LSB
+* Register Type: READ/WRITE
+* Register Address: 173 (Decimal); AD (Hex)
+*******************************************
+*/
 int inv_icp201xx_wr_otp_mr_lsb(inv_icp201xx_serif_t *s, uint8_t new_value)
 {
 	return inv_icp201xx_serif_write_reg(s, MPUREG_OTP_MTP_MR_LSB, 1, &new_value);
 }
 
-/******************************************
- * Register Name: OTP MR MSB
- * Register Type: READ/WRITE
- * Register Address: 174 (Decimal); AE (Hex)
- *******************************************
- */
+/*
+*****************************************
+* Register Name: OTP MR MSB
+* Register Type: READ/WRITE
+* Register Address: 174 (Decimal); AE (Hex)
+*******************************************
+*/
 int inv_icp201xx_wr_otp_mr_msb(inv_icp201xx_serif_t *s, uint8_t new_value)
 {
 	return inv_icp201xx_serif_write_reg(s, MPUREG_OTP_MTP_MR_MSB, 1, &new_value);
 }
 
-/******************************************
- * Register Name: OTP MRA LSB
- * Register Type: READ/WRITE
- * Register Address: 175 (Decimal); AF (Hex)
- *******************************************
- */
+/*
+*****************************************
+* Register Name: OTP MRA LSB
+* Register Type: READ/WRITE
+* Register Address: 175 (Decimal); AF (Hex)
+*******************************************
+*/
 int inv_icp201xx_wr_otp_mra_lsb(inv_icp201xx_serif_t *s, uint8_t new_value)
 {
 	return inv_icp201xx_serif_write_reg(s, MPUREG_OTP_MTP_MRA_LSB, 1, &new_value);
@@ -176,12 +180,13 @@ int inv_icp201xx_rd_otp_mra_lsb(inv_icp201xx_serif_t *s, uint8_t *value)
 {
 	return inv_icp201xx_serif_read_reg(s, MPUREG_OTP_MTP_MRA_LSB, 1, value);
 }
-/******************************************
- * Register Name: OTP MRA MSB
- * Register Type: READ/WRITE
- * Register Address: 176 (Decimal); B0 (Hex)
- *******************************************
- */
+/*
+*****************************************
+* Register Name: OTP MRA MSB
+* Register Type: READ/WRITE
+* Register Address: 176 (Decimal); B0 (Hex)
+*******************************************
+*/
 int inv_icp201xx_wr_otp_mra_msb(inv_icp201xx_serif_t *s, uint8_t new_value)
 {
 	return inv_icp201xx_serif_write_reg(s, MPUREG_OTP_MTP_MRA_MSB, 1, &new_value);
@@ -192,33 +197,36 @@ int inv_icp201xx_rd_otp_mra_msb(inv_icp201xx_serif_t *s, uint8_t *value)
 	return inv_icp201xx_serif_read_reg(s, MPUREG_OTP_MTP_MRA_MSB, 1, value);
 }
 
-/******************************************
- * Register Name: OTP MRB LSB
- * Register Type: READ/WRITE
- * Register Address: 177 (Decimal); B1 (Hex)
- *******************************************
- */
+/*
+*****************************************
+* Register Name: OTP MRB LSB
+* Register Type: READ/WRITE
+* Register Address: 177 (Decimal); B1 (Hex)
+*******************************************
+*/
 int inv_icp201xx_wr_otp_mrb_lsb(inv_icp201xx_serif_t *s, uint8_t new_value)
 {
 	return inv_icp201xx_serif_write_reg(s, MPUREG_OTP_MTP_MRB_LSB, 1, &new_value);
 }
-/******************************************
- * Register Name: OTP MRB MSB
- * Register Type: READ/WRITE
- * Register Address: 178 (Decimal); B2 (Hex)
- *******************************************
- */
+/*
+*****************************************
+* Register Name: OTP MRB MSB
+* Register Type: READ/WRITE
+* Register Address: 178 (Decimal); B2 (Hex)
+*******************************************
+*/
 int inv_icp201xx_wr_otp_mrb_msb(inv_icp201xx_serif_t *s, uint8_t new_value)
 {
 	return inv_icp201xx_serif_write_reg(s, MPUREG_OTP_MTP_MRB_MSB, 1, &new_value);
 }
 
-/******************************************
- * Register Name: OTP ADDR
- * Register Type: READ/WRITE
- * Register Address: 181 (Decimal); B5 (Hex)
- *******************************************
- */
+/*
+*****************************************
+* Register Name: OTP ADDR
+* Register Type: READ/WRITE
+* Register Address: 181 (Decimal); B5 (Hex)
+*******************************************
+*/
 int inv_icp201xx_wr_otp_addr(inv_icp201xx_serif_t *s, uint8_t new_value)
 {
 	return inv_icp201xx_serif_write_reg(s, MPUREG_OTP_MTP_OTP_ADDR, 1, &new_value);
@@ -229,12 +237,13 @@ int inv_icp201xx_rd_otp_addr(inv_icp201xx_serif_t *s, uint8_t *value)
 	return inv_icp201xx_serif_read_reg(s, MPUREG_OTP_MTP_OTP_ADDR, 1, value);
 }
 
-/******************************************
- * Register Name: OTP CMD
- * Register Type: READ/WRITE
- * Register Address: 182 (Decimal); B6 (Hex)
- *******************************************
- */
+/*
+*****************************************
+* Register Name: OTP CMD
+* Register Type: READ/WRITE
+* Register Address: 182 (Decimal); B6 (Hex)
+*******************************************
+*/
 int inv_icp201xx_wr_otp_cmd(inv_icp201xx_serif_t *s, uint8_t new_value)
 {
 	return inv_icp201xx_serif_write_reg(s, MPUREG_OTP_MTP_OTP_CMD, 1, &new_value);
@@ -245,35 +254,38 @@ int inv_icp201xx_rd_otp_cmd(inv_icp201xx_serif_t *s, uint8_t *value)
 	return inv_icp201xx_serif_read_reg(s, MPUREG_OTP_MTP_OTP_CMD, 1, value);
 }
 
-/******************************************
- * Register Name: OTP Read Reg
- * Register Type: READ
- * Register Address: 184 (Decimal); B8 (Hex)
- *******************************************
- */
+/*
+*****************************************
+* Register Name: OTP Read Reg
+* Register Type: READ
+* Register Address: 184 (Decimal); B8 (Hex)
+*******************************************
+*/
 
 int inv_icp201xx_rd_otp_reg_data(inv_icp201xx_serif_t *s, uint8_t *value)
 {
 	return inv_icp201xx_serif_read_reg(s, MPUREG_OTP_MTP_RD_DATA, 1, value);
 }
 
-/******************************************
- * Register Name: OTP status
- * Register Type: READ
- * Register Address: 185 (Decimal); B9 (Hex)
- *******************************************
- */
+/*
+*****************************************
+* Register Name: OTP status
+* Register Type: READ
+* Register Address: 185 (Decimal); B9 (Hex)
+*******************************************
+*/
 int inv_icp201xx_rd_otp_status(inv_icp201xx_serif_t *s, uint8_t *value)
 {
 	return inv_icp201xx_serif_read_reg(s, MPUREG_OTP_MTP_OTP_STATUS, 1, value);
 }
 
-/******************************************
- * Register Name: OTP Debug2
- * Register Type: READ/WRITE
- * Register Address:  180(Decimal); BC (Hex)
- *******************************************
- */
+/*
+*****************************************
+* Register Name: OTP Debug2
+* Register Type: READ/WRITE
+* Register Address:  180(Decimal); BC (Hex)
+*******************************************
+*/
 int inv_icp201xx_wr_otp_dbg2_reset(inv_icp201xx_serif_t *s, uint8_t new_value)
 {
 	int status;
@@ -293,23 +305,25 @@ int inv_icp201xx_wr_otp_dbg2_reset(inv_icp201xx_serif_t *s, uint8_t new_value)
 	return status;
 }
 
-/******************************************
- * Register Name: Master lock
- * Register Type: WRITE
- * Register Address:  190(Decimal); BE (Hex)
- *******************************************
- */
+/*
+*****************************************
+* Register Name: Master lock
+* Register Type: WRITE
+* Register Address:  190(Decimal); BE (Hex)
+*******************************************
+*/
 int inv_icp201xx_wr_master_lock(inv_icp201xx_serif_t *s, uint8_t new_value)
 {
 	return inv_icp201xx_serif_write_reg(s, MPUREG_MASTER_LOCK, 1, &new_value);
 }
 
-/******************************************
- * Register Name: OTP STATUS2
- * Register Type: WRITE
- * Register Address:  191(Decimal); BF (Hex)
- *******************************************
- */
+/*
+*****************************************
+* Register Name: OTP STATUS2
+* Register Type: WRITE
+* Register Address:  191(Decimal); BF (Hex)
+*******************************************
+*/
 int inv_icp201xx_rd_boot_up_status(inv_icp201xx_serif_t *s, uint8_t *value)
 {
 	int status;
@@ -592,9 +606,10 @@ int inv_icp201xx_rd_fifo_readout_mode(inv_icp201xx_serif_t *s, icp201xx_FIFO_rea
 	return status;
 }
 
-/************************************    End of Mode Select
- * *******************************************************
- */
+/*
+***********************************    End of Mode Select
+* *******************************************************
+*/
 
 int inv_icp201xx_wr_int_status(inv_icp201xx_serif_t *s, uint8_t new_value)
 {
@@ -724,9 +739,10 @@ int inv_icp201xx_rd_spi_mode(inv_icp201xx_serif_t *s, icp201xx_spi_mode_t *value
 	return status;
 }
 
-/******************************************************** FIFO FILL
- * *******************************************
- */
+/*
+******************************************************* FIFO FILL
+* *******************************************
+*/
 
 int inv_icp201xx_rd_fifo_fill(inv_icp201xx_serif_t *s, uint8_t *value)
 {
@@ -801,9 +817,10 @@ int inv_icp201xx_rd_fifo_level(inv_icp201xx_serif_t *s, uint8_t *value)
 	return status;
 }
 
-/************************************ End of FIFO FILL
- * ************************************************
- */
+/*
+*********************************** End of FIFO FILL
+* ************************************************
+*/
 
 int inv_icp201xx_rd_fifo(inv_icp201xx_serif_t *s, uint8_t len, uint8_t *value,
 			 uint8_t fifo_read_offset)
