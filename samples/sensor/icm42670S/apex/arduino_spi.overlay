@@ -7,7 +7,7 @@
 /* Example configuration of a ICM42670S device on an Arduino SPI bus. */
 &arduino_spi {
 	status = "okay";
-	cs-gpios = <&arduino_header 16 GPIO_ACTIVE_LOW>; /* D10 */
+	cs-gpios = <&arduino_header 14 GPIO_ACTIVE_LOW>; /* D8 */
 	icm42670S@0 {
 		compatible = "invensense,icm42670S";
 		reg = <0>;

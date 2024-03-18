@@ -766,7 +766,12 @@ static int icm42670S_chip_init(const struct device *dev)
 	data->serif.write_reg = inv_io_hal_write_reg;
 	data->serif.max_read = 1024 * 32;
 	data->serif.max_write = 1024 * 32;
+#if ICM42670S_BUS_SPI
+	data->serif.serif_type = UI_SPI4;
+#endif
+#if ICM42670S_BUS_I2C
 	data->serif.serif_type = UI_I2C;
+#endif
 	err = inv_imu_init(&data->driver, &data->serif, NULL);
 	if (err < 0) {
 		LOG_DBG("Init failed: %d", err);
@@ -775,12 +780,12 @@ static int icm42670S_chip_init(const struct device *dev)
 
 	err = inv_imu_get_who_am_i(&data->driver, &data->chip_id);
 	if (err < 0) {
-		LOG_DBG("ID read failed: %d", err);
+		LOG_ERR("ID read failed: %d", err);
 		return err;
 	}
 
 	if (data->chip_id != INV_IMU_WHOAMI) {
-		LOG_DBG("bad chip id 0x%x", data->chip_id);
+		LOG_ERR("bad chip id 0x%x", data->chip_id);
 		return -ENOTSUP;
 	}
 
