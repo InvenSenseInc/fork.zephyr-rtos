@@ -780,12 +780,12 @@ static int icm42670S_chip_init(const struct device *dev)
 
 	err = inv_imu_get_who_am_i(&data->driver, &data->chip_id);
 	if (err < 0) {
-		LOG_DBG("ID read failed: %d", err);
+		LOG_ERR("ID read failed: %d", err);
 		return err;
 	}
 
 	if (data->chip_id != INV_IMU_WHOAMI) {
-		LOG_DBG("bad chip id 0x%x", data->chip_id);
+		LOG_ERR("bad chip id 0x%x", data->chip_id);
 		return -ENOTSUP;
 	}
 

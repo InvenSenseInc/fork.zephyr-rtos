@@ -1483,10 +1483,6 @@ static int configure_serial_interface(inv_imu_device_t *s)
 			return INV_ERROR_BAD_ARG; /* Not supported */
 		status |= inv_imu_write_reg(s, DEVICE_CONFIG, 1, &value);
 
-		/* Workaround : Overwrite DRIVE_CONFIG3 register with 0x4 value */
-		value = 0x4;
-		status |= inv_imu_write_reg(s, DRIVE_CONFIG3, 1, &value);
-
 #if INV_IMU_REV == INV_IMU_REV_A
 		/* Device operation in shared spi bus configuration (AN-000352) */
 		status |= inv_imu_read_reg(s, INTF_CONFIG0, 1, &value);
