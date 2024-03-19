@@ -1,9 +1,8 @@
 sample:
-  name: ICM42670S Sensor AML sample
+  name: ICM42670S Sensor AML pointing sample
 tests:
   sample.sensor.icm42670S:
-    harness: console
+    build_only: true
     tags: sensors
     integration_platforms:
-      - arduino_zero
       - nrf52dk_nrf52832
