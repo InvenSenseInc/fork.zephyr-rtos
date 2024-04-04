@@ -11,12 +11,11 @@
 #include <zephyr/pm/device.h>
 #include <zephyr/sys/byteorder.h>
 #include <zephyr/sys/__assert.h>
-
-#include <zephyr/logging/log.h>
 #include <zephyr/drivers/sensor/icm42670s.h>
 
 #include "icm42670S.h"
 
+#include <zephyr/logging/log.h>
 LOG_MODULE_REGISTER(ICM42670S, CONFIG_SENSOR_LOG_LEVEL);
 
 #if DT_NUM_INST_STATUS_OKAY(DT_DRV_COMPAT) == 0
@@ -74,6 +73,7 @@ uint64_t inv_imu_get_time_us(void)
 	return k_uptime_get() * 1000;
 }
 
+#ifdef CONFIG_ICM42670S_TRIGGER
 static int icm42670S_fetch_from_fifo(const struct device *dev)
 {
 	struct icm42670S_data *data = dev->data;
@@ -129,12 +129,12 @@ static int icm42670S_fetch_from_fifo(const struct device *dev)
 				return status;
 			}
 
-			data->accel[0] = event.accel[0];
-			data->accel[1] = event.accel[1];
-			data->accel[2] = event.accel[2];
-			data->gyro[0] = event.gyro[0];
-			data->gyro[1] = event.gyro[1];
-			data->gyro[2] = event.gyro[2];
+			data->accel_x = event.accel[0];
+			data->accel_y = event.accel[1];
+			data->accel_z = event.accel[2];
+			data->gyro_x = event.gyro[0];
+			data->gyro_y = event.gyro[1];
+			data->gyro_z = event.gyro[2];
 			data->temperature = event.temperature;
 			/* TODO use a ringbuffer to handle multiple samples in FIFO */
 
@@ -149,10 +149,122 @@ static int icm42670S_fetch_from_fifo(const struct device *dev)
 
 	return 0;
 }
+#endif
+
+#ifndef CONFIG_ICM42670S_TRIGGER
+void icm42670S_lock(const struct device *dev)
+{
+	ARG_UNUSED(dev);
+}
+
+void icm42670S_unlock(const struct device *dev)
+{
+	ARG_UNUSED(dev);
+}
+
+static int icm42670S_sample_fetch_accel(const struct device *dev)
+{
+	struct icm42670S_data *data = dev->data;
+	uint8_t buffer[ACCEL_DATA_SIZE];
+
+	int res = inv_imu_read_reg(&data->driver, ACCEL_DATA_X1, ACCEL_DATA_SIZE, buffer);
+
+	if (res) {
+		return res;
+	}
+
+	data->accel_x = (int16_t)sys_get_be16(&buffer[0]);
+	data->accel_y = (int16_t)sys_get_be16(&buffer[2]);
+	data->accel_z = (int16_t)sys_get_be16(&buffer[4]);
+
+	return 0;
+}
+
+static int icm42670S_sample_fetch_gyro(const struct device *dev)
+{
+	struct icm42670S_data *data = dev->data;
+	uint8_t buffer[GYRO_DATA_SIZE];
+
+	int res = inv_imu_read_reg(&data->driver, GYRO_DATA_X1, GYRO_DATA_SIZE, buffer);
+
+	if (res) {
+		return res;
+	}
+
+	data->gyro_x = (int16_t)sys_get_be16(&buffer[0]);
+	data->gyro_y = (int16_t)sys_get_be16(&buffer[2]);
+	data->gyro_z = (int16_t)sys_get_be16(&buffer[4]);
+
+	return 0;
+}
+
+static int icm42670S_sample_fetch_temp(const struct device *dev)
+{
+	struct icm42670S_data *data = dev->data;
+	uint8_t buffer[TEMP_DATA_SIZE];
+
+	int res = inv_imu_read_reg(&data->driver, TEMP_DATA1, TEMP_DATA_SIZE, buffer);
+
+	if (res) {
+		return res;
+	}
+
+	data->temperature = (int16_t)sys_get_be16(&buffer[0]);
+
+	return 0;
+}
+
+static int icm42670S_fetch_from_registers(const struct device *dev, enum sensor_channel chan)
+{
+	struct icm42670S_data *data = dev->data;
+	int res = 0;
+	uint8_t int_status;
+	
+	LOG_ERR("Fetch from reg");
+	
+	icm42670S_lock(dev);
+	
+	/* Ensure data ready status bit is set */
+	res |= inv_imu_read_reg(&data->driver, INT_STATUS_DRDY, 1, &int_status);
+	
+	if (int_status & INT_STATUS_DRDY_DATA_RDY_INT_MASK) {
+		switch (chan) {
+			case SENSOR_CHAN_ALL:
+				res |= icm42670S_sample_fetch_accel(dev);
+				res |= icm42670S_sample_fetch_gyro(dev);
+				res |= icm42670S_sample_fetch_temp(dev);
+				break;
+			case SENSOR_CHAN_ACCEL_XYZ:
+			case SENSOR_CHAN_ACCEL_X:
+			case SENSOR_CHAN_ACCEL_Y:
+			case SENSOR_CHAN_ACCEL_Z:
+				res = icm42670S_sample_fetch_accel(dev);
+				break;
+			case SENSOR_CHAN_GYRO_XYZ:
+			case SENSOR_CHAN_GYRO_X:
+			case SENSOR_CHAN_GYRO_Y:
+			case SENSOR_CHAN_GYRO_Z:
+				res = icm42670S_sample_fetch_gyro(dev);
+				break;
+			case SENSOR_CHAN_DIE_TEMP:
+				res = icm42670S_sample_fetch_temp(dev);
+				break;
+			default:
+				res = -ENOTSUP;
+				break;
+		}
+	}
+	
+	icm42670S_unlock(dev);
+	return res;
+}
+#endif
 
 static int icm42670S_sample_fetch(const struct device *dev, enum sensor_channel chan)
 {
-	int status = -1;
+	int status = -ENOTSUP;
+	
+	icm42670S_lock(dev);
 
 	if ((enum sensor_channel_icm42670S)chan == SENSOR_CHAN_APEX_MOTION) {
 #ifdef CONFIG_ICM42670S_APEX_PEDOMETER
@@ -173,14 +285,22 @@ static int icm42670S_sample_fetch(const struct device *dev, enum sensor_channel 
 	}
 #endif
 
-	if (chan == SENSOR_CHAN_ALL) {
+	if ((chan == SENSOR_CHAN_ALL) || (chan == SENSOR_CHAN_ACCEL_XYZ) || (chan == SENSOR_CHAN_ACCEL_X) 
+		|| (chan == SENSOR_CHAN_ACCEL_Y) || (chan == SENSOR_CHAN_ACCEL_Z) 
+		|| (chan == SENSOR_CHAN_GYRO_XYZ) || (chan == SENSOR_CHAN_GYRO_X) || (chan == SENSOR_CHAN_GYRO_Y)
+		|| (chan == SENSOR_CHAN_GYRO_Z) || (chan == SENSOR_CHAN_DIE_TEMP)) {
+#ifdef CONFIG_ICM42670S_TRIGGER
 		status = icm42670S_fetch_from_fifo(dev);
+#else
+		status = icm42670S_fetch_from_registers(dev, chan);
+#endif
 	}
 
+	icm42670S_unlock(dev);
 	return status;
 }
 
-static void icm42670S_accel_convert(struct sensor_value *val, int raw_val, uint16_t fs)
+static void icm42670S_convert_accel(struct sensor_value *val, int raw_val, uint16_t fs)
 {
 	int64_t conv_val;
 
@@ -190,7 +310,7 @@ static void icm42670S_accel_convert(struct sensor_value *val, int raw_val, uint1
 	val->val2 = conv_val % 1000000;
 }
 
-static void icm42670S_gyro_convert(struct sensor_value *val, int16_t raw_val, uint16_t fs)
+static void icm42670S_convert_gyro(struct sensor_value *val, int16_t raw_val, uint16_t fs)
 {
 	int64_t conv_val;
 
@@ -200,7 +320,7 @@ static void icm42670S_gyro_convert(struct sensor_value *val, int16_t raw_val, ui
 	val->val2 = conv_val % 1000000;
 }
 
-static void icm42670S_temp_convert(struct sensor_value *val, int16_t raw_val)
+static void icm42670S_convert_temp(struct sensor_value *val, int16_t raw_val)
 {
 	int64_t conv_val;
 
@@ -212,18 +332,33 @@ static void icm42670S_temp_convert(struct sensor_value *val, int16_t raw_val)
 static int icm42670S_channel_get(const struct device *dev, enum sensor_channel chan,
 				 struct sensor_value *val)
 {
+	int res = 0;
 	struct icm42670S_data *data = dev->data;
+	
+	icm42670S_lock(dev);
 
 	if (chan == SENSOR_CHAN_ACCEL_XYZ) {
-		icm42670S_accel_convert(val, data->accel[0], data->accel_fs);
-		icm42670S_accel_convert(val + 1, data->accel[1], data->accel_fs);
-		icm42670S_accel_convert(val + 2, data->accel[2], data->accel_fs);
+		icm42670S_convert_accel(&val[0], data->accel_x, data->accel_fs);
+		icm42670S_convert_accel(&val[1], data->accel_y, data->accel_fs);
+		icm42670S_convert_accel(&val[2], data->accel_z, data->accel_fs);
+	} else if (chan == SENSOR_CHAN_ACCEL_X) {
+		icm42670S_convert_accel(val, data->accel_x, data->accel_fs);
+	} else if (chan == SENSOR_CHAN_ACCEL_Y) {
+		icm42670S_convert_accel(val, data->accel_y, data->accel_fs);
+	} else if (chan == SENSOR_CHAN_ACCEL_Z) {
+		icm42670S_convert_accel(val, data->accel_z, data->accel_fs);
 	} else if (chan == SENSOR_CHAN_GYRO_XYZ) {
-		icm42670S_gyro_convert(val, data->gyro[0], data->gyro_fs);
-		icm42670S_gyro_convert(val + 1, data->gyro[1], data->gyro_fs);
-		icm42670S_gyro_convert(val + 2, data->gyro[2], data->gyro_fs);
+		icm42670S_convert_gyro(&val[0], data->gyro_x, data->gyro_fs);
+		icm42670S_convert_gyro(&val[1], data->gyro_y, data->gyro_fs);
+		icm42670S_convert_gyro(&val[2], data->gyro_z, data->gyro_fs);
+	} else if (chan == SENSOR_CHAN_GYRO_X) {
+		icm42670S_convert_gyro(val, data->gyro_x, data->gyro_fs);
+	} else if (chan == SENSOR_CHAN_GYRO_Y) {
+		icm42670S_convert_gyro(val, data->gyro_y, data->gyro_fs);
+	} else if (chan == SENSOR_CHAN_GYRO_Z) {
+		icm42670S_convert_gyro(val, data->gyro_z, data->gyro_fs);
 	} else if (chan == SENSOR_CHAN_DIE_TEMP) {
-		icm42670S_temp_convert(val, data->temperature);
+		icm42670S_convert_temp(val, data->temperature);
 #ifdef CONFIG_ICM42670S_APEX_PEDOMETER
 	} else if ((enum sensor_channel_icm42670S)chan == SENSOR_CHAN_APEX_MOTION) {
 		val->val1 = data->pedometer_cnt;
@@ -258,23 +393,25 @@ static int icm42670S_channel_get(const struct device *dev, enum sensor_channel c
 #ifdef CONFIG_ICM42670S_AML_GYR_OFFSET
 	} else if ((enum sensor_channel_icm42670S)chan ==
 		   SENSOR_CHAN_AML_OUTPUT_GYRO_CALIBRATTION) {
-		icm42670S_gyro_convert(val, data->gyro_offset[0], data->gyro_fs);
-		icm42670S_gyro_convert(val + 1, data->gyro_offset[1], data->gyro_fs);
-		icm42670S_gyro_convert(val + 2, data->gyro_offset[2], data->gyro_fs);
+		icm42670S_convert_gyro(&val[0], data->gyro_offset[0], data->gyro_fs);
+		icm42670S_convert_gyro(&val[1], data->gyro_offset[1], data->gyro_fs);
+		icm42670S_convert_gyro(&val[2], data->gyro_offset[2], data->gyro_fs);
 #endif
 #ifdef CONFIG_ICM42670S_AML_QUATERNION
 	} else if ((enum sensor_channel_icm42670S)chan == SENSOR_CHAN_AML_OUTPUT_QUATERNION) {
-		icm42670S_aml_quaternion_convert(val, data->quaternion[0]);
-		icm42670S_aml_quaternion_convert(val + 1, data->quaternion[1]);
-		icm42670S_aml_quaternion_convert(val + 2, data->quaternion[2]);
-		icm42670S_aml_quaternion_convert(val + 3, data->quaternion[3]);
+		icm42670S_aml_quaternion_convert(&val[0], data->quaternion[0]);
+		icm42670S_aml_quaternion_convert(&val[1], data->quaternion[1]);
+		icm42670S_aml_quaternion_convert(&val[2], data->quaternion[2]);
+		icm42670S_aml_quaternion_convert(&val[3], data->quaternion[3]);
 #endif
 #endif
 	} else {
-		return -ENOTSUP;
+		res = -ENOTSUP;
 	}
 
-	return 0;
+	icm42670S_unlock(dev);
+	
+	return res;
 }
 
 static uint16_t convert_enum_to_freq(uint8_t val)
@@ -325,7 +462,6 @@ static uint16_t convert_enum_to_freq(uint8_t val)
 	return freq;
 }
 
-#ifdef CONFIG_ICM42670S_ATTR_RUNTIME
 static uint32_t convert_freq_to_bitfield(uint32_t val, uint16_t *freq)
 {
 	uint32_t odr_bitfield = 0;
@@ -453,7 +589,6 @@ static uint32_t convert_lp_avg_to_bitfield(uint32_t val)
 	}
 	return bitfield;
 }
-#endif
 
 static uint8_t convert_bitfield_to_acc_fs(uint8_t bitfield)
 {
@@ -487,11 +622,10 @@ static uint16_t convert_bitfield_to_gyr_fs(uint8_t bitfield)
 	return gyr_fs;
 }
 
-#ifdef CONFIG_ICM42670S_ATTR_RUNTIME
-static int icm42670S_accel_power_mode_set(struct icm42670S_data *drv_data,
+static int icm42670S_set_accel_power_mode(struct icm42670S_data *drv_data,
 					  const struct sensor_value *val)
 {
-	int err;
+	int err = 0;
 
 	if ((val->val1 == ICM42670S_LOW_POWER_MODE) &&
 	    (drv_data->accel_pwr_mode != ICM42670S_LOW_POWER_MODE)) {
@@ -522,9 +656,9 @@ static int icm42670S_accel_power_mode_set(struct icm42670S_data *drv_data,
 	return err;
 }
 
-static int icm42670S_accel_odr_set(struct icm42670S_data *drv_data, const struct sensor_value *val)
+static int icm42670S_set_accel_odr(struct icm42670S_data *drv_data, const struct sensor_value *val)
 {
-	int err;
+	int err = 0;
 
 	if (val->val1 <= 1600 && val->val1 >= 1) {
 		if (drv_data->accel_hz == 0) {
@@ -551,10 +685,10 @@ static int icm42670S_accel_odr_set(struct icm42670S_data *drv_data, const struct
 	return err;
 }
 
-static int icm42670S_accel_range_set(struct icm42670S_data *drv_data,
+static int icm42670S_set_accel_fs(struct icm42670S_data *drv_data,
 				     const struct sensor_value *val)
 {
-	int err;
+	int err = 0;
 
 	if (val->val1 > 16 || val->val1 < 2) {
 		LOG_ERR("Incorrect fullscale value");
@@ -571,16 +705,16 @@ static int icm42670S_accel_range_set(struct icm42670S_data *drv_data,
 static int icm42670S_accel_config(struct icm42670S_data *drv_data, enum sensor_attribute attr,
 				  const struct sensor_value *val)
 {
-	int err;
+	int err = 0;
 
 	if (attr == SENSOR_ATTR_CONFIGURATION) {
-		icm42670S_accel_power_mode_set(drv_data, val);
+		err |= icm42670S_set_accel_power_mode(drv_data, val);
 
 	} else if (attr == SENSOR_ATTR_SAMPLING_FREQUENCY) {
-		icm42670S_accel_odr_set(drv_data, val);
+		err |= icm42670S_set_accel_odr(drv_data, val);
 
 	} else if (attr == SENSOR_ATTR_FULL_SCALE) {
-		icm42670S_accel_range_set(drv_data, val);
+		err |= icm42670S_set_accel_fs(drv_data, val);
 
 	} else if ((enum sensor_attribute_icm42670S)attr == SENSOR_ATTR_BW_FILTER_LPF) {
 		if (val->val1 > 180) {
@@ -600,15 +734,15 @@ static int icm42670S_accel_config(struct icm42670S_data *drv_data, enum sensor_a
 							convert_lp_avg_to_bitfield(val->val1));
 		}
 	} else {
-		LOG_ERR("Not supported ATTR");
-		return -ENOTSUP;
+		LOG_ERR("Unsupported attribute");
+		return -EINVAL;
 	}
 	return err;
 }
 
-static int icm42670S_gyro_odr_set(struct icm42670S_data *drv_data, const struct sensor_value *val)
+static int icm42670S_set_gyro_odr(struct icm42670S_data *drv_data, const struct sensor_value *val)
 {
-	int err;
+	int err = 0;
 
 	if (val->val1 <= 1600 && val->val1 > 12) {
 		if (drv_data->gyro_hz == 0) {
@@ -631,9 +765,9 @@ static int icm42670S_gyro_odr_set(struct icm42670S_data *drv_data, const struct 
 	return err;
 }
 
-static int icm42670S_gyro_range_set(struct icm42670S_data *drv_data, const struct sensor_value *val)
+static int icm42670S_set_gyro_fs(struct icm42670S_data *drv_data, const struct sensor_value *val)
 {
-	int err;
+	int err = 0;
 
 	if (val->val1 > 2000 || val->val1 < 250) {
 		LOG_ERR("Incorrect fullscale value");
@@ -650,13 +784,13 @@ static int icm42670S_gyro_range_set(struct icm42670S_data *drv_data, const struc
 static int icm42670S_gyro_config(struct icm42670S_data *drv_data, enum sensor_attribute attr,
 				 const struct sensor_value *val)
 {
-	int err;
+	int err = 0;
 
 	if (attr == SENSOR_ATTR_SAMPLING_FREQUENCY) {
-		icm42670S_gyro_odr_set(drv_data, val);
+		err |= icm42670S_set_gyro_odr(drv_data, val);
 
 	} else if (attr == SENSOR_ATTR_FULL_SCALE) {
-		icm42670S_gyro_range_set(drv_data, val);
+		err |= icm42670S_set_gyro_fs(drv_data, val);
 
 	} else if ((enum sensor_attribute_icm42670S)attr == SENSOR_ATTR_BW_FILTER_LPF) {
 		if (val->val1 > 180) {
@@ -668,12 +802,11 @@ static int icm42670S_gyro_config(struct icm42670S_data *drv_data, enum sensor_at
 		}
 
 	} else {
-		LOG_ERR("Not supported ATTR");
+		LOG_ERR("Unsupported attribute");
 		return -EINVAL;
 	}
 	return err;
 }
-#endif
 
 static int icm42670S_attr_set(const struct device *dev, enum sensor_channel chan,
 			      enum sensor_attribute attr, const struct sensor_value *val)
@@ -682,6 +815,8 @@ static int icm42670S_attr_set(const struct device *dev, enum sensor_channel chan
 	int err = 0;
 
 	__ASSERT_NO_MSG(val != NULL);
+	
+	icm42670S_lock(dev);
 
 	if ((enum sensor_channel_icm42670S)chan == SENSOR_CHAN_APEX_MOTION) {
 		if (attr == SENSOR_ATTR_CONFIGURATION) {
@@ -722,92 +857,92 @@ static int icm42670S_attr_set(const struct device *dev, enum sensor_channel chan
 			LOG_ERR("Not supported ATTR");
 			return -EINVAL;
 		}
-#ifdef CONFIG_ICM42670S_ATTR_RUNTIME
-	} else if (chan == SENSOR_CHAN_ACCEL_XYZ) {
-		icm42670S_accel_config(drv_data, attr, val);
+	} else if ((chan == SENSOR_CHAN_ACCEL_XYZ) || (chan == SENSOR_CHAN_ACCEL_X) 
+		|| (chan == SENSOR_CHAN_ACCEL_Y) || (chan == SENSOR_CHAN_ACCEL_Z)) {
+		err |= icm42670S_accel_config(drv_data, attr, val);
 
-	} else if (chan == SENSOR_CHAN_GYRO_XYZ) {
-		icm42670S_gyro_config(drv_data, attr, val);
+	} else if ((chan == SENSOR_CHAN_GYRO_XYZ) || (chan == SENSOR_CHAN_GYRO_X)
+		|| (chan == SENSOR_CHAN_GYRO_Y) || (chan == SENSOR_CHAN_GYRO_Z)) {
+		err |= icm42670S_gyro_config(drv_data, attr, val);
 
-#endif
 	} else {
-		LOG_ERR("Not supported");
+		LOG_ERR("Unsupported channel");
 		(void)drv_data;
 		return -EINVAL;
 	}
 
+	icm42670S_unlock(dev);
+	
 	return err;
 }
 
+
+static int icm42670S_attr_get(const struct device *dev, enum sensor_channel chan,
+			     enum sensor_attribute attr, struct sensor_value *val)
+{
+	const struct icm42670S_data *data = dev->data;
+	int res = 0;
+
+	__ASSERT_NO_MSG(val != NULL);
+
+	icm42670S_lock(dev);
+
+	switch (chan) {
+	case SENSOR_CHAN_ACCEL_X:
+	case SENSOR_CHAN_ACCEL_Y:
+	case SENSOR_CHAN_ACCEL_Z:
+	case SENSOR_CHAN_ACCEL_XYZ:
+		if (attr == SENSOR_ATTR_SAMPLING_FREQUENCY) {
+			val->val1 = data->accel_hz;
+		} else if (attr == SENSOR_ATTR_FULL_SCALE) {
+			val->val1 = data->accel_fs;
+		} else {
+			LOG_ERR("Unsupported attribute");
+			res = -EINVAL;
+		}
+		break;
+
+	case SENSOR_CHAN_GYRO_X:
+	case SENSOR_CHAN_GYRO_Y:
+	case SENSOR_CHAN_GYRO_Z:
+	case SENSOR_CHAN_GYRO_XYZ:
+		if (attr == SENSOR_ATTR_SAMPLING_FREQUENCY) {
+			val->val1 = data->gyro_hz;
+		} else if (attr == SENSOR_ATTR_FULL_SCALE) {
+			val->val1 = data->gyro_fs;
+		} else {
+			LOG_ERR("Unsupported attribute");
+			res = -EINVAL;
+		}
+		break;
+
+	default:
+		LOG_ERR("Unsupported channel");
+		res = -EINVAL;
+		break;
+	}
+
+	icm42670S_unlock(dev);
+
+	return res;
+}
+
 static const struct sensor_driver_api icm42670S_api_funcs = {
+#ifdef CONFIG_ICM42670S_TRIGGER
+	.trigger_set = icm42670S_trigger_set,
+#endif
 	.sample_fetch = icm42670S_sample_fetch,
 	.channel_get = icm42670S_channel_get,
-	.trigger_set = icm42670S_trigger_set,
 	.attr_set = icm42670S_attr_set,
+	.attr_get = icm42670S_attr_get,
 };
 
-static int icm42670S_chip_init(const struct device *dev)
+static int icm42670S_turn_on_sensor(const struct device *dev)
 {
 	struct icm42670S_data *data = dev->data;
-	const struct icm42670S_config *cfg = dev->config;
-	inv_imu_int1_pin_config_t int1_pin_config;
-	inv_imu_interrupt_parameter_t config_int = {(inv_imu_interrupt_value)0};
-
-	int err = icm42670S_bus_check(dev);
-	if (err < 0) {
-		LOG_DBG("bus check failed: %d", err);
-		return err;
-	}
-	k_sleep(K_SECONDS(0.3));
-
-	// Initialize serial interface and device
-	data->serif.context = (struct device *)dev;
-	data->serif.read_reg = inv_io_hal_read_reg;
-	data->serif.write_reg = inv_io_hal_write_reg;
-	data->serif.max_read = 1024 * 32;
-	data->serif.max_write = 1024 * 32;
-#if ICM42670S_BUS_SPI
-	data->serif.serif_type = UI_SPI4;
-#endif
-#if ICM42670S_BUS_I2C
-	data->serif.serif_type = UI_I2C;
-#endif
-	err = inv_imu_init(&data->driver, &data->serif, NULL);
-	if (err < 0) {
-		LOG_DBG("Init failed: %d", err);
-		return err;
-	}
-
-	err = inv_imu_get_who_am_i(&data->driver, &data->chip_id);
-	if (err < 0) {
-		LOG_ERR("ID read failed: %d", err);
-		return err;
-	}
-
-	if (data->chip_id != INV_IMU_WHOAMI) {
-		LOG_ERR("bad chip id 0x%x", data->chip_id);
-		return -ENOTSUP;
-	}
-
-	/* Set interrupt config */
-	int1_pin_config.int_polarity = INT_CONFIG_INT1_POLARITY_HIGH;
-	int1_pin_config.int_mode = INT_CONFIG_INT1_MODE_PULSED;
-	int1_pin_config.int_drive = INT_CONFIG_INT1_DRIVE_CIRCUIT_PP;
-	err |= inv_imu_set_pin_config_int1(&data->driver, &int1_pin_config);
-
-	config_int.INV_FIFO_THS = INV_IMU_ENABLE;
-	err |= inv_imu_set_config_int1(&data->driver, &config_int);
-
-	err |= icm42670S_init_interrupt(dev);
-	if (err < 0) {
-		LOG_ERR("Failed to initialize interrupt.");
-		return err;
-	}
-
-	LOG_DBG("\"%s\" OK", dev->name);
-
-	k_sleep(K_MSEC(1));
-
+	const struct icm42670S_config *cfg = dev->config;	
+	int err = 0;
+	
 	err |= inv_imu_set_accel_fsr(&data->driver,
 				     (cfg->accel_fs << ACCEL_CONFIG0_ACCEL_UI_FS_SEL_POS));
 	data->accel_fs =
@@ -862,12 +997,100 @@ static int icm42670S_chip_init(const struct device *dev)
 		LOG_ERR("Failed to configure ODR.");
 		return err;
 	}
-#ifdef CONFIG_ICM42670S_ATTR_RUNTIME
+
 	data->accel_pwr_mode = cfg->accel_pwr_mode;
 	data->accel_hz = convert_enum_to_freq(cfg->accel_hz);
 	data->gyro_hz = convert_enum_to_freq(cfg->gyro_hz);
+
+	return err;
+}
+
+static int icm42670S_sensor_init(const struct device *dev)
+{
+	struct icm42670S_data *data = dev->data;
+	int err = 0;
+	
+	// Initialize serial interface and device
+	data->serif.context = (struct device *)dev;
+	data->serif.read_reg = inv_io_hal_read_reg;
+	data->serif.write_reg = inv_io_hal_write_reg;
+	data->serif.max_read = 1024 * 32;
+	data->serif.max_write = 1024 * 32;
+#if ICM42670S_BUS_SPI
+	data->serif.serif_type = UI_SPI4;
 #endif
-	return 0;
+#if ICM42670S_BUS_I2C
+	data->serif.serif_type = UI_I2C;
+#endif
+	err = inv_imu_init(&data->driver, &data->serif, NULL);
+	if (err < 0) {
+		LOG_DBG("Init failed: %d", err);
+		return err;
+	}
+
+	err = inv_imu_get_who_am_i(&data->driver, &data->chip_id);
+	if (err < 0) {
+		LOG_ERR("ID read failed: %d", err);
+		return err;
+	}
+
+	if (data->chip_id != INV_IMU_WHOAMI) {
+		LOG_ERR("bad chip id 0x%x", data->chip_id);
+		return -ENOTSUP;
+	}
+
+	LOG_DBG("\"%s\" OK", dev->name);
+	return err;
+}
+
+#ifdef CONFIG_ICM42670S_TRIGGER
+static int icm42670S_init_interrupt(const struct device *dev)
+{
+	struct icm42670S_data *data = dev->data;
+	int err = 0;
+	inv_imu_int1_pin_config_t int1_pin_config;
+	inv_imu_interrupt_parameter_t config_int = {(inv_imu_interrupt_value)0};
+	
+	/* Set interrupt config */
+	int1_pin_config.int_polarity = INT_CONFIG_INT1_POLARITY_HIGH;
+	int1_pin_config.int_mode = INT_CONFIG_INT1_MODE_PULSED;
+	int1_pin_config.int_drive = INT_CONFIG_INT1_DRIVE_CIRCUIT_PP;
+	err |= inv_imu_set_pin_config_int1(&data->driver, &int1_pin_config);
+
+	config_int.INV_FIFO_THS = INV_IMU_ENABLE;
+	err |= inv_imu_set_config_int1(&data->driver, &config_int);
+
+	return err;
+}
+#endif
+
+static int icm42670S_init(const struct device *dev)
+{
+	int err = icm42670S_bus_check(dev);
+	if (err < 0) {
+		LOG_DBG("bus check failed: %d", err);
+		return err;
+	}
+	k_sleep(K_SECONDS(0.3));
+	
+	if (icm42670S_sensor_init(dev)) {
+		LOG_ERR("could not initialize sensor");
+		return -EIO;
+	}
+
+#ifdef CONFIG_ICM42670S_TRIGGER
+	err |= icm42670S_init_interrupt(dev);
+	err |= icm42670S_trigger_init(dev);
+	if (err < 0) {
+		LOG_ERR("Failed to initialize interrupt.");
+		return err;
+	}
+#endif
+	k_sleep(K_MSEC(1));
+	
+	err = icm42670S_turn_on_sensor(dev);
+
+	return err;
 }
 
 /* Initializes a struct icm42670S_config for an instance on a SPI bus. */
@@ -911,7 +1134,7 @@ static int icm42670S_chip_init(const struct device *dev)
 		COND_CODE_1(DT_INST_ON_BUS(inst, spi), (ICM42670S_CONFIG_SPI(inst)),               \
 			    (ICM42670S_CONFIG_I2C(inst)));                                         \
                                                                                                    \
-	SENSOR_DEVICE_DT_INST_DEFINE(inst, icm42670S_chip_init, NULL, &icm42670S_data_##inst,      \
+	SENSOR_DEVICE_DT_INST_DEFINE(inst, icm42670S_init, NULL, &icm42670S_data_##inst,      \
 				     &icm42670S_config_##inst, POST_KERNEL,                        \
 				     CONFIG_SENSOR_INIT_PRIORITY, &icm42670S_api_funcs);
 

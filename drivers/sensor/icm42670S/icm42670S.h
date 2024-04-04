@@ -4,8 +4,8 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-#ifndef ZEPHYR_DRIVERS_SENSOR_ICM42670S_ICM42670S_H_
-#define ZEPHYR_DRIVERS_SENSOR_ICM42670S_ICM42670S_H_
+#ifndef ZEPHYR_DRIVERS_SENSOR_ICM42670S_H_
+#define ZEPHYR_DRIVERS_SENSOR_ICM42670S_H_
 
 #include <zephyr/types.h>
 #include <zephyr/device.h>
@@ -61,17 +61,19 @@ struct icm42670S_data {
 	struct inv_imu_serif serif;
 	struct inv_imu_device driver;
 	uint8_t chip_id;
-	int32_t accel[3];
-	int32_t gyro[3];
+	int32_t accel_x;
+	int32_t accel_y;
+	int32_t accel_z;
+	int32_t gyro_x;
+	int32_t gyro_y;
+	int32_t gyro_z;
 	int32_t temperature;
 
 	uint8_t accel_fs;
 	uint16_t gyro_fs;
-#ifdef CONFIG_ICM42670S_ATTR_RUNTIME
 	uint16_t accel_hz;
 	uint16_t gyro_hz;
 	uint8_t accel_pwr_mode;
-#endif
 
 #ifdef CONFIG_ICM42670S_APEX_PEDOMETER
 	uint8_t dmp_odr_hz;
@@ -93,15 +95,21 @@ struct icm42670S_data {
 	int32_t quaternion[4];
 #endif
 
+#ifdef CONFIG_ICM42670S_TRIGGER
 	const struct device *dev;
 	struct gpio_callback gpio_cb;
-
 	const struct sensor_trigger *data_ready_trigger;
 	sensor_trigger_handler_t data_ready_handler;
-
+	struct k_mutex mutex;
+#endif
+#ifdef CONFIG_ICM42670S_TRIGGER_OWN_THREAD
 	K_KERNEL_STACK_MEMBER(thread_stack, CONFIG_ICM42670S_THREAD_STACK_SIZE);
 	struct k_thread thread;
 	struct k_sem gpio_sem;
+#endif
+#ifdef CONFIG_ICM42670S_TRIGGER_GLOBAL_THREAD
+	struct k_work work;
+#endif
 };
 
 struct icm42670S_config {
@@ -118,10 +126,11 @@ struct icm42670S_config {
 	uint8_t accel_pwr_mode;
 };
 
+#ifdef CONFIG_ICM42670S_TRIGGER
 int icm42670S_trigger_set(const struct device *dev, const struct sensor_trigger *trig,
 			  sensor_trigger_handler_t handler);
-
-int icm42670S_init_interrupt(const struct device *dev);
+int icm42670S_trigger_init(const struct device *dev);
+#endif
 
 #ifdef CONFIG_ICM42670S_APEX_PEDOMETER
 int icm42670S_apex_enable(inv_imu_device_t *s);
@@ -155,4 +164,7 @@ void icm42670S_aml_process(const struct device *dev);
 void icm42670S_aml_quaternion_convert(struct sensor_value *val, int32_t raw_val);
 #endif
 
-#endif /* ZEPHYR_DRIVERS_SENSOR_ICM42670S_ICM42670S_H_ */
+void icm42670S_lock(const struct device *dev);
+void icm42670S_unlock(const struct device *dev);
+
+#endif /* ZEPHYR_DRIVERS_SENSOR_ICM42670S_H_ */

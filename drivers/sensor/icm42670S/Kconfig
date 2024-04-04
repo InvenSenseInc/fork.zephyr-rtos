@@ -1,4 +1,5 @@
-# ICM42670S IMU sensor configuration options
+# ICM42670-P ICM42670-S Six-Axis Motion Tracking device configuration options
+#
 # Copyright (c) 2023 TDK Invensense
 # SPDX-License-Identifier: Apache-2.0
 
@@ -12,10 +13,6 @@ menuconfig ICM42670S
 	  Enable driver for ICM42670S I2C-based or SPI-based Six-Axis Motion Tracking device.
 
 if ICM42670S
-
-config ICM42670S_ATTR_RUNTIME
-	bool "ICM42670S set attributes at runtime (full-scale, ODR, filtering, power mode)"
-	default n
 
 config ICM42670S_APEX
 	bool "ICM42670S APEX features"
@@ -53,6 +50,29 @@ config ICM42670S_AML_QUATERNION
 	bool "Computed W, X, Y and Z quaternion coefficients"
 
 endif # ICM42670S_AML
+
+choice ICM42670S_TRIGGER_MODE
+	prompt "Trigger mode"
+	default ICM42670S_TRIGGER_OWN_THREAD
+	help
+	  Specify the type of triggering to be used by the driver.
+
+config ICM42670S_TRIGGER_NONE
+	bool "No trigger"
+
+config ICM42670S_TRIGGER_GLOBAL_THREAD
+	bool "Use global thread"
+	depends on GPIO
+	select ICM42670S_TRIGGER
+
+config ICM42670S_TRIGGER_OWN_THREAD
+	bool "Use own thread"
+	depends on GPIO
+	select ICM42670S_TRIGGER
+endchoice
+
+config ICM42670S_TRIGGER
+	bool
 
 config ICM42670S_THREAD_PRIORITY
 	int "Thread priority"
