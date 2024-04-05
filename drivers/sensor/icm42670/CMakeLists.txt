@@ -3,8 +3,8 @@
 zephyr_library()
 
 zephyr_library_sources(
-  icm42670.c 
-  icm42670_spi.c 
+  icm42670.c
+  icm42670_spi.c
   icm42670_i2c.c
 )
 zephyr_library_include_directories(.)

@@ -29,13 +29,7 @@ extern "C" {
 
 /** @file inv_imu.h */
 
-
-/* Device ID */
-#define ICM42670S
-
 /* Device description */
-#define INV_IMU_STRING_ID         "ICM42670S"
-#define INV_IMU_WHOAMI            0x69
 #define INV_IMU_REV               INV_IMU_REV_A
 #define INV_IMU_IS_GYRO_SUPPORTED 1
 

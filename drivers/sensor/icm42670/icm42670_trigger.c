@@ -15,7 +15,7 @@
 LOG_MODULE_DECLARE(ICM42670, CONFIG_SENSOR_LOG_LEVEL);
 
 int icm42670_trigger_set(const struct device *dev, const struct sensor_trigger *trig,
-			  sensor_trigger_handler_t handler)
+			 sensor_trigger_handler_t handler)
 {
 	struct icm42670_data *data = dev->data;
 	const struct icm42670_config *cfg = dev->config;
@@ -44,7 +44,7 @@ int icm42670_trigger_set(const struct device *dev, const struct sensor_trigger *
 }
 
 static void icm42670_gpio_callback(const struct device *dev, struct gpio_callback *cb,
-				    uint32_t pins)
+				   uint32_t pins)
 {
 	struct icm42670_data *data = CONTAINER_OF(cb, struct icm42670_data, gpio_cb);
 	const struct icm42670_config *cfg = data->dev->config;
@@ -107,7 +107,7 @@ int icm42670_trigger_init(const struct device *dev)
 		LOG_ERR("gpio_int gpio not ready");
 		return -ENODEV;
 	}
-	
+
 	data->dev = dev;
 
 	gpio_pin_configure_dt(&cfg->gpio_int, GPIO_INPUT);
@@ -120,12 +120,12 @@ int icm42670_trigger_init(const struct device *dev)
 	}
 
 	k_mutex_init(&data->mutex);
-	
+
 #if defined(CONFIG_ICM42670_TRIGGER_OWN_THREAD)
 	k_sem_init(&data->gpio_sem, 0, K_SEM_MAX_LIMIT);
 
-	k_thread_create(&data->thread, data->thread_stack,
-			CONFIG_ICM42670_THREAD_STACK_SIZE, icm42670_thread, data, NULL, NULL,
+	k_thread_create(&data->thread, data->thread_stack, CONFIG_ICM42670_THREAD_STACK_SIZE,
+			icm42670_thread, data, NULL, NULL,
 			K_PRIO_COOP(CONFIG_ICM42670_THREAD_PRIORITY), 0, K_NO_WAIT);
 #elif defined(CONFIG_ICM42670_TRIGGER_GLOBAL_THREAD)
 	data->work.handler = icm42670_work_handler;

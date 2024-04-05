@@ -21,6 +21,9 @@
 
 #define DT_DRV_COMPAT invensense_icm42670
 
+#define INV_IMU_ICM42670P_WHOAMI 0x67
+#define INV_IMU_ICM42670S_WHOAMI 0x69
+
 #define ICM42670_BUS_SPI DT_ANY_INST_ON_BUS_STATUS_OKAY(spi)
 #define ICM42670_BUS_I2C DT_ANY_INST_ON_BUS_STATUS_OKAY(i2c)
 
@@ -38,9 +41,9 @@ int icm42670_tap_fetch(const struct device *dev);
 
 typedef int (*icm42670_bus_check_fn)(const union icm42670_bus *bus);
 typedef int (*icm42670_reg_read_fn)(const union icm42670_bus *bus, uint8_t reg, uint8_t *buf,
-				     uint32_t size);
+				    uint32_t size);
 typedef int (*icm42670_reg_write_fn)(const union icm42670_bus *bus, uint8_t reg, uint8_t *buf,
-				      uint32_t size);
+				     uint32_t size);
 
 struct icm42670_bus_io {
 	icm42670_bus_check_fn check;
@@ -128,7 +131,7 @@ struct icm42670_config {
 
 #ifdef CONFIG_ICM42670_TRIGGER
 int icm42670_trigger_set(const struct device *dev, const struct sensor_trigger *trig,
-			  sensor_trigger_handler_t handler);
+			 sensor_trigger_handler_t handler);
 int icm42670_trigger_init(const struct device *dev);
 #endif
 
@@ -137,7 +140,7 @@ int icm42670_apex_enable(inv_imu_device_t *s);
 int icm42670_apex_enable_pedometer(const struct device *dev, inv_imu_device_t *s);
 int icm42670_apex_pedometer_fetch_from_dmp(const struct device *dev);
 void icm42670_apex_pedometer_cadence_convert(struct sensor_value *val, uint8_t raw_val,
-					      uint8_t dmp_odr_hz);
+					     uint8_t dmp_odr_hz);
 #endif
 
 #ifdef CONFIG_ICM42670_APEX_TILT

@@ -21,7 +21,7 @@ static int icm42670_bus_check_spi(const union icm42670_bus *bus)
 }
 
 static int icm42670_reg_read_spi(const union icm42670_bus *bus, uint8_t start, uint8_t *buf,
-				  uint32_t size)
+				 uint32_t size)
 {
 	uint8_t cmd[] = {(start | 0x80)};
 	const struct spi_buf tx_buf = {.buf = cmd, .len = sizeof(cmd)};
@@ -45,17 +45,18 @@ static int icm42670_reg_read_spi(const union icm42670_bus *bus, uint8_t start, u
 }
 
 static int icm42670_reg_write_spi(const union icm42670_bus *bus, uint8_t reg, uint8_t *buf,
-				   uint32_t size)
+				  uint32_t size)
 {
 	uint8_t cmd[] = {reg & 0x7F};
-	const struct spi_buf tx_buf[2] = {{.buf = cmd, .len = sizeof(cmd)},{.buf = buf, .len = size}};
+	const struct spi_buf tx_buf[2] = {{.buf = cmd, .len = sizeof(cmd)},
+					  {.buf = buf, .len = size}};
 	const struct spi_buf_set tx = {.buffers = tx_buf, .count = 2};
 
 	int ret = spi_write_dt(&bus->spi, &tx);
 	if (ret) {
 		LOG_ERR("spi_write FAIL %d\n", ret);
 		return ret;
-	}	
+	}
 	return 0;
 }
 

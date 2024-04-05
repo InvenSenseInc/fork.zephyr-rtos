@@ -7,7 +7,7 @@
 #include "icm42670.h"
 #include "imu/inv_imu_apex.h"
 
-#if defined(CONFIG_ICM42670_APEX_PEDOMETER) || defined(CONFIG_ICM42670_APEX_TILT) ||             \
+#if defined(CONFIG_ICM42670_APEX_PEDOMETER) || defined(CONFIG_ICM42670_APEX_TILT) ||               \
 	defined(CONFIG_ICM42670_APEX_SMD)
 int icm42670_apex_enable(inv_imu_device_t *s)
 {
@@ -35,7 +35,8 @@ int icm42670_apex_enable(inv_imu_device_t *s)
 	/* Get the default parameters for the APEX features */
 	err |= inv_imu_apex_init_parameters_struct(s, &apex_inputs);
 
-	/* Configure the power mode Normal mode.
+	/*
+	 * Configure the power mode Normal mode.
 	 *  Avalaible mode : Low Power mode (WoM+Pedometer),
 	 *  configure the WoM to wake-up the DMP once it goes in power save mode
 	 */
@@ -93,7 +94,7 @@ int icm42670_apex_pedometer_fetch_from_dmp(const struct device *dev)
 }
 
 void icm42670_apex_pedometer_cadence_convert(struct sensor_value *val, uint8_t raw_val,
-					      uint8_t dmp_odr_hz)
+					     uint8_t dmp_odr_hz)
 {
 	int64_t conv_val;
 
@@ -182,7 +183,8 @@ int icm42670_apex_enable_wom(inv_imu_device_t *s)
 	rc |= inv_imu_set_accel_frequency(s, ACCEL_CONFIG0_ODR_12_5_HZ);
 	rc |= inv_imu_enable_accel_low_power_mode(s);
 
-	/* Configure WOM thresholds for each axis to 195 mg (Resolution 1g/256)
+	/*
+	 * Configure WOM thresholds for each axis to 195 mg (Resolution 1g/256)
 	 * WOM threshold = 50 * 1000 / 256 = 195 mg
 	 * and enable WOM
 	 */

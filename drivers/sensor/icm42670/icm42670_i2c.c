@@ -17,13 +17,13 @@ static int icm42670_bus_check_i2c(const union icm42670_bus *bus)
 }
 
 static int icm42670_reg_read_i2c(const union icm42670_bus *bus, uint8_t reg, uint8_t *buf,
-				  uint32_t size)
+				 uint32_t size)
 {
 	return i2c_burst_read_dt(&bus->i2c, reg, buf, size);
 }
 
 static int icm42670_reg_write_i2c(const union icm42670_bus *bus, uint8_t reg, uint8_t *buf,
-				   uint32_t size)
+				  uint32_t size)
 {
 	return i2c_burst_write_dt(&bus->i2c, reg, buf, size);
 }

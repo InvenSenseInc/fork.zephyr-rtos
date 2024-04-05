@@ -41,6 +41,8 @@ static const struct device *get_icm42670_device(void)
 	return dev;
 }
 
+#if defined(CONFIG_ICM42670_APEX_PEDOMETER) || defined(CONFIG_ICM42670_APEX_TILT) ||               \
+	defined(CONFIG_ICM42670_APEX_WOM) || defined(CONFIG_ICM42670_APEX_SMD)
 static const char *now_str(void)
 {
 	static char buf[16]; /* ...HH:MM:SS.MMM */
@@ -60,6 +62,7 @@ static const char *now_str(void)
 	snprintf(buf, sizeof(buf), "%u:%02u:%02u.%03u", h, min, s, ms);
 	return buf;
 }
+#endif
 
 static void handle_icm42670_drdy(const struct device *dev, const struct sensor_trigger *trig)
 {

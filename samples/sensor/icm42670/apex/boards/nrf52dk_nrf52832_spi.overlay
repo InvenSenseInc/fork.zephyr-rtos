@@ -4,17 +4,14 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-/*
- * Example configuration of a ICM42670 device on an Arduino I2C bus.
- *
- * Device address 0x68 is assumed. Your device may have a different
- * address; check your device documentation if unsure.
- */
-&arduino_i2c {
+/* Example configuration of a ICM42670 device on spi2 compatible with an Arduino SPI bus. */
+&arduino_spi {
 	status = "okay";
-	icm42670@68 {
+	cs-gpios = <&arduino_header 14 GPIO_ACTIVE_LOW>; /* D8 */
+	icm42670@0 {
 		compatible = "invensense,icm42670";
-		reg = <0x68>;
+		reg = <0>;
+		spi-max-frequency = <1000000>; /* conservatively set to 1MHz */
 		int-gpios = <&arduino_header 8 GPIO_ACTIVE_HIGH>; /* D2 */
 	};
 };
