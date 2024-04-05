@@ -1,0 +1,14 @@
+# Copyright (c) 2020, TDK Invensense
+# SPDX-License-Identifier: Apache-2.0
+
+# Enable APEX features support and choose between : 
+# ICM42670_APEX_PEDOMETER, ICM42670_APEX_TILT, ICM42670_APEX_SMD or ICM42670_APEX_WOM
+
+config ICM42670_APEX
+	default y
+
+choice APEX_FEATURES
+    default ICM42670_APEX_PEDOMETER
+endchoice
+
+source "Kconfig.zephyr"

@@ -1,0 +1,31 @@
+/*
+ * Copyright (c) 2020, TDK Invensense
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
+/* Example configuration of a ICM42670 device on an Arduino SPI bus. */
+&arduino_spi {
+	status = "okay";
+	cs-gpios = <&arduino_header 14 GPIO_ACTIVE_LOW>; /* D8 */
+	icm42670@0 {
+		compatible = "invensense,icm42670";
+		reg = <0>;
+		spi-max-frequency = <1000000>; /* conservatively set to 1MHz */
+		int-gpios = <&arduino_header 8 GPIO_ACTIVE_HIGH>; /* D2 */
+		
+		power-mode = "low power";
+		accel-hz = <25>;
+		gyro-hz = <0>;
+		accel-avg = <2>;
+	};
+};
+
+/*
+ * Increase native UART speed to report all IMU data at 100Hz.
+ */
+&uart0 {
+	compatible = "nordic,nrf-uarte";
+	status = "okay";
+	current-speed = <1000000>;
+};

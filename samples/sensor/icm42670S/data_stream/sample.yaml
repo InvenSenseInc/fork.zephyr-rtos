@@ -1,9 +1,0 @@
-sample:
-  name: ICM42670S Sensor data stream sample
-tests:
-  sample.sensor.icm42670S:
-    harness: console
-    tags: sensors
-    integration_platforms:
-      - arduino_zero
-      - nrf52dk_nrf52832
