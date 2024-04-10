@@ -1,0 +1,28 @@
+/*
+ * Copyright (c) 2024, TDK Invensense
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
+/* Example configuration of a ICP2021XX device on an Arduino SPI bus. */
+&arduino_spi {
+	status = "okay";
+	cs-gpios = <&arduino_header 14 GPIO_ACTIVE_LOW>; /* D8 */
+	icp201xx@0 {
+		compatible = "invensense,icp201xx";
+		reg = <0>;
+		spi-max-frequency = <500000>; /* conservatively set to 1MHz */
+		int-gpios = <&arduino_header 8 GPIO_ACTIVE_HIGH>; /* D2 */
+		drive-strength = <1>; /* Reduce drive strength avoid cross talk */
+	};
+};
+
+/*
+ * Increase native UART speed.
+ */
+&uart0 {
+	compatible = "nordic,nrf-uarte";
+	status = "okay";
+	current-speed = <1000000>;
+};
+
