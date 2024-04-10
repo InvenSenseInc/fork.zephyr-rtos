@@ -1,0 +1,46 @@
+# Copyright (c) 2024 TDK Invensense
+# SPDX-License-Identifier: Apache-2.0
+
+description: ICP201xx High Accuracy, Low Power, Barometric Pressure and Temperature Sensor IC
+
+compatible: "invensense,icp201xx"
+
+include: [sensor-device.yaml, i2c-device.yaml]
+
+properties:
+  int-gpios:
+    type: phandle-array
+    description: |
+      The INT signal default configuration is active-high. The
+      property value should ensure the flags properly describe the
+      signal that is presented to the driver.
+
+  op-mode:
+    type: int
+    required: false
+    default: 0
+    description: |
+      Default mode for sensor.
+      Maps to icp201xx_op_mode_t
+    enum:
+      - 0
+      - 1
+      - 2
+      - 3
+      - 4
+
+  drive-strength:
+    type: int
+    required: false
+    default: 3
+    description: |
+      IO device strength register value.
+    enum:
+      - 0
+      - 1
+      - 2
+      - 3
+      - 4
+      - 5
+      - 6
+      - 7
