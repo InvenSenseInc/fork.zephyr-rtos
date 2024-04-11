@@ -1,0 +1,8 @@
+sample:
+  name: ICM42670 Sensor AML sample
+tests:
+  sample.sensor.icm42670.aml:
+    build_only: true
+    tags: sensors
+    integration_platforms:
+      - nrf52dk/nrf52832
