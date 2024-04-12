@@ -696,12 +696,11 @@ static int icm42670_set_accel_fs(struct icm42670_data *drv_data, const struct se
 	if (val->val1 > 16 || val->val1 < 2) {
 		LOG_ERR("Incorrect fullscale value");
 		return -EINVAL;
-	} else {
-		err |= inv_imu_set_accel_fsr(
-			&drv_data->driver,
-			convert_acc_fs_to_bitfield(val->val1, &drv_data->accel_fs));
-		LOG_DBG("Set accel full scale to: %d G", drv_data->accel_fs);
 	}
+	err |= inv_imu_set_accel_fsr(
+		&drv_data->driver,
+		convert_acc_fs_to_bitfield(val->val1, &drv_data->accel_fs));
+	LOG_DBG("Set accel full scale to: %d G", drv_data->accel_fs);
 	return err;
 }
 
@@ -723,19 +722,17 @@ static int icm42670_accel_config(struct icm42670_data *drv_data, enum sensor_att
 		if (val->val1 > 180) {
 			LOG_ERR("Incorrect low pass filter bandwidth value");
 			return -EINVAL;
-		} else {
-			err |= inv_imu_set_accel_ln_bw(&drv_data->driver,
-						       convert_ln_bw_to_bitfield(val->val1));
 		}
+		err |= inv_imu_set_accel_ln_bw(&drv_data->driver,
+						   convert_ln_bw_to_bitfield(val->val1));
 
 	} else if ((enum sensor_attribute_icm42670)attr == SENSOR_ATTR_AVERAGING) {
 		if (val->val1 > 64 || val->val1 < 2) {
 			LOG_ERR("Incorrect averaging filter value");
 			return -EINVAL;
-		} else {
-			err |= inv_imu_set_accel_lp_avg(&drv_data->driver,
-							convert_lp_avg_to_bitfield(val->val1));
 		}
+		err |= inv_imu_set_accel_lp_avg(&drv_data->driver,
+							convert_lp_avg_to_bitfield(val->val1));
 	} else {
 		LOG_ERR("Unsupported attribute");
 		return -EINVAL;
@@ -775,12 +772,11 @@ static int icm42670_set_gyro_fs(struct icm42670_data *drv_data, const struct sen
 	if (val->val1 > 2000 || val->val1 < 250) {
 		LOG_ERR("Incorrect fullscale value");
 		return -EINVAL;
-	} else {
-		err |= inv_imu_set_gyro_fsr(
-			&drv_data->driver,
-			convert_gyr_fs_to_bitfield(val->val1, &drv_data->gyro_fs));
-		LOG_DBG("Set gyro fullscale to: %d dps", drv_data->gyro_fs);
 	}
+	err |= inv_imu_set_gyro_fsr(
+		&drv_data->driver,
+		convert_gyr_fs_to_bitfield(val->val1, &drv_data->gyro_fs));
+	LOG_DBG("Set gyro fullscale to: %d dps", drv_data->gyro_fs);
 	return err;
 }
 
@@ -799,10 +795,9 @@ static int icm42670_gyro_config(struct icm42670_data *drv_data, enum sensor_attr
 		if (val->val1 > 180) {
 			LOG_ERR("Incorrect low pass filter bandwidth value");
 			return -EINVAL;
-		} else {
-			err |= inv_imu_set_gyro_ln_bw(&drv_data->driver,
-						      convert_ln_bw_to_bitfield(val->val1));
 		}
+		err |= inv_imu_set_gyro_ln_bw(&drv_data->driver,
+						  convert_ln_bw_to_bitfield(val->val1));
 
 	} else {
 		LOG_ERR("Unsupported attribute");

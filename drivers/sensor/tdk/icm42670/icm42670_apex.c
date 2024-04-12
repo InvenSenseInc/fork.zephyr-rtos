@@ -123,9 +123,8 @@ int icm42670_apex_tilt_fetch_from_dmp(const struct device *dev)
 
 	if (int_status3 & (INT_STATUS3_TILT_DET_INT_MASK)) {
 		return rc;
-	} else {
-		return -1;
 	}
+	return -1;
 }
 #endif
 

@@ -6,16 +6,16 @@ ICM42670-S: Invensense Motion Tracking Device
 Overview
 ********
 
-This sample application runs the Air-Motion Library for managing 
-mouse cursor motion from 3 axes gyroscope and 3 axes accelerometer. 
-The library is intended to be used in free space pointing devices 
-to operate in-air point and click navigation, just like a classic 
-2D mouse will do on a desk. 
+This sample application runs the Air-Motion Library for managing
+mouse cursor motion from 3 axes gyroscope and 3 axes accelerometer.
+The library is intended to be used in free space pointing devices
+to operate in-air point and click navigation, just like a classic
+2D mouse will do on a desk.
 Air Motion Library is capable of :
-** Pointing : Converts motion sensors data into delta X and delta Y 
+** Pointing : Converts motion sensors data into delta X and delta Y
 pointer movements.
-** Gesture recognition: Detects 'Up', 'Down', 'Left', 'Right', 
-'Clockwise' and 'CounterClockwise' swipes, the device position and 
+** Gesture recognition: Detects 'Up', 'Down', 'Left', 'Right',
+'Clockwise' and 'CounterClockwise' swipes, the device position and
 the device static.
 ** Gyroscope offsets calibration: Computes gyroscope offsets.
 ** Quaternion computing; Computes the orientation of the device.
@@ -29,15 +29,15 @@ For more information, see documentation:
 Driver configuration
 ********************
 
-The Air Motion Library is bonded to the ICM42670-S device. At initialization 
+The Air Motion Library is bonded to the ICM42670-S device. At initialization
 stage, the driver configures the highest FSR for accelerometer and gyroscope
-and the algorithm operating frequency to 100Hz. 
+and the algorithm operating frequency to 100Hz.
 
 Wiring
 *******
 
 This sample uses an external breakout for the sensor. A devicetree
-overlay must be provided to identify the SPI or I2C bus and the interrupt 
+overlay must be provided to identify the SPI or I2C bus and the interrupt
 sensor GPIO.
 
 Building and Running instructions

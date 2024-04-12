@@ -6,15 +6,15 @@ ICM42670: Invensense Motion Tracking Device
 Ovreview
 ********
 
-This sample application starts the APEX (Advanced Pedometer 
+This sample application starts the APEX (Advanced Pedometer
 and Event Detection) features. It consists of:
-** Pedometer: Tracks step count, and provide details such as the cadence 
+** Pedometer: Tracks step count, and provide details such as the cadence
 and the estimated activity type (Walk, Run, Unknown).
-** Tilt Detection: Detects the Tilt when tilting the board with an angle 
-of 30 degrees or more. The tilt event is generated when the 
+** Tilt Detection: Detects the Tilt when tilting the board with an angle
+of 30 degrees or more. The tilt event is generated when the
 position is held for 4 seconds.
 ** Wake on Motion (WoM): Detects motion per axis exceeding 195 mg threshold.
-** Significant Motion Detector (SMD): Detects when the user has moved 
+** Significant Motion Detector (SMD): Detects when the user has moved
 significantly.
 Each feature is enabled through KConfig choice.
 
@@ -28,7 +28,7 @@ Wiring
 *******
 
 This sample uses an external breakout for the sensor. A devicetree
-overlay must be provided to identify the SPI or I2C bus and the interrupt 
+overlay must be provided to identify the SPI or I2C bus and the interrupt
 sensor GPIO.
 
 Building and Running instructions

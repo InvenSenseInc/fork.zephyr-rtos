@@ -48,9 +48,8 @@ int icm42670S_aml_init(const struct device *dev, inv_imu_device_t *s, int8_t del
 	if (rc != 0) {
 		LOG_ERR("Error. Authentication Failed.");
 		return rc;
-	} else {
-		LOG_DBG("Algorithm init OK");
 	}
+	LOG_DBG("Algorithm init OK");
 
 	/* Configure ICM device */
 	rc |= inv_imu_set_accel_fsr(s, ACCEL_CONFIG0_FS_SEL_16g);
