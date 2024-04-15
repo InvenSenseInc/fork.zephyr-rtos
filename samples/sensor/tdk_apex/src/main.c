@@ -8,7 +8,7 @@
 #include <zephyr/device.h>
 #include <zephyr/devicetree.h>
 #include <zephyr/drivers/sensor.h>
-#include <zephyr/drivers/sensor/icm42670.h>
+#include <zephyr/drivers/sensor/tdk_apex.h>
 #include <stdio.h>
 
 static struct sensor_trigger data_trigger;
@@ -17,12 +17,12 @@ static struct sensor_trigger data_trigger;
 static volatile int irq_from_device = 0;
 
 /*
- * Get a device structure from a devicetree node with compatible
- * "invensense,icm42670". (If there are multiple, just pick one.)
+ * Get a device structure from a devicetree node from alias
+ * "tdk_apex_sensor0". (If there are multiple, just pick one.)
  */
-static const struct device *get_icm42670_device(void)
+static const struct device *get_tdk_apex_device(void)
 {
-	const struct device *const dev = DEVICE_DT_GET_ANY(invensense_icm42670);
+	const struct device *const dev = DEVICE_DT_GET(DT_ALIAS(tdk_apex_sensor0));
 
 	if (dev == NULL) {
 		/* No such node, or the node does not have status "okay". */
@@ -41,8 +41,8 @@ static const struct device *get_icm42670_device(void)
 	return dev;
 }
 
-#if defined(CONFIG_ICM42670_APEX_PEDOMETER) || defined(CONFIG_ICM42670_APEX_TILT) ||               \
-	defined(CONFIG_ICM42670_APEX_WOM) || defined(CONFIG_ICM42670_APEX_SMD)
+#if defined(CONFIG_TDK_APEX_PEDOMETER) || defined(CONFIG_TDK_APEX_TILT) ||               \
+	defined(CONFIG_TDK_APEX_WOM) || defined(CONFIG_TDK_APEX_SMD)
 static const char *now_str(void)
 {
 	static char buf[16]; /* ...HH:MM:SS.MMM */
@@ -64,7 +64,7 @@ static const char *now_str(void)
 }
 #endif
 
-static void handle_icm42670_drdy(const struct device *dev, const struct sensor_trigger *trig)
+static void handle_tdk_apex_drdy(const struct device *dev, const struct sensor_trigger *trig)
 {
 	if (trig->type == SENSOR_TRIG_MOTION) {
 		int rc = sensor_sample_fetch_chan(dev, trig->chan);
@@ -82,7 +82,7 @@ static void handle_icm42670_drdy(const struct device *dev, const struct sensor_t
 
 int main(void)
 {
-	const struct device *dev = get_icm42670_device();
+	const struct device *dev = get_tdk_apex_device();
 	struct sensor_value apex_mode;
 
 	if (dev == NULL) {
@@ -90,17 +90,17 @@ int main(void)
 	}
 
 	/* Setting APEX Pedometer feature */
-#ifdef CONFIG_ICM42670_APEX_PEDOMETER
-	apex_mode.val1 = ICM42670_APEX_PEDOMETER;
+#ifdef CONFIG_TDK_APEX_PEDOMETER
+	apex_mode.val1 = TDK_APEX_PEDOMETER;
 #endif
-#ifdef CONFIG_ICM42670_APEX_TILT
-	apex_mode.val1 = ICM42670_APEX_TILT;
+#ifdef CONFIG_TDK_APEX_TILT
+	apex_mode.val1 = TDK_APEX_TILT;
 #endif
-#ifdef CONFIG_ICM42670_APEX_WOM
-	apex_mode.val1 = ICM42670_APEX_WOM;
+#ifdef CONFIG_TDK_APEX_WOM
+	apex_mode.val1 = TDK_APEX_WOM;
 #endif
-#ifdef CONFIG_ICM42670_APEX_SMD
-	apex_mode.val1 = ICM42670_APEX_SMD;
+#ifdef CONFIG_TDK_APEX_SMD
+	apex_mode.val1 = TDK_APEX_SMD;
 #endif
 	apex_mode.val2 = 0;
 	sensor_attr_set(dev, SENSOR_CHAN_APEX_MOTION, SENSOR_ATTR_CONFIGURATION, &apex_mode);
@@ -109,7 +109,7 @@ int main(void)
 		.type = SENSOR_TRIG_MOTION,
 		.chan = SENSOR_CHAN_APEX_MOTION,
 	};
-	if (sensor_trigger_set(dev, &data_trigger, handle_icm42670_drdy) < 0) {
+	if (sensor_trigger_set(dev, &data_trigger, handle_tdk_apex_drdy) < 0) {
 		printf("Cannot configure data trigger!!!\n");
 		return 0;
 	}
@@ -121,7 +121,7 @@ int main(void)
 	while (1) {
 
 		if (irq_from_device) {
-#ifdef CONFIG_ICM42670_APEX_PEDOMETER
+#ifdef CONFIG_TDK_APEX_PEDOMETER
 			struct sensor_value apex_pedometer[3];
 			sensor_channel_get(dev, SENSOR_CHAN_APEX_MOTION, apex_pedometer);
 
@@ -133,17 +133,17 @@ int main(void)
 			       : apex_pedometer[1].val1 == 2 ? "Run"
 							     : "Unknown");
 #endif
-#ifdef CONFIG_ICM42670_APEX_TILT
+#ifdef CONFIG_TDK_APEX_TILT
 			printf("[%s]: TILT\n", now_str());
 #endif
-#ifdef CONFIG_ICM42670_APEX_WOM
+#ifdef CONFIG_TDK_APEX_WOM
 			struct sensor_value apex_wom[3];
 			sensor_channel_get(dev, SENSOR_CHAN_APEX_MOTION, apex_wom);
 
 			printf("[%s]: WOM x=%d y=%d z=%d\n", now_str(), apex_wom[0].val1,
 			       apex_wom[1].val1, apex_wom[2].val1);
 #endif
-#ifdef CONFIG_ICM42670_APEX_SMD
+#ifdef CONFIG_TDK_APEX_SMD
 			printf("[%s]: SMD\n", now_str());
 #endif
 			irq_from_device = 0;

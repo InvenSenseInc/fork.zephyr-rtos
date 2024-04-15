@@ -22,12 +22,6 @@
 #define ICM42670_LOW_NOISE_MODE    (0)
 #define ICM42670_LOW_POWER_MODE    (1)
 
-/** ICM42670 APEX features */
-#define ICM42670_APEX_PEDOMETER    (1)
-#define ICM42670_APEX_TILT         (2)
-#define ICM42670_APEX_SMD          (3)
-#define ICM42670_APEX_WOM          (4)
-
 /**
  * @brief Extended sensor attributes for ICM42670 6-axis MEMS sensor
  *
@@ -53,28 +47,5 @@ enum sensor_attribute_icm42670 {
 	SENSOR_ATTR_BW_FILTER_LPF = SENSOR_ATTR_PRIV_START,
 	/** Averaging configuration */
 	SENSOR_ATTR_AVERAGING,
-};
-
-
-/**
- * @brief Extended sensor channel for ICM42670 6-axis MEMS sensor
- *
- * This exposes sensor channel for the ICM42670 which can be used for
- * getting the APEX features data.
- *
- * The APEX (Advanced Pedometer and Event Detection – neXt gen) features of
- * ICM42670 consist of:
- * ** Pedometer: Tracks step count.
- * ** Tilt Detection: Detect the Tilt angle exceeds 35 degrees.
- * ** Wake on Motion (WoM): Detects motion when accelerometer samples exceed
- * a programmable threshold. This motion event can be used to enable device
- * operation from sleep mode.
- * ** Significant Motion Detector (SMD): Detects significant motion based on
- * accelerometer data.
- */
-enum sensor_channel_icm42670 {
-
-	/** APEX features */
-	SENSOR_CHAN_APEX_MOTION = SENSOR_CHAN_PRIV_START,
 };
 #endif /* ZEPHYR_INCLUDE_DRIVERS_SENSOR_ICM42670_H_ */

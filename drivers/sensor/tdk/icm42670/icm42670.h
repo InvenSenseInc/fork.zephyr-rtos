@@ -80,13 +80,13 @@ struct icm42670_data {
 	uint16_t gyro_hz;
 	uint8_t accel_pwr_mode;
 
-#ifdef CONFIG_ICM42670_APEX_PEDOMETER
+#ifdef CONFIG_TDK_APEX_PEDOMETER
 	uint8_t dmp_odr_hz;
 	uint64_t pedometer_cnt;
 	uint8_t pedometer_activity;
 	uint8_t pedometer_cadence;
 #endif
-#ifdef CONFIG_ICM42670_APEX_WOM
+#ifdef CONFIG_TDK_APEX_WOM
 	uint8_t wom_x;
 	uint8_t wom_y;
 	uint8_t wom_z;
@@ -129,7 +129,7 @@ int icm42670_trigger_set(const struct device *dev, const struct sensor_trigger *
 int icm42670_trigger_init(const struct device *dev);
 #endif
 
-#ifdef CONFIG_ICM42670_APEX_PEDOMETER
+#ifdef CONFIG_TDK_APEX_PEDOMETER
 int icm42670_apex_enable(inv_imu_device_t *s);
 int icm42670_apex_enable_pedometer(const struct device *dev, inv_imu_device_t *s);
 int icm42670_apex_pedometer_fetch_from_dmp(const struct device *dev);
@@ -137,19 +137,19 @@ void icm42670_apex_pedometer_cadence_convert(struct sensor_value *val, uint8_t r
 					     uint8_t dmp_odr_hz);
 #endif
 
-#ifdef CONFIG_ICM42670_APEX_TILT
+#ifdef CONFIG_TDK_APEX_TILT
 int icm42670_apex_enable(inv_imu_device_t *s);
 int icm42670_apex_enable_tilt(inv_imu_device_t *s);
 int icm42670_apex_tilt_fetch_from_dmp(const struct device *dev);
 #endif
 
-#ifdef CONFIG_ICM42670_APEX_SMD
+#ifdef CONFIG_TDK_APEX_SMD
 int icm42670_apex_enable(inv_imu_device_t *s);
 int icm42670_apex_enable_smd(inv_imu_device_t *s);
 int icm42670_apex_smd_fetch_from_dmp(const struct device *dev);
 #endif
 
-#ifdef CONFIG_ICM42670_APEX_WOM
+#ifdef CONFIG_TDK_APEX_WOM
 int icm42670_apex_enable_wom(inv_imu_device_t *s);
 int icm42670_apex_wom_fetch_from_dmp(const struct device *dev);
 #endif

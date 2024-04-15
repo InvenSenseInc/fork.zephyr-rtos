@@ -1,13 +1,13 @@
-.. _icm42670:
+.. _tdk_apex:
 
-ICM42670: Invensense Motion Tracking Device
-############################################
+TDK Advanced Pedometer and Event Detection (APEX)
+#################################################
 
-Ovreview
+Overview
 ********
 
-This sample application starts the APEX (Advanced Pedometer
-and Event Detection) features. It consists of:
+This sample application shows how to use the APEX (Advanced Pedometer
+and Event Detection) features of TDK Invensense sensors. It consists of:
 ** Pedometer: Tracks step count, and provide details such as the cadence
 and the estimated activity type (Walk, Run, Unknown).
 ** Tilt Detection: Detects the Tilt when tilting the board with an angle
@@ -21,7 +21,7 @@ Each feature is enabled through KConfig choice.
 Driver configuration
 ********************
 
-The APEX is based on accelerometer data only. The ICM42670 driver configures
+The APEX is based on accelerometer data only. The TDK Sensor driver configures
 accelerometer low power mode and the APEX operating frequency (25Hz or 50Hz).
 
 Wiring
@@ -38,17 +38,17 @@ After providing a devicetree overlay that specifies the sensor location,
 build this sample app using:
 
 .. zephyr-app-commands:
-   :zephyr-app: samples/sensor/icm42670/apex
+   :zephyr-app: samples/sensor/tdk_apex
    :board: nrf52dk/nrf52832
    :goals: build flash
 
-Sample Output
-=============
+Sample Output with TDK sensor : ICM-42670-P 6-axis Sensor
+=========================================================
 
 .. code-block:: console
 
 ## Default configuration
-## APEX_FEATURES = ICM42670_APEX_PEDOMETER
+## APEX_FEATURES = TDK_APEX_PEDOMETER
 
 Configured for APEX data collecting.
 *** Booting Zephyr OS build zephyr-v3.5.0-3192-g528359f60dd9 ***
@@ -61,7 +61,7 @@ Found device "icm42670@68", getting sensor data
 
 <repeats endlessly>
 
-## APEX_FEATURES = ICM42670_APEX_TILT
+## APEX_FEATURES = TDK_APEX_TILT
 
 Configured for APEX data collecting.
 *** Booting Zephyr OS build zephyr-v3.5.0-3192-g528359f60dd9 ***
@@ -72,7 +72,7 @@ Found device "icm42670@68", getting sensor data
 
 <repeats endlessly>
 
-## APEX_FEATURES = ICM42670_APEX_WOM
+## APEX_FEATURES = TDK_APEX_WOM
 
 Configured for APEX data collecting.
 *** Booting Zephyr OS build zephyr-v3.5.0-3192-g528359f60dd9 ***
@@ -85,7 +85,7 @@ Found device "icm42670@68", getting sensor data
 
 <repeats endlessly>
 
-## APEX_FEATURES = ICM42670_APEX_SMD
+## APEX_FEATURES = TDK_APEX_SMD
 
 Configured for APEX data collecting.
 *** Booting Zephyr OS build zephyr-v3.5.0-3192-g528359f60dd9 ***

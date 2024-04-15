@@ -23,22 +23,22 @@ config ICM42670_APEX
 choice APEX_FEATURES
 	prompt "ICM42670 APEX features"
 	depends on ICM42670_APEX
-	default ICM42670_APEX_PEDOMETER
+	default TDK_APEX_PEDOMETER
 	help
 	  Select APEX feature for ICM42670 sensor.
-config ICM42670_APEX_PEDOMETER
+config TDK_APEX_PEDOMETER
 	bool "Pedometer: Tracks step count"
-config ICM42670_APEX_TILT
+config TDK_APEX_TILT
 	bool "Tilt Detection: Detect the Tilt angle exceeds 35 degrees"
-config ICM42670_APEX_SMD
+config TDK_APEX_SMD
 	bool "Significant Motion Detector (SMD): Detects significant motion based on accelerometer data"
-config ICM42670_APEX_WOM
+config TDK_APEX_WOM
 	bool "Wake on Motion (WoM): Detects motion when accelerometer samples exceed a programmable threshold"
 endchoice
 
 choice ICM42670_TRIGGER_MODE
 	prompt "Trigger mode"
-	default ICM42670_TRIGGER_OWN_THREAD
+	default ICM42670_TRIGGER_NONE
 	help
 	  Specify the type of triggering to be used by the driver.
 

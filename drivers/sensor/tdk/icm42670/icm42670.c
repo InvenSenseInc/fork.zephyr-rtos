@@ -14,6 +14,7 @@
 #include <zephyr/sys/byteorder.h>
 #include <zephyr/sys/__assert.h>
 #include <zephyr/drivers/sensor/icm42670.h>
+#include <zephyr/drivers/sensor/tdk_apex.h>
 
 #include "icm42670.h"
 
@@ -148,7 +149,7 @@ static int icm42670_fetch_from_fifo(const struct device *dev)
 			return status;
 		}
 
-	} /*else: FIFO threshold was not reached and FIFO was not full*/
+	} /*else: FIFO threshold was not reached and FIFO was not full */
 
 	return 0;
 }
@@ -269,14 +270,14 @@ static int icm42670_sample_fetch(const struct device *dev, enum sensor_channel c
 
 	icm42670_lock(dev);
 
-	if ((enum sensor_channel_icm42670)chan == SENSOR_CHAN_APEX_MOTION) {
-#ifdef CONFIG_ICM42670_APEX_PEDOMETER
+	if ((enum sensor_channel_tdk_apex)chan == SENSOR_CHAN_APEX_MOTION) {
+#ifdef CONFIG_TDK_APEX_PEDOMETER
 		status = icm42670_apex_pedometer_fetch_from_dmp(dev);
-#elif defined(CONFIG_ICM42670_APEX_TILT)
+#elif defined(CONFIG_TDK_APEX_TILT)
 		status = icm42670_apex_tilt_fetch_from_dmp(dev);
-#elif defined(CONFIG_ICM42670_APEX_SMD)
+#elif defined(CONFIG_TDK_APEX_SMD)
 		status = icm42670_apex_smd_fetch_from_dmp(dev);
-#elif defined(CONFIG_ICM42670_APEX_WOM)
+#elif defined(CONFIG_TDK_APEX_WOM)
 		status = icm42670_apex_wom_fetch_from_dmp(dev);
 #endif
 	}
@@ -297,7 +298,7 @@ static int icm42670_sample_fetch(const struct device *dev, enum sensor_channel c
 	return status;
 }
 
-static void icm42670_convert_accel(struct sensor_value *val, int raw_val, uint16_t fs)
+static void icm42670_convert_accel(struct sensor_value *val, int16_t raw_val, uint16_t fs)
 {
 	int64_t conv_val;
 
@@ -356,21 +357,18 @@ static int icm42670_channel_get(const struct device *dev, enum sensor_channel ch
 		icm42670_convert_gyro(val, data->gyro_z, data->gyro_fs);
 	} else if (chan == SENSOR_CHAN_DIE_TEMP) {
 		icm42670_convert_temp(val, data->temperature);
-#ifdef CONFIG_ICM42670_APEX_PEDOMETER
-	} else if ((enum sensor_channel_icm42670)chan == SENSOR_CHAN_APEX_MOTION) {
-		val->val1 = data->pedometer_cnt;
-		val++;
-		val->val1 = data->pedometer_activity;
-		icm42670_apex_pedometer_cadence_convert(val + 2, data->pedometer_cadence,
+#ifdef CONFIG_TDK_APEX_PEDOMETER
+	} else if ((enum sensor_channel_tdk_apex)chan == SENSOR_CHAN_APEX_MOTION) {
+		val[0].val1 = data->pedometer_cnt;
+		val[1].val1 = data->pedometer_activity;
+		icm42670_apex_pedometer_cadence_convert(&val[2], data->pedometer_cadence,
 							data->dmp_odr_hz);
 #endif
-#ifdef CONFIG_ICM42670_APEX_WOM
-	} else if ((enum sensor_channel_icm42670)chan == SENSOR_CHAN_APEX_MOTION) {
-		val->val1 = data->wom_x;
-		val++;
-		val->val1 = data->wom_y;
-		val++;
-		val->val1 = data->wom_z;
+#ifdef CONFIG_TDK_APEX_WOM
+	} else if ((enum sensor_channel_tdk_apex)chan == SENSOR_CHAN_APEX_MOTION) {
+		val[0].val1 = data->wom_x;
+		val[1].val1 = data->wom_y;
+		val[2].val1 = data->wom_z;
 #endif
 	} else {
 		res = -ENOTSUP;
@@ -780,25 +778,25 @@ static int icm42670_attr_set(const struct device *dev, enum sensor_channel chan,
 
 	icm42670_lock(dev);
 
-	if ((enum sensor_channel_icm42670)chan == SENSOR_CHAN_APEX_MOTION) {
+	if ((enum sensor_channel_tdk_apex)chan == SENSOR_CHAN_APEX_MOTION) {
 		if (attr == SENSOR_ATTR_CONFIGURATION) {
-#ifdef CONFIG_ICM42670_APEX_PEDOMETER
-			if (val->val1 == ICM42670_APEX_PEDOMETER) {
+#ifdef CONFIG_TDK_APEX_PEDOMETER
+			if (val->val1 == TDK_APEX_PEDOMETER) {
 				err |= icm42670_apex_enable(&drv_data->driver);
 				err |= icm42670_apex_enable_pedometer(dev, &drv_data->driver);
 			}
-#elif defined(CONFIG_ICM42670_APEX_TILT)
-			if (val->val1 == ICM42670_APEX_TILT) {
+#elif defined(CONFIG_TDK_APEX_TILT)
+			if (val->val1 == TDK_APEX_TILT) {
 				err |= icm42670_apex_enable(&drv_data->driver);
 				err |= icm42670_apex_enable_tilt(&drv_data->driver);
 			}
-#elif defined(CONFIG_ICM42670_APEX_SMD)
-			if (val->val1 == ICM42670_APEX_SMD) {
+#elif defined(CONFIG_TDK_APEX_SMD)
+			if (val->val1 == TDK_APEX_SMD) {
 				err |= icm42670_apex_enable(&drv_data->driver);
 				err |= icm42670_apex_enable_smd(&drv_data->driver);
 			}
-#elif defined(CONFIG_ICM42670_APEX_WOM)
-			if (val->val1 == ICM42670_APEX_WOM) {
+#elif defined(CONFIG_TDK_APEX_WOM)
+			if (val->val1 == TDK_APEX_WOM) {
 				err |= icm42670_apex_enable_wom(&drv_data->driver);
 			}
 #else

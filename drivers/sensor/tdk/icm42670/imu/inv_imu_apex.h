@@ -61,12 +61,12 @@ typedef struct inv_imu_apex_step_activity {
 	/** Number of steps taken */
 	uint16_t step_cnt;
 
-	/** Walk/run cadence in number of samples.	 *  Format is u6.2. (at 50Hz and 2Hz walk
-	 * frequency, if the cadence	 *  is 25 samples, the register will output 100).
+	/** Walk/run cadence in number of samples. Format is u6.2. (at 50Hz and 2Hz walk
+	 * frequency, if the cadence is 25 samples, the register will output 100).
 	 */
 	uint8_t step_cadence;
 
-	/** Detected activity.	 *  Unknown (0), Walk (1) or Run (2)
+	/** Detected activity. Unknown (0), Walk (1) or Run (2)
 	 */
 	uint8_t activity_class;
 } inv_imu_apex_step_activity_t;
@@ -104,11 +104,11 @@ int inv_imu_apex_disable_smd(inv_imu_device_t *s);
 int inv_imu_apex_init_parameters_struct(inv_imu_device_t *s,
 					inv_imu_apex_parameters_t *apex_inputs);
 
-/** @brief Configures DMP parameters for APEX algorithms. *  @param[in] s            Pointer to
- * device.
+/** @brief Configures DMP parameters for APEX algorithms. 
+ *  @param[in] s Pointer to device.
  *  @param[in] apex_inputs  The requested input parameters.
- *  @return                 0 on success, negative value on error.
- *  @warning APEX inputs can't change on the fly, this should be called before enabling * any APEX
+ *  @return 0 on success, negative value on error.
+ *  @warning APEX inputs can't change on the fly, this should be called before enabling any APEX
  * features.
  *  @warning This API can't be called twice within 10 ms.
  */

@@ -7,8 +7,8 @@
 #include "icm42670.h"
 #include "imu/inv_imu_apex.h"
 
-#if defined(CONFIG_ICM42670_APEX_PEDOMETER) || defined(CONFIG_ICM42670_APEX_TILT) ||               \
-	defined(CONFIG_ICM42670_APEX_SMD)
+#if defined(CONFIG_TDK_APEX_PEDOMETER) || defined(CONFIG_TDK_APEX_TILT) ||               \
+	defined(CONFIG_TDK_APEX_SMD)
 int icm42670_apex_enable(inv_imu_device_t *s)
 {
 	int err = 0;
@@ -50,7 +50,7 @@ int icm42670_apex_enable(inv_imu_device_t *s)
 }
 #endif
 
-#ifdef CONFIG_ICM42670_APEX_PEDOMETER
+#ifdef CONFIG_TDK_APEX_PEDOMETER
 int icm42670_apex_enable_pedometer(const struct device *dev, inv_imu_device_t *s)
 {
 	struct icm42670_data *data = dev->data;
@@ -103,9 +103,9 @@ void icm42670_apex_pedometer_cadence_convert(struct sensor_value *val, uint8_t r
 	val->val1 = conv_val / 1000000;
 	val->val2 = conv_val % 1000000;
 }
-#endif
+#endif /* CONFIG_TDK_APEX_PEDOMETER */
 
-#ifdef CONFIG_ICM42670_APEX_TILT
+#ifdef CONFIG_TDK_APEX_TILT
 int icm42670_apex_enable_tilt(inv_imu_device_t *s)
 {
 	/* Enable the pedometer */
@@ -126,9 +126,9 @@ int icm42670_apex_tilt_fetch_from_dmp(const struct device *dev)
 	}
 	return -1;
 }
-#endif
+#endif /* CONFIG_TDK_APEX_TILT */
 
-#ifdef CONFIG_ICM42670_APEX_SMD
+#ifdef CONFIG_TDK_APEX_SMD
 int icm42670_apex_enable_smd(inv_imu_device_t *s)
 {
 	int rc = 0;
@@ -156,9 +156,9 @@ int icm42670_apex_smd_fetch_from_dmp(const struct device *dev)
 		return 0;
 	}
 }
-#endif
+#endif /* CONFIG_TDK_APEX_SMD */
 
-#ifdef CONFIG_ICM42670_APEX_WOM
+#ifdef CONFIG_TDK_APEX_WOM
 int icm42670_apex_enable_wom(inv_imu_device_t *s)
 {
 	int rc = 0;
@@ -223,5 +223,4 @@ int icm42670_apex_wom_fetch_from_dmp(const struct device *dev)
 		return -1;
 	}
 }
-
-#endif
+#endif /* CONFIG_TDK_APEX_WOM */
