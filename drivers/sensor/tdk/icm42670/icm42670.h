@@ -91,14 +91,6 @@ struct icm42670_data {
 	uint8_t wom_y;
 	uint8_t wom_z;
 #endif
-#ifdef CONFIG_ICM42670S_AML
-	int8_t delta[2];
-	uint8_t swipes_detected;
-	uint8_t remote_position;
-	uint8_t remote_static;
-	int16_t gyro_offset[3];
-	int32_t quaternion[4];
-#endif
 
 #ifdef CONFIG_ICM42670_TRIGGER
 	const struct device *dev;
@@ -160,13 +152,6 @@ int icm42670_apex_smd_fetch_from_dmp(const struct device *dev);
 #ifdef CONFIG_ICM42670_APEX_WOM
 int icm42670_apex_enable_wom(inv_imu_device_t *s);
 int icm42670_apex_wom_fetch_from_dmp(const struct device *dev);
-#endif
-
-#ifdef CONFIG_ICM42670S_AML
-int icm42670S_aml_init(const struct device *dev, inv_imu_device_t *s, int8_t delta_gain_x,
-		       int8_t delta_gain_y);
-void icm42670S_aml_process(const struct device *dev);
-void icm42670S_aml_quaternion_convert(struct sensor_value *val, int32_t raw_val);
 #endif
 
 void icm42670_lock(const struct device *dev);

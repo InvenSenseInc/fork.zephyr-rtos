@@ -281,13 +281,6 @@ static int icm42670_sample_fetch(const struct device *dev, enum sensor_channel c
 #endif
 	}
 
-#ifdef CONFIG_ICM42670S_AML
-	if ((enum sensor_channel_icm42670)chan == SENSOR_CHAN_AML) {
-		status = icm42670_fetch_from_fifo(dev);
-		icm42670S_aml_process(dev);
-	}
-#endif
-
 	if ((chan == SENSOR_CHAN_ALL) || (chan == SENSOR_CHAN_ACCEL_XYZ) ||
 	    (chan == SENSOR_CHAN_ACCEL_X) || (chan == SENSOR_CHAN_ACCEL_Y) ||
 	    (chan == SENSOR_CHAN_ACCEL_Z) || (chan == SENSOR_CHAN_GYRO_XYZ) ||
@@ -378,35 +371,6 @@ static int icm42670_channel_get(const struct device *dev, enum sensor_channel ch
 		val->val1 = data->wom_y;
 		val++;
 		val->val1 = data->wom_z;
-#endif
-#ifdef CONFIG_ICM42670S_AML
-#ifdef CONFIG_ICM42670S_AML_POINTING
-	} else if ((enum sensor_channel_icm42670)chan == SENSOR_CHAN_AML_OUTPUT_DELTA_POINTING) {
-		val->val1 = data->delta[0];
-		val++;
-		val->val1 = data->delta[1];
-#endif
-#ifdef CONFIG_ICM42670S_AML_GESTURES
-	} else if ((enum sensor_channel_icm42670)chan == SENSOR_CHAN_AML_OUTPUT_GESTURES) {
-		val->val1 = data->swipes_detected;
-		val++;
-		val->val1 = data->remote_position;
-		val++;
-		val->val1 = data->remote_static;
-#endif
-#ifdef CONFIG_ICM42670S_AML_GYR_OFFSET
-	} else if ((enum sensor_channel_icm42670)chan == SENSOR_CHAN_AML_OUTPUT_GYRO_CALIBRATTION) {
-		icm42670_convert_gyro(&val[0], data->gyro_offset[0], data->gyro_fs);
-		icm42670_convert_gyro(&val[1], data->gyro_offset[1], data->gyro_fs);
-		icm42670_convert_gyro(&val[2], data->gyro_offset[2], data->gyro_fs);
-#endif
-#ifdef CONFIG_ICM42670S_AML_QUATERNION
-	} else if ((enum sensor_channel_icm42670)chan == SENSOR_CHAN_AML_OUTPUT_QUATERNION) {
-		icm42670S_aml_quaternion_convert(&val[0], data->quaternion[0]);
-		icm42670S_aml_quaternion_convert(&val[1], data->quaternion[1]);
-		icm42670S_aml_quaternion_convert(&val[2], data->quaternion[2]);
-		icm42670S_aml_quaternion_convert(&val[3], data->quaternion[3]);
-#endif
 #endif
 	} else {
 		res = -ENOTSUP;
@@ -844,17 +808,6 @@ static int icm42670_attr_set(const struct device *dev, enum sensor_channel chan,
 			LOG_ERR("Not supported ATTR");
 			return -EINVAL;
 		}
-	} else if ((enum sensor_channel_icm42670)chan == SENSOR_CHAN_AML) {
-		if (attr == SENSOR_ATTR_CONFIGURATION) {
-#ifdef CONFIG_ICM42670S_AML
-			err |= icm42670S_aml_init(dev, &drv_data->driver, val[0].val1, val[1].val1);
-#else
-			LOG_ERR("Not supported ATTR value");
-#endif
-		} else {
-			LOG_ERR("Not supported ATTR");
-			return -EINVAL;
-		}
 	} else if ((chan == SENSOR_CHAN_ACCEL_XYZ) || (chan == SENSOR_CHAN_ACCEL_X) ||
 		   (chan == SENSOR_CHAN_ACCEL_Y) || (chan == SENSOR_CHAN_ACCEL_Z)) {
 		err |= icm42670_accel_config(drv_data, attr, val);
@@ -1041,7 +994,7 @@ static int icm42670_sensor_init(const struct device *dev)
 		LOG_DBG("\"%s\" ICM-42670-P OK", dev->name);
 	}
 	if (data->chip_id == INV_IMU_ICM42670S_WHOAMI) {
-		LOG_DBG("\"%s\" ICM-42670-S AML support OK", dev->name);
+		LOG_DBG("\"%s\" ICM-42670-S OK", dev->name);
 	}
 	return err;
 }
