@@ -54,7 +54,7 @@ static int icm42670_reg_write_spi(const union icm42670_bus *bus, uint8_t reg, ui
 					  {.buf = buf, .len = size}};
 	const struct spi_buf_set tx = {.buffers = tx_buf, .count = 2};
 	int ret = spi_write_dt(&bus->spi, &tx);
-	
+
 	if (ret) {
 		LOG_ERR("spi_write FAIL %d\n", ret);
 		return ret;

@@ -569,7 +569,7 @@ static uint32_t convert_ln_bw_to_bitfield(uint32_t val)
 			ACCEL_CONFIG1_ACCEL_FILT_BW_NO_FILTER; /*
 								* (=
 								* GYRO_CONFIG1_GYRO_FILT_BW_NO_FILTER)
-								*/
+  */
 	}
 	return bitfield;
 }

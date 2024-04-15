@@ -7,14 +7,14 @@ Overview
 ********
 
 This sample application periodically (100 Hz) measures the sensor
-temperature, acceleration, and angular velocity, displaying the 
+temperature, acceleration, and angular velocity, displaying the
 values on the console along with a timestamp since startup.
 
 Wiring
 ******
 
 This sample uses an external breakout for the sensor.  A devicetree
-overlay must be provided to identify the SPI or I2C bus and the interrupt 
+overlay must be provided to identify the SPI or I2C bus and the interrupt
 sensor GPIO.
 
 Building and Running instructions
