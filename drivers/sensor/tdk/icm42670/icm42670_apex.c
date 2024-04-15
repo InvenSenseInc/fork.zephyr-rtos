@@ -7,7 +7,7 @@
 #include "icm42670.h"
 #include "imu/inv_imu_apex.h"
 
-#if defined(CONFIG_TDK_APEX_PEDOMETER) || defined(CONFIG_TDK_APEX_TILT) ||               \
+#if defined(CONFIG_TDK_APEX_PEDOMETER) || defined(CONFIG_TDK_APEX_TILT) ||                         \
 	defined(CONFIG_TDK_APEX_SMD)
 int icm42670_apex_enable(inv_imu_device_t *s)
 {

@@ -13,7 +13,7 @@
 	};
 };
 
-/* 
+/*
  * Example configuration of a ICM42670 device on spi2 compatible with an Arduino SPI bus.
  */
 &arduino_spi {

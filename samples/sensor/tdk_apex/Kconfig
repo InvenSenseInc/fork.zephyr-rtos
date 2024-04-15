@@ -10,7 +10,7 @@ choice ICM42670_TRIGGER_MODE
 	default ICM42670_TRIGGER_OWN_THREAD
 endchoice
 
-# Enable APEX features support for the IMU device selected 
+# Enable APEX features support for the IMU device selected
 
 config ICM42670_APEX
 	default y

@@ -41,7 +41,7 @@ static const struct device *get_tdk_apex_device(void)
 	return dev;
 }
 
-#if defined(CONFIG_TDK_APEX_PEDOMETER) || defined(CONFIG_TDK_APEX_TILT) ||               \
+#if defined(CONFIG_TDK_APEX_PEDOMETER) || defined(CONFIG_TDK_APEX_TILT) ||                         \
 	defined(CONFIG_TDK_APEX_WOM) || defined(CONFIG_TDK_APEX_SMD)
 static const char *now_str(void)
 {
