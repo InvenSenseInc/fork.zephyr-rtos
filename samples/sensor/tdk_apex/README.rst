@@ -16,7 +16,7 @@ position is held for 4 seconds.
 ** Wake on Motion (WoM): Detects motion per axis exceeding 195 mg threshold.
 ** Significant Motion Detector (SMD): Detects when the user has moved
 significantly.
-Each feature is enabled through KConfig choice.
+APEX feature support and teh different feature are enabled through KConfig.
 
 Driver configuration
 ********************
@@ -28,7 +28,7 @@ Wiring
 *******
 
 This sample uses an external breakout for the sensor. A devicetree
-overlay must be provided to identify the SPI or I2C bus and the interrupt
+overlay must be provided to identify the TDK sensor, the SPI or I2C bus interface and the interrupt
 sensor GPIO.
 
 Building and Running instructions

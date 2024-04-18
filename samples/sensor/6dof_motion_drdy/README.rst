@@ -1,20 +1,21 @@
-.. _icm42670:
+.. _6dof_motion_drdy:
 
-ICM42670: Invensense Motion Tracking Device
+6DOF Motion Dataready:
 ############################################
 
 Overview
 ********
 
-This sample application periodically (100 Hz) measures the sensor
+This sample application periodically (100 Hz) measures the 6-axis sensor with
 temperature, acceleration, and angular velocity, displaying the
 values on the console along with a timestamp since startup.
+Trigger options could be configured through KConfig.
 
 Wiring
 ******
 
 This sample uses an external breakout for the sensor.  A devicetree
-overlay must be provided to identify the SPI or I2C bus and the interrupt
+overlay must be provided to identify the 6-axis motion sensor, the SPI or I2C bus interface and the interrupt
 sensor GPIO.
 
 Building and Running instructions
@@ -24,7 +25,7 @@ After providing a devicetree overlay that specifies the sensor location,
 build this sample app using:
 
 .. zephyr-app-commands:
-   :zephyr-app: samples/sensor/icm42670/data_stream
+   :zephyr-app: samples/sensor/6dof_motion_dry
    :board: nrf52dk/nrf52832
    :goals: build flash
 
@@ -34,6 +35,7 @@ Sample Output
 .. code-block:: console
 
 ## Default configuration
+ICM42670 TDK Invensense Motion Tracking Device
 
 *** Booting Zephyr OS build zephyr-v3.5.0-3192-g528359f60dd9 ***
 Found device "icm42670@68", getting sensor data

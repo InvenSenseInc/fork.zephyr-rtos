@@ -8,7 +8,6 @@
 #include <zephyr/device.h>
 #include <zephyr/devicetree.h>
 #include <zephyr/drivers/sensor.h>
-#include <zephyr/drivers/sensor/icm42670.h>
 #include <stdio.h>
 
 static struct sensor_trigger data_trigger;
@@ -17,12 +16,12 @@ static struct sensor_trigger data_trigger;
 static volatile int irq_from_device = 0;
 
 /*
- * Get a device structure from a devicetree node with compatible
- * "invensense,icm42670". (If there are multiple, just pick one.)
+ * Get a device structure from a devicetree node from alias
+ * "6dof_motion_drdy0".
  */
-static const struct device *get_icm42670_device(void)
+static const struct device *get_6dof_motion_device(void)
 {
-	const struct device *const dev = DEVICE_DT_GET_ANY(invensense_icm42670);
+	const struct device *const dev = DEVICE_DT_GET(DT_ALIAS(6dof_motion_drdy0));
 
 	if (dev == NULL) {
 		/* No such node, or the node does not have status "okay". */
@@ -61,7 +60,7 @@ static const char *now_str(void)
 	return buf;
 }
 
-static void handle_icm42670_drdy(const struct device *dev, const struct sensor_trigger *trig)
+static void handle_6dof_motion_drdy(const struct device *dev, const struct sensor_trigger *trig)
 {
 	if (trig->type == SENSOR_TRIG_DATA_READY) {
 		int rc = sensor_sample_fetch_chan(dev, trig->chan);
@@ -79,7 +78,7 @@ static void handle_icm42670_drdy(const struct device *dev, const struct sensor_t
 
 int main(void)
 {
-	const struct device *dev = get_icm42670_device();
+	const struct device *dev = get_6dof_motion_device();
 	struct sensor_value accel[3];
 	struct sensor_value gyro[3];
 	struct sensor_value temperature;
@@ -92,7 +91,7 @@ int main(void)
 		.type = SENSOR_TRIG_DATA_READY,
 		.chan = SENSOR_CHAN_ALL,
 	};
-	if (sensor_trigger_set(dev, &data_trigger, handle_icm42670_drdy) < 0) {
+	if (sensor_trigger_set(dev, &data_trigger, handle_6dof_motion_drdy) < 0) {
 		printf("Cannot configure data trigger!!!\n");
 		return 0;
 	}

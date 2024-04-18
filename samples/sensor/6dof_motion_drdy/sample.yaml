@@ -1,7 +1,7 @@
 sample:
-  name: ICM42670 Sensor data stream sample
+  name: 6DOF Motion dataready sample
 tests:
-  sample.sensor.icm42670.ds:
+  sample.sensor.6dof_motion_drdy:
     build_only: true
     tags: sensors
     integration_platforms:

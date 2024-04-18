@@ -18,7 +18,7 @@ static volatile int irq_from_device = 0;
 
 /*
  * Get a device structure from a devicetree node from alias
- * "tdk_apex_sensor0". (If there are multiple, just pick one.)
+ * "tdk_apex_sensor0".
  */
 static const struct device *get_tdk_apex_device(void)
 {
