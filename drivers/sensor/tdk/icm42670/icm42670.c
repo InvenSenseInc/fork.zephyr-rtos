@@ -1045,35 +1045,29 @@ static int icm42670_init(const struct device *dev)
 	return err;
 }
 
+/* Initializes a common struct icm42670_config */
+#define ICM42670_CONFIG_COMMON(inst)                                                               \
+	.gpio_int = GPIO_DT_SPEC_INST_GET(inst, int_gpios),                                        \
+	.accel_fs = DT_INST_ENUM_IDX(inst, accel_fs),                                              \
+	.accel_hz = DT_INST_ENUM_IDX(inst, accel_hz),                                              \
+	.accel_avg = DT_INST_ENUM_IDX(inst, accel_avg),                                            \
+	.accel_filt_bw = DT_INST_ENUM_IDX(inst, accel_filt_bw),                                    \
+	.gyro_fs = DT_INST_ENUM_IDX(inst, gyro_fs), .gyro_hz = DT_INST_ENUM_IDX(inst, gyro_hz),    \
+	.gyro_filt_bw = DT_INST_ENUM_IDX(inst, gyro_filt_bw),                                      \
+	.accel_pwr_mode = DT_INST_ENUM_IDX(inst, power_mode),
+
 /* Initializes a struct icm42670_config for an instance on a SPI bus. */
 #define ICM42670_CONFIG_SPI(inst)                                                                  \
 	{                                                                                          \
 		.bus.spi = SPI_DT_SPEC_INST_GET(inst, ICM42670_SPI_OPERATION, 0),                  \
-		.bus_io = &icm42670_bus_io_spi,                                                    \
-		.gpio_int = GPIO_DT_SPEC_INST_GET(inst, int_gpios),                                \
-		.accel_fs = DT_INST_ENUM_IDX(inst, accel_fs),                                      \
-		.accel_hz = DT_INST_ENUM_IDX(inst, accel_hz),                                      \
-		.accel_avg = DT_INST_ENUM_IDX(inst, accel_avg),                                    \
-		.accel_filt_bw = DT_INST_ENUM_IDX(inst, accel_filt_bw),                            \
-		.gyro_fs = DT_INST_ENUM_IDX(inst, gyro_fs),                                        \
-		.gyro_hz = DT_INST_ENUM_IDX(inst, gyro_hz),                                        \
-		.gyro_filt_bw = DT_INST_ENUM_IDX(inst, gyro_filt_bw),                              \
-		.accel_pwr_mode = DT_INST_ENUM_IDX(inst, power_mode),                              \
+		.bus_io = &icm42670_bus_io_spi, ICM42670_CONFIG_COMMON(inst)                       \
 	}
 
 /* Initializes a struct icm42670_config for an instance on an I2C bus. */
 #define ICM42670_CONFIG_I2C(inst)                                                                  \
 	{                                                                                          \
 		.bus.i2c = I2C_DT_SPEC_INST_GET(inst), .bus_io = &icm42670_bus_io_i2c,             \
-		.gpio_int = GPIO_DT_SPEC_INST_GET(inst, int_gpios),                                \
-		.accel_fs = DT_INST_ENUM_IDX(inst, accel_fs),                                      \
-		.accel_hz = DT_INST_ENUM_IDX(inst, accel_hz),                                      \
-		.accel_avg = DT_INST_ENUM_IDX(inst, accel_avg),                                    \
-		.accel_filt_bw = DT_INST_ENUM_IDX(inst, accel_filt_bw),                            \
-		.gyro_fs = DT_INST_ENUM_IDX(inst, gyro_fs),                                        \
-		.gyro_hz = DT_INST_ENUM_IDX(inst, gyro_hz),                                        \
-		.gyro_filt_bw = DT_INST_ENUM_IDX(inst, gyro_filt_bw),                              \
-		.accel_pwr_mode = DT_INST_ENUM_IDX(inst, power_mode),                              \
+		ICM42670_CONFIG_COMMON(inst)                                                       \
 	}
 
 /*
