@@ -829,7 +829,8 @@ int inv_imu_get_data_from_registers(inv_imu_device_t *s)
 	inv_imu_sensor_event_t event;
 
 	/* Ensure data ready status bit is set */
-	if (status |= inv_imu_read_reg(s, INT_STATUS_DRDY, 1, &int_status)) {
+	status |= inv_imu_read_reg(s, INT_STATUS_DRDY, 1, &int_status);
+	if (status != INV_ERROR_SUCCESS) {
 		return status;
 	}
 

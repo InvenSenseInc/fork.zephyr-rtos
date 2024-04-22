@@ -16,8 +16,11 @@ properties:
     type: string
     default: "low noise"
     description: |
-      Default power mode.
-      Low power mode is allowed for accelerometer sensor only from 1.5625Hz to 400Hz
+      Power mode.
+      Low power mode is allowed for accelerometer sensor only from
+      1.5625Hz to 400Hz. 
+      The default is choosen to support both accelerometer and
+      gyroscope sensors.
     enum:
       - "low noise"
       - "low power"
