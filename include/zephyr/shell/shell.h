@@ -26,6 +26,10 @@
 extern "C" {
 #endif
 
+#ifndef CONFIG_SHELL_PROMPT_BUFF_SIZE
+#define CONFIG_SHELL_PROMPT_BUFF_SIZE 0
+#endif
+
 #ifndef CONFIG_SHELL_CMD_BUFF_SIZE
 #define CONFIG_SHELL_CMD_BUFF_SIZE 0
 #endif
@@ -69,6 +73,8 @@ extern "C" {
 /**
  * @brief Shell API
  * @defgroup shell_api Shell API
+ * @since 1.14
+ * @version 1.0.0
  * @ingroup os_services
  * @{
  */
@@ -743,6 +749,7 @@ struct shell_backend_ctx_flags {
 	uint32_t cmd_ctx      :1; /*!< Shell is executing command */
 	uint32_t print_noinit :1; /*!< Print request from not initialized shell */
 	uint32_t sync_mode    :1; /*!< Shell in synchronous mode */
+	uint32_t handle_log   :1; /*!< Shell is handling logger backend */
 };
 
 BUILD_ASSERT((sizeof(struct shell_backend_ctx_flags) == sizeof(uint32_t)),
@@ -776,7 +783,11 @@ enum shell_signal {
  * @brief Shell instance context.
  */
 struct shell_ctx {
-	const char *prompt; /*!< shell current prompt. */
+#if defined(CONFIG_SHELL_PROMPT_CHANGE) && CONFIG_SHELL_PROMPT_CHANGE
+	char prompt[CONFIG_SHELL_PROMPT_BUFF_SIZE]; /*!< shell current prompt. */
+#else
+	const char *prompt;
+#endif
 
 	enum shell_state state; /*!< Internal module state.*/
 	enum shell_receive_state receive_state;/*!< Escape sequence indicator.*/
@@ -797,6 +808,9 @@ struct shell_ctx {
 
 	/** When bypass is set, all incoming data is passed to the callback. */
 	shell_bypass_cb_t bypass;
+
+	/*!< Logging level for a backend. */
+	uint32_t log_level;
 
 #if defined CONFIG_SHELL_GETOPT
 	/*!< getopt context for a shell backend. */

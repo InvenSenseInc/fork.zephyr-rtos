@@ -47,7 +47,7 @@ static K_SEM_DEFINE(hci_sem, 1, 1);
 
 #define DIVC(x, y)         (((x)+(y)-1)/(y))
 
-static uint32_t buffer[DIVC(BLE_DYN_ALLOC_SIZE, 4)];
+static uint32_t __noinit buffer[DIVC(BLE_DYN_ALLOC_SIZE, 4)];
 
 extern uint8_t ll_state_busy;
 
@@ -56,7 +56,7 @@ static bool is_hci_event_discardable(const uint8_t *evt_data)
 	uint8_t evt_type = evt_data[0];
 
 	switch (evt_type) {
-#if defined(CONFIG_BT_BREDR)
+#if defined(CONFIG_BT_CLASSIC)
 	case BT_HCI_EVT_INQUIRY_RESULT_WITH_RSSI:
 	case BT_HCI_EVT_EXTENDED_INQUIRY_RESULT:
 		return true;

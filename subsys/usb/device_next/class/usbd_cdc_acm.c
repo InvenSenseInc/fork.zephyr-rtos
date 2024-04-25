@@ -4,6 +4,8 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
+#define DT_DRV_COMPAT zephyr_cdc_acm_uart
+
 #include <zephyr/init.h>
 #include <zephyr/kernel.h>
 #include <zephyr/drivers/uart.h>
@@ -16,15 +18,14 @@
 
 #include <zephyr/drivers/usb/udc.h>
 
+#include "usbd_msg.h"
+
 #include <zephyr/logging/log.h>
 LOG_MODULE_REGISTER(usbd_cdc_acm, CONFIG_USBD_CDC_ACM_LOG_LEVEL);
 
-/*
- * FIXME: buffer count per device.
- */
 NET_BUF_POOL_FIXED_DEFINE(cdc_acm_ep_pool,
-			  2, 512,
-			  sizeof(struct udc_buf_info), NULL);
+			  DT_NUM_INST_STATUS_OKAY(DT_DRV_COMPAT) * 2,
+			  512, sizeof(struct udc_buf_info), NULL);
 
 #define CDC_ACM_DEFAULT_LINECODING	{sys_cpu_to_le32(115200), 0, 0, 8}
 #define CDC_ACM_DEFAULT_BULK_EP_MPS	0
@@ -360,6 +361,7 @@ static int usbd_cdc_acm_ctd(struct usbd_class_node *const c_nd,
 			    const struct usb_setup_packet *const setup,
 			    const struct net_buf *const buf)
 {
+	struct usbd_contex *uds_ctx = c_nd->data->uds_ctx;
 	const struct device *dev = c_nd->data->priv;
 	struct cdc_acm_uart_data *data = dev->data;
 	size_t len;
@@ -374,11 +376,13 @@ static int usbd_cdc_acm_ctd(struct usbd_class_node *const c_nd,
 
 		memcpy(&data->line_coding, buf->data, len);
 		cdc_acm_update_uart_cfg(data);
+		usbd_msg_pub_device(uds_ctx, USBD_MSG_CDC_ACM_LINE_CODING, dev);
 		return 0;
 
 	case SET_CONTROL_LINE_STATE:
 		data->line_state = setup->wValue;
 		cdc_acm_update_linestate(data);
+		usbd_msg_pub_device(uds_ctx, USBD_MSG_CDC_ACM_CONTROL_LINE_STATE, dev);
 		return 0;
 
 	default:
@@ -1094,8 +1098,6 @@ static struct usbd_cdc_acm_desc cdc_acm_desc_##n = {				\
 		.bDescriptorType = 0,						\
 	},									\
 }
-
-#define DT_DRV_COMPAT zephyr_cdc_acm_uart
 
 #define USBD_CDC_ACM_DT_DEVICE_DEFINE(n)					\
 	BUILD_ASSERT(DT_INST_ON_BUS(n, usb),					\

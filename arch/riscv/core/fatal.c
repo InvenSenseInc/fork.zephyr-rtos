@@ -163,15 +163,15 @@ void _Fault(z_arch_esf_t *esf)
 
 	__asm__ volatile("csrr %0, mcause" : "=r" (mcause));
 
-#ifndef CONFIG_SOC_OPENISA_RV32M1_RISCV32
+#ifndef CONFIG_SOC_OPENISA_RV32M1
 	unsigned long mtval;
 	__asm__ volatile("csrr %0, mtval" : "=r" (mtval));
 #endif
 
-	mcause &= SOC_MCAUSE_EXP_MASK;
+	mcause &= CONFIG_RISCV_MCAUSE_EXCEPTION_MASK;
 	LOG_ERR("");
 	LOG_ERR(" mcause: %ld, %s", mcause, cause_str(mcause));
-#ifndef CONFIG_SOC_OPENISA_RV32M1_RISCV32
+#ifndef CONFIG_SOC_OPENISA_RV32M1
 	LOG_ERR("  mtval: %lx", mtval);
 #endif
 

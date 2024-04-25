@@ -655,9 +655,7 @@ int usb_dc_ep_enable(const uint8_t ep)
 		*ep_state->ep_ctl = val;
 	}
 
-	if (USB_EP_DIR_IS_OUT(ep) && ep != USB_CONTROL_EP_OUT &&
-	    ep_state->cb != usb_transfer_ep_callback) {
-		/* Start reading now, except for transfer managed eps */
+	if (USB_EP_DIR_IS_OUT(ep) && ep != USB_CONTROL_EP_OUT) {
 		return usb_dc_ep_start_read(ep, DATA_BUFFER_SIZE);
 	}
 
@@ -678,6 +676,13 @@ int usb_dc_ep_disable(const uint8_t ep)
 	if (!ep_state->ep_ctl) {
 		return 0;
 	}
+
+	/* If this endpoint has previously been used and e.g. the host application
+	 * crashed, the endpoint may remain locked even after reconfiguration
+	 * because the write semaphore is never given back.
+	 * udc_rpi_cancel_endpoint() handles this so the endpoint can be written again.
+	 */
+	udc_rpi_cancel_endpoint(ep);
 
 	uint8_t val = *ep_state->ep_ctl & ~EP_CTRL_ENABLE_BITS;
 

@@ -21,6 +21,8 @@
 extern "C" {
 #endif
 
+typedef int pid_t;
+
 #ifndef __useconds_t_defined
 typedef unsigned long useconds_t;
 #endif
@@ -38,15 +40,9 @@ typedef unsigned long timer_t;
 /* Thread attributes */
 struct pthread_attr {
 	void *stack;
-	uint16_t stacksize;
-	uint16_t guardsize;
-	int8_t priority;
-	uint8_t schedpolicy: 2;
-	uint8_t guardsize_msbit: 1;
-	bool initialized: 1;
-	bool cancelstate: 1;
-	bool detachstate: 1;
+	uint32_t details[2];
 };
+
 #if defined(CONFIG_MINIMAL_LIBC) || defined(CONFIG_PICOLIBC) || defined(CONFIG_ARMCLANG_STD_LIBC) \
 	|| defined(CONFIG_ARCMWDT_LIBC)
 typedef struct pthread_attr pthread_attr_t;
@@ -64,7 +60,8 @@ typedef struct k_sem sem_t;
 typedef uint32_t pthread_mutex_t;
 
 struct pthread_mutexattr {
-	int type;
+	unsigned char type: 2;
+	bool initialized: 1;
 };
 #if defined(CONFIG_MINIMAL_LIBC) || defined(CONFIG_PICOLIBC) || defined(CONFIG_ARMCLANG_STD_LIBC) \
 	|| defined(CONFIG_ARCMWDT_LIBC)
@@ -94,13 +91,7 @@ typedef struct pthread_barrierattr {
 
 typedef uint32_t pthread_rwlockattr_t;
 
-typedef struct pthread_rwlock_obj {
-	struct k_sem rd_sem;
-	struct k_sem wr_sem;
-	struct k_sem reader_active;/* blocks WR till reader has acquired lock */
-	int32_t status;
-	k_tid_t wr_owner;
-} pthread_rwlock_t;
+typedef uint32_t pthread_rwlock_t;
 
 struct pthread_once {
 	bool flag;

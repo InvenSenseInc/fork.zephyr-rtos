@@ -6,17 +6,11 @@
 
 #set -x #uncomment this line for debugging
 set -ue
-: "${BSIM_COMPONENTS_PATH:?BSIM_COMPONENTS_PATH must be defined}"
-: "${ZEPHYR_BASE:?ZEPHYR_BASE must be set to point to the zephyr root\
- directory}"
-
-WORK_DIR="${WORK_DIR:-${ZEPHYR_BASE}/bsim_out}"
-
-BOARD_ROOT="${BOARD_ROOT:-${ZEPHYR_BASE}}"
-
-mkdir -p ${WORK_DIR}
+: "${ZEPHYR_BASE:?ZEPHYR_BASE must be set to point to the zephyr root directory}"
 
 source ${ZEPHYR_BASE}/tests/bsim/compile.source
+
+${ZEPHYR_BASE}/tests/bsim/bluetooth/ll/cis/compile.sh
 
 app=tests/bsim/bluetooth/ll/advx compile
 app=tests/bsim/bluetooth/ll/advx \
@@ -31,18 +25,6 @@ app=tests/bsim/bluetooth/ll/bis compile
 app=tests/bsim/bluetooth/ll/bis \
   conf_overlay=overlay-ticker_expire_info.conf compile
 app=tests/bsim/bluetooth/ll/bis conf_file=prj_vs_dp.conf compile
-
-app=tests/bsim/bluetooth/ll/cis conf_overlay=overlay.conf compile
-app=tests/bsim/bluetooth/ll/cis conf_overlay=overlay-acl_first.conf compile
-app=tests/bsim/bluetooth/ll/cis conf_overlay=overlay-legacy_adv.conf compile
-app=tests/bsim/bluetooth/ll/cis conf_overlay=overlay-legacy_adv_acl_first.conf compile
-app=tests/bsim/bluetooth/ll/cis conf_overlay=overlay-acl_group.conf compile
-app=tests/bsim/bluetooth/ll/cis conf_overlay=overlay-acl_group_acl_first.conf compile
-app=tests/bsim/bluetooth/ll/cis conf_overlay=overlay-peripheral_cis.conf compile
-app=tests/bsim/bluetooth/ll/cis conf_overlay=overlay-acl_first_ft_per_skip_2_se.conf compile
-app=tests/bsim/bluetooth/ll/cis conf_overlay=overlay-acl_first_ft_per_skip_4_se.conf compile
-app=tests/bsim/bluetooth/ll/cis conf_overlay=overlay-acl_first_ft_cen_skip_2_se.conf compile
-app=tests/bsim/bluetooth/ll/cis conf_overlay=overlay-acl_first_ft_cen_skip_4_se.conf compile
 
 app=tests/bsim/bluetooth/ll/edtt/hci_test_app \
   conf_file=prj_dut_llcp.conf compile

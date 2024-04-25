@@ -39,6 +39,7 @@ It currently supports the following shells:
 
 - bash
 - zsh
+- fish
 
 Additional instructions are available in the command's help::
 
@@ -88,6 +89,8 @@ To use this command:
 
    This step ensures the build directory contains CMake metadata required for
    SPDX document generation.
+
+#. Enable :file:`CONFIG_BUILD_OUTPUT_META` in your project.
 
 #. Build your application using this pre-created build directory, like so:
 

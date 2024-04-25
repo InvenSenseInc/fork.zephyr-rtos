@@ -108,6 +108,10 @@ elseif (CONFIG_NATIVE_LIBRARY)
       $<TARGET_PROPERTY:compiler,no_builtin>
     )
   endif()
+
+  if (CONFIG_COMPILER_WARNINGS_AS_ERRORS)
+    target_compile_options(native_simulator INTERFACE $<TARGET_PROPERTY:compiler,warnings_as_errors>)
+  endif()
 endif()
 
 if(CONFIG_EXTERNAL_LIBC)
@@ -132,8 +136,6 @@ if (CONFIG_GPROF)
 
   target_link_options(native_simulator INTERFACE "-pg")
 endif()
-
-zephyr_compile_definitions(_POSIX_C_SOURCE=200809 _XOPEN_SOURCE=600 _XOPEN_SOURCE_EXTENDED)
 
 if (CONFIG_NATIVE_APPLICATION)
   zephyr_ld_options(
@@ -195,7 +197,7 @@ endif()
 # This is due to some tests using _Static_assert which is a 2011 feature, but
 # otherwise relying on compilers supporting it also when set to C99.
 # This was in general ok, but with some host compilers and C library versions
-# it led to problems. So we override it to 2011 for native_posix.
+# it led to problems. So we override it to 2011 for the native targets.
 set_property(GLOBAL PROPERTY CSTD c11)
 
 add_subdirectory(core)

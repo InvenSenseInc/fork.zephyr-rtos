@@ -2,6 +2,11 @@
 
 zephyr_library()
 zephyr_library_property(ALLOW_EMPTY TRUE)
+zephyr_library_include_directories(${ZEPHYR_BASE}/subsys/net/l2)
+
+zephyr_library_sources_ifdef(CONFIG_ETH_DRIVER_RAW_MODE
+  eth_raw.c
+  )
 
 zephyr_library_sources_ifdef(CONFIG_ETH_GECKO
 	eth_gecko.c
@@ -36,6 +41,7 @@ zephyr_library_sources_ifdef(CONFIG_ETH_IVSHMEM 	eth_ivshmem.c eth_ivshmem_queue
 zephyr_library_sources_ifdef(CONFIG_ETH_ADIN2111	eth_adin2111.c)
 zephyr_library_sources_ifdef(CONFIG_ETH_LAN865X	        eth_lan865x.c oa_tc6.c)
 zephyr_library_sources_ifdef(CONFIG_ETH_NXP_ENET	eth_nxp_enet.c)
+zephyr_library_sources_ifdef(CONFIG_ETH_XMC4XXX     eth_xmc4xxx.c)
 
 if(CONFIG_ETH_NXP_S32_NETC)
   zephyr_library_sources(eth_nxp_s32_netc.c)
@@ -61,3 +67,4 @@ if(CONFIG_ETH_NATIVE_POSIX)
 endif()
 
 add_subdirectory(phy)
+add_subdirectory(eth_nxp_enet_qos)

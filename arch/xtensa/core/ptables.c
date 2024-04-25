@@ -106,11 +106,6 @@ static sys_slist_t xtensa_domain_list;
 
 extern char _heap_end[];
 extern char _heap_start[];
-extern char __data_start[];
-extern char __data_end[];
-extern char _bss_start[];
-extern char _bss_end[];
-
 /*
  * Static definition of all code & data memory regions of the
  * current Zephyr image. This information must be available &
@@ -255,13 +250,13 @@ static void map_memory(const uint32_t start, const uint32_t end,
 	map_memory_range(start, end, attrs, shared);
 
 #ifdef CONFIG_XTENSA_MMU_DOUBLE_MAP
-	if (arch_xtensa_is_ptr_uncached((void *)start)) {
-		map_memory_range(POINTER_TO_UINT(z_soc_cached_ptr((void *)start)),
-			POINTER_TO_UINT(z_soc_cached_ptr((void *)end)),
+	if (sys_cache_is_ptr_uncached((void *)start)) {
+		map_memory_range(POINTER_TO_UINT(sys_cache_cached_ptr_get((void *)start)),
+			POINTER_TO_UINT(sys_cache_cached_ptr_get((void *)end)),
 			attrs | XTENSA_MMU_CACHED_WB, shared);
-	} else if (arch_xtensa_is_ptr_cached((void *)start)) {
-		map_memory_range(POINTER_TO_UINT(z_soc_uncached_ptr((void *)start)),
-			POINTER_TO_UINT(z_soc_uncached_ptr((void *)end)), attrs, shared);
+	} else if (sys_cache_is_ptr_cached((void *)start)) {
+		map_memory_range(POINTER_TO_UINT(sys_cache_uncached_ptr_get((void *)start)),
+			POINTER_TO_UINT(sys_cache_uncached_ptr_get((void *)end)), attrs, shared);
 	}
 #endif
 }
@@ -284,19 +279,6 @@ static void xtensa_init_page_tables(void)
 		map_memory(range->start, range->end, attrs, shared);
 	}
 
-/**
- * GCC complains about usage of the SoC MMU range ARRAY_SIZE
- * (xtensa_soc_mmu_ranges) as the default weak declaration is
- * an empty array, and any access to its element is considered
- * out of bound access. However, we have a number of element
- * variable to guard against this (... if done correctly).
- * Besides, this will almost be overridden by the SoC layer.
- * So tell GCC to ignore this.
- */
-#if defined(__GNUC__)
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Warray-bounds"
-#endif
 	for (entry = 0; entry < xtensa_soc_mmu_ranges_num; entry++) {
 		const struct xtensa_mmu_range *range = &xtensa_soc_mmu_ranges[entry];
 		bool shared;
@@ -307,9 +289,7 @@ static void xtensa_init_page_tables(void)
 
 		map_memory(range->start, range->end, attrs, shared);
 	}
-#if defined(__GNUC__)
-#pragma GCC diagnostic pop
-#endif
+
 	/* Finally, the direct-mapped pages used in the page tables
 	 * must be fixed up to use the same cache attribute (but these
 	 * must be writable, obviously).  They shouldn't be left at
@@ -413,19 +393,19 @@ static inline void __arch_mem_map(void *va, uintptr_t pa, uint32_t xtensa_flags,
 	uint32_t flags, flags_uc;
 
 	if (IS_ENABLED(CONFIG_XTENSA_MMU_DOUBLE_MAP)) {
-		if (arch_xtensa_is_ptr_cached(va)) {
+		if (sys_cache_is_ptr_cached(va)) {
 			vaddr = va;
-			vaddr_uc = arch_xtensa_uncached_ptr(va);
+			vaddr_uc = sys_cache_uncached_ptr_get(va);
 		} else {
-			vaddr = arch_xtensa_cached_ptr(va);
+			vaddr = sys_cache_cached_ptr_get(va);
 			vaddr_uc = va;
 		}
 
-		if (arch_xtensa_is_ptr_cached((void *)pa)) {
+		if (sys_cache_is_ptr_cached((void *)pa)) {
 			paddr = pa;
-			paddr_uc = (uintptr_t)arch_xtensa_uncached_ptr((void *)pa);
+			paddr_uc = (uintptr_t)sys_cache_uncached_ptr_get((void *)pa);
 		} else {
-			paddr = (uintptr_t)arch_xtensa_cached_ptr((void *)pa);
+			paddr = (uintptr_t)sys_cache_cached_ptr_get((void *)pa);
 			paddr_uc = pa;
 		}
 
@@ -588,11 +568,11 @@ static inline void __arch_mem_unmap(void *va)
 	void *vaddr, *vaddr_uc;
 
 	if (IS_ENABLED(CONFIG_XTENSA_MMU_DOUBLE_MAP)) {
-		if (arch_xtensa_is_ptr_cached(va)) {
+		if (sys_cache_is_ptr_cached(va)) {
 			vaddr = va;
-			vaddr_uc = arch_xtensa_uncached_ptr(va);
+			vaddr_uc = sys_cache_uncached_ptr_get(va);
 		} else {
-			vaddr = arch_xtensa_cached_ptr(va);
+			vaddr = sys_cache_cached_ptr_get(va);
 			vaddr_uc = va;
 		}
 	} else {
@@ -866,11 +846,11 @@ static inline int update_region(uint32_t *ptables, uintptr_t start,
 	uintptr_t va, va_uc;
 	uint32_t new_flags, new_flags_uc;
 
-	if (arch_xtensa_is_ptr_cached((void *)start)) {
+	if (sys_cache_is_ptr_cached((void *)start)) {
 		va = start;
-		va_uc = (uintptr_t)arch_xtensa_uncached_ptr((void *)start);
+		va_uc = (uintptr_t)sys_cache_uncached_ptr_get((void *)start);
 	} else {
-		va = (uintptr_t)arch_xtensa_cached_ptr((void *)start);
+		va = (uintptr_t)sys_cache_cached_ptr_get((void *)start);
 		va_uc = start;
 	}
 
@@ -1095,6 +1075,19 @@ void xtensa_swap_update_page_tables(struct k_thread *incoming)
 		&(incoming->mem_domain_info.mem_domain->arch);
 
 	xtensa_set_paging(domain->asid, ptables);
+
+#ifdef CONFIG_XTENSA_INVALIDATE_MEM_DOMAIN_TLB_ON_SWAP
+	struct k_mem_domain *mem_domain = incoming->mem_domain_info.mem_domain;
+
+	for (int idx = 0; idx < mem_domain->num_partitions; idx++) {
+		struct k_mem_partition *part = &mem_domain->partitions[idx];
+		uintptr_t end = part->start + part->size;
+
+		for (uintptr_t addr = part->start; addr < end; addr += CONFIG_MMU_PAGE_SIZE) {
+			xtensa_dtlb_vaddr_invalidate((void *)addr);
+		}
+	}
+#endif
 }
 
 #endif /* CONFIG_USERSPACE */

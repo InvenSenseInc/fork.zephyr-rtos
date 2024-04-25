@@ -26,6 +26,7 @@
 enum hawkbit_response {
 	HAWKBIT_NETWORKING_ERROR,
 	HAWKBIT_UNCONFIRMED_IMAGE,
+	HAWKBIT_PERMISSION_ERROR,
 	HAWKBIT_METADATA_ERROR,
 	HAWKBIT_DOWNLOAD_ERROR,
 	HAWKBIT_OK,
@@ -61,6 +62,11 @@ void hawkbit_autohandler(void);
  * @return HAWKBIT_DOWNLOAD_ERROR fail while downloading the update package.
  */
 enum hawkbit_response hawkbit_probe(void);
+
+/**
+ * @brief Request system to reboot.
+ */
+void hawkbit_reboot(void);
 
 /**
  * @}

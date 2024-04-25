@@ -914,13 +914,13 @@ static int priv_clock_enable(void)
 		return -ENODEV;
 	}
 
-#if defined(PWR_USBSCR_USB33SV)
+#if defined(PWR_USBSCR_USB33SV) || defined(PWR_SVMCR_USV)
 	/*
 	 * VDDUSB independent USB supply (PWR clock is on)
 	 * with LL_PWR_EnableVDDUSB function (higher case)
 	 */
 	LL_PWR_EnableVDDUSB();
-#endif /* PWR_USBSCR_USB33SV */
+#endif /* PWR_USBSCR_USB33SV or PWR_SVMCR_USV */
 #if defined(CONFIG_SOC_SERIES_STM32H7X)
 	LL_PWR_EnableUSBVoltageDetector();
 
@@ -988,14 +988,16 @@ static int priv_clock_enable(void)
 	 */
 	LL_AHB1_GRP1_DisableClockSleep(LL_AHB1_GRP1_PERIPH_USB2OTGHSULPI);
 #endif
-#else
+#else /* DT_HAS_COMPAT_STATUS_OKAY(st_stm32_usbphyc) */
+#if !USB_OTG_HS_ULPI_PHY
 	/* Disable ULPI interface (for external high-speed PHY) clock in low
 	 * power mode. It is disabled by default in run power mode, no need to
 	 * disable it.
 	 */
 	LL_AHB1_GRP1_DisableClockLowPower(LL_AHB1_GRP1_PERIPH_OTGHSULPI);
-#endif
-#endif
+#endif /* USB_OTG_HS_ULPI_PHY */
+#endif /* DT_HAS_COMPAT_STATUS_OKAY(st_stm32_usbphyc) */
+#endif /* DT_HAS_COMPAT_STATUS_OKAY(st_stm32_otghs) */
 
 	return 0;
 }

@@ -209,7 +209,7 @@ static void set_sw_update_state(struct lwm2m_swmgmt_data *instance, uint8_t stat
 						   instance->obj_inst_id,
 						   SWMGMT_UPDATE_STATE_ID);
 
-	ret = lwm2m_set_u8(obj_path, state);
+	ret = lwm2m_set_u8(&obj_path, state);
 	if (ret != 0) {
 		LOG_ERR("Could not set state");
 	}
@@ -794,4 +794,4 @@ static int lwm2m_swmgmt_init(void)
 	return 0;
 }
 
-SYS_INIT(lwm2m_swmgmt_init, APPLICATION, CONFIG_KERNEL_INIT_PRIORITY_DEFAULT);
+LWM2M_OBJ_INIT(lwm2m_swmgmt_init);

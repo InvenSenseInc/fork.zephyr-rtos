@@ -5,6 +5,8 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
+#include <version.h>
+
 #include <zephyr/sys/printk.h>
 #include <zephyr/shell/shell.h>
 #include <zephyr/init.h>
@@ -32,15 +34,10 @@
 static int cmd_kernel_version(const struct shell *sh,
 			      size_t argc, char **argv)
 {
-	uint32_t version = sys_kernel_version_get();
-
 	ARG_UNUSED(argc);
 	ARG_UNUSED(argv);
 
-	shell_print(sh, "Zephyr version %d.%d.%d",
-		      SYS_KERNEL_VER_MAJOR(version),
-		      SYS_KERNEL_VER_MINOR(version),
-		      SYS_KERNEL_VER_PATCHLEVEL(version));
+	shell_print(sh, "Zephyr version %s", KERNEL_VERSION_STRING);
 	return 0;
 }
 
@@ -197,11 +194,12 @@ static int cmd_kernel_threads(const struct shell *sh,
 	shell_print(sh, "Scheduler: %u since last call", sys_clock_elapsed());
 	shell_print(sh, "Threads:");
 
-#ifdef CONFIG_SMP
+	/*
+	 * Use the unlocked version as the callback itself might call
+	 * arch_irq_unlock.
+	 */
 	k_thread_foreach_unlocked(shell_tdata_dump, (void *)sh);
-#else
-	k_thread_foreach(shell_tdata_dump, (void *)sh);
-#endif
+
 	return 0;
 }
 
@@ -245,11 +243,11 @@ static int cmd_kernel_stacks(const struct shell *sh,
 
 	memset(pad, ' ', MAX((THREAD_MAX_NAM_LEN - strlen("IRQ 00")), 1));
 
-#ifdef CONFIG_SMP
+	/*
+	 * Use the unlocked version as the callback itself might call
+	 * arch_irq_unlock.
+	 */
 	k_thread_foreach_unlocked(shell_stack_dump, (void *)sh);
-#else
-	k_thread_foreach(shell_stack_dump, (void *)sh);
-#endif
 
 	/* Placeholder logic for interrupt stack until we have better
 	 * kernel support, including dumping arch-specific exception-related
@@ -259,7 +257,7 @@ static int cmd_kernel_stacks(const struct shell *sh,
 
 	for (int i = 0; i < num_cpus; i++) {
 		size_t unused;
-		const uint8_t *buf = Z_KERNEL_STACK_BUFFER(z_interrupt_stacks[i]);
+		const uint8_t *buf = K_KERNEL_STACK_BUFFER(z_interrupt_stacks[i]);
 		size_t size = K_KERNEL_STACK_SIZEOF(z_interrupt_stacks[i]);
 		int err = z_stack_space_get(buf, size, &unused);
 

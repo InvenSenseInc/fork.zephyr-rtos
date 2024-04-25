@@ -27,7 +27,7 @@
 #endif
 
 #if defined(CONFIG_INPUT)
-	ITERABLE_SECTION_ROM(input_listener, 4)
+	ITERABLE_SECTION_ROM(input_callback, 4)
 #endif
 
 #if defined(CONFIG_EMUL)
@@ -36,6 +36,7 @@
 
 #if defined(CONFIG_ZBUS)
 	ITERABLE_SECTION_ROM(zbus_channel, 4)
+	ITERABLE_SECTION_ROM(zbus_observer, 4)
 	ITERABLE_SECTION_ROM(zbus_channel_observation, 4)
 #endif /* CONFIG_ZBUS */
 

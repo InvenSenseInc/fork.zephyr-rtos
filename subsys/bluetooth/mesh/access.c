@@ -174,7 +174,7 @@ static void data_buf_add_le16_offset(struct net_buf_simple *buf,
 	}
 }
 
-static void data_buf_add_mem_offset(struct net_buf_simple *buf, uint8_t *data, size_t len,
+static void data_buf_add_mem_offset(struct net_buf_simple *buf, const uint8_t *data, size_t len,
 				    size_t *offset)
 {
 	if (*offset >= len) {
@@ -694,13 +694,13 @@ static int bt_mesh_comp_data_get_page_2(struct net_buf_simple *buf, size_t offse
 		data_buf_add_u8_offset(buf, dev_comp2->record[i].version.z, &offset);
 		data_buf_add_u8_offset(buf, dev_comp2->record[i].elem_offset_cnt, &offset);
 		if (dev_comp2->record[i].elem_offset_cnt) {
-			data_buf_add_mem_offset(buf, (uint8_t *)dev_comp2->record[i].elem_offset,
+			data_buf_add_mem_offset(buf, dev_comp2->record[i].elem_offset,
 						dev_comp2->record[i].elem_offset_cnt, &offset);
 		}
 
 		data_buf_add_le16_offset(buf, dev_comp2->record[i].data_len, &offset);
 		if (dev_comp2->record[i].data_len) {
-			data_buf_add_mem_offset(buf, (uint8_t *)dev_comp2->record[i].data,
+			data_buf_add_mem_offset(buf, dev_comp2->record[i].data,
 						dev_comp2->record[i].data_len, &offset);
 		}
 	}
@@ -922,7 +922,7 @@ static void mod_publish(struct k_work *work)
 		return;
 	}
 
-	LOG_DBG("%u", k_uptime_get_32());
+	LOG_DBG("timestamp: %u", k_uptime_get_32());
 
 	if (pub->count) {
 		pub->count--;
@@ -1066,13 +1066,13 @@ int bt_mesh_comp_register(const struct bt_mesh_comp *comp)
 
 	err = 0;
 
-	if (IS_ENABLED(CONFIG_BT_MESH_COMP_PAGE_1)) {
+	if (MOD_REL_LIST_SIZE > 0) {
 		memset(mod_rel_list, 0, sizeof(mod_rel_list));
 	}
 
 	bt_mesh_model_foreach(mod_init, &err);
 
-	if (IS_ENABLED(CONFIG_BT_MESH_COMP_PAGE_1)) {
+	if (MOD_REL_LIST_SIZE > 0) {
 		int i;
 
 		MOD_REL_LIST_FOR_EACH(i) {
@@ -1504,6 +1504,10 @@ static int element_model_recv(struct bt_mesh_msg_ctx *ctx, struct net_buf_simple
 		return ACCESS_STATUS_MESSAGE_NOT_UNDERSTOOD;
 	}
 
+	if (IS_ENABLED(CONFIG_BT_MESH_ACCESS_DELAYABLE_MSG_CTX_ENABLED)) {
+		ctx->rnd_delay = true;
+	}
+
 	net_buf_simple_save(buf, &state);
 	err = op->func(model, ctx, buf);
 	net_buf_simple_restore(buf, &state);
@@ -1541,22 +1545,42 @@ int bt_mesh_model_recv(struct bt_mesh_msg_ctx *ctx, struct net_buf_simple *buf)
 
 		if (index >= dev_comp->elem_count) {
 			LOG_ERR("Invalid address 0x%02x", ctx->recv_dst);
-			err = ACCESS_STATUS_INVALID_ADDRESS;
+			return ACCESS_STATUS_INVALID_ADDRESS;
 		} else {
 			const struct bt_mesh_elem *elem = &dev_comp->elem[index];
 
 			err = element_model_recv(ctx, buf, elem, opcode);
 		}
 	} else {
+		err = ACCESS_STATUS_MESSAGE_NOT_UNDERSTOOD;
 		for (index = 0; index < dev_comp->elem_count; index++) {
 			const struct bt_mesh_elem *elem = &dev_comp->elem[index];
+			int err_elem;
 
-			(void)element_model_recv(ctx, buf, elem, opcode);
+			err_elem = element_model_recv(ctx, buf, elem, opcode);
+			err = err_elem == ACCESS_STATUS_SUCCESS ? err_elem : err;
 		}
 	}
 
 	if (IS_ENABLED(CONFIG_BT_MESH_ACCESS_LAYER_MSG) && msg_cb) {
 		msg_cb(opcode, ctx, buf);
+	}
+
+	return err;
+}
+
+int bt_mesh_access_recv(struct bt_mesh_msg_ctx *ctx, struct net_buf_simple *buf)
+{
+	int err;
+
+	err = bt_mesh_model_recv(ctx, buf);
+
+	if (IS_ENABLED(CONFIG_BT_MESH_ACCESS_LAYER_MSG) && msg_cb) {
+		/* Mesh assumes that the application has processed the message.
+		 * Access layer returns success to trigger RPL update and prevent
+		 * replay attack over application.
+		 */
+		err = 0;
 	}
 
 	return err;
@@ -1578,7 +1602,9 @@ int bt_mesh_model_send(const struct bt_mesh_model *model, struct bt_mesh_msg_ctx
 	}
 
 #if defined CONFIG_BT_MESH_ACCESS_DELAYABLE_MSG
-	if (ctx->rnd_delay) {
+	/* No sense to use delayable message for unicast loopback. */
+	if (ctx->rnd_delay &&
+	    !(bt_mesh_has_addr(ctx->addr) && BT_MESH_ADDR_IS_UNICAST(ctx->addr))) {
 		return bt_mesh_delayable_msg_manage(ctx, msg, bt_mesh_model_elem(model)->rt->addr,
 						    cb, cb_data);
 	}
@@ -1738,7 +1764,8 @@ static int mod_rel_register(const struct bt_mesh_model *base,
 			return 0;
 		}
 	}
-	LOG_ERR("Failed to extend");
+
+	LOG_ERR("CONFIG_BT_MESH_MODEL_EXTENSION_LIST_SIZE is too small");
 	return -ENOMEM;
 }
 
@@ -1778,8 +1805,11 @@ int bt_mesh_model_extend(const struct bt_mesh_model *extending_mod,
 	}
 
 register_extension:
-	if (IS_ENABLED(CONFIG_BT_MESH_COMP_PAGE_1)) {
+	if (MOD_REL_LIST_SIZE > 0) {
 		return mod_rel_register(base_mod, extending_mod, RELATION_TYPE_EXT);
+	} else if (IS_ENABLED(CONFIG_BT_MESH_COMP_PAGE_1)) {
+		LOG_ERR("CONFIG_BT_MESH_MODEL_EXTENSION_LIST_SIZE is too small");
+		return -ENOMEM;
 	}
 
 	return 0;
@@ -1791,7 +1821,7 @@ int bt_mesh_model_correspond(const struct bt_mesh_model *corresponding_mod,
 	int i, err;
 	uint8_t cor_id = 0;
 
-	if (!IS_ENABLED(CONFIG_BT_MESH_COMP_PAGE_1)) {
+	if (MOD_REL_LIST_SIZE == 0) {
 		return -ENOTSUP;
 	}
 
@@ -2374,7 +2404,6 @@ size_t bt_mesh_comp_page_size(uint8_t page)
 
 int bt_mesh_comp_store(void)
 {
-#if IS_ENABLED(CONFIG_BT_MESH_V1d1)
 	NET_BUF_SIMPLE_DEFINE(buf, CONFIG_BT_MESH_COMP_PST_BUF_SIZE);
 	int err;
 
@@ -2404,7 +2433,7 @@ int bt_mesh_comp_store(void)
 
 		LOG_DBG("Stored CDP%d", comp_data_pages[i].page);
 	}
-#endif
+
 	return 0;
 }
 

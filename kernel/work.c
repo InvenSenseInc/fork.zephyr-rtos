@@ -63,18 +63,14 @@ static inline uint32_t flags_get(const uint32_t *flagp)
 static struct k_spinlock lock;
 
 /* Invoked by work thread */
-static void handle_flush(struct k_work *work)
-{
-	struct z_work_flusher *flusher
-		= CONTAINER_OF(work, struct z_work_flusher, work);
-
-	k_sem_give(&flusher->sem);
-}
+static void handle_flush(struct k_work *work) { }
 
 static inline void init_flusher(struct z_work_flusher *flusher)
 {
+	struct k_work *work = &flusher->work;
 	k_sem_init(&flusher->sem, 0, 1);
 	k_work_init(&flusher->work, handle_flush);
+	flag_set(&work->flags, K_WORK_FLUSHING_BIT);
 }
 
 /* List of pending cancellations. */
@@ -95,6 +91,26 @@ static inline void init_work_cancel(struct z_work_canceller *canceler,
 	canceler->work = work;
 	sys_slist_append(&pending_cancels, &canceler->node);
 }
+
+/* Complete flushing of a work item.
+ *
+ * Invoked with work lock held.
+ *
+ * Invoked from a work queue thread.
+ *
+ * Reschedules.
+ *
+ * @param work the work structure that has completed flushing.
+ */
+static void finalize_flush_locked(struct k_work *work)
+{
+	struct z_work_flusher *flusher
+		= CONTAINER_OF(work, struct z_work_flusher, work);
+
+	flag_clear(&work->flags, K_WORK_FLUSHING_BIT);
+
+	k_sem_give(&flusher->sem);
+};
 
 /* Complete cancellation of a work item and unlock held lock.
  *
@@ -125,9 +141,9 @@ static void finalize_cancel_locked(struct k_work *work)
 		if (wc->work == work) {
 			sys_slist_remove(&pending_cancels, prev, &wc->node);
 			k_sem_give(&wc->sem);
-		} else {
-			prev = &wc->node;
+			break;
 		}
+		prev = &wc->node;
 	}
 }
 
@@ -455,7 +471,7 @@ bool k_work_flush(struct k_work *work,
 	__ASSERT_NO_MSG(sync != NULL);
 #ifdef CONFIG_KERNEL_COHERENCE
 	__ASSERT_NO_MSG(arch_mem_coherent(sync));
-#endif
+#endif /* CONFIG_KERNEL_COHERENCE */
 
 	SYS_PORT_TRACING_OBJ_FUNC_ENTER(k_work, flush, work);
 
@@ -567,7 +583,7 @@ bool k_work_cancel_sync(struct k_work *work,
 	__ASSERT_NO_MSG(!k_is_in_isr());
 #ifdef CONFIG_KERNEL_COHERENCE
 	__ASSERT_NO_MSG(arch_mem_coherent(sync));
-#endif
+#endif /* CONFIG_KERNEL_COHERENCE */
 
 	SYS_PORT_TRACING_OBJ_FUNC_ENTER(k_work, cancel_sync, work, sync);
 
@@ -672,13 +688,16 @@ static void work_queue_main(void *workq_ptr, void *p2, void *p3)
 		handler(work);
 
 		/* Mark the work item as no longer running and deal
-		 * with any cancellation issued while it was running.
-		 * Clear the BUSY flag and optionally yield to prevent
-		 * starving other threads.
+		 * with any cancellation and flushing issued while it
+		 * was running.  Clear the BUSY flag and optionally
+		 * yield to prevent starving other threads.
 		 */
 		key = k_spin_lock(&lock);
 
 		flag_clear(&work->flags, K_WORK_RUNNING_BIT);
+		if (flag_test(&work->flags, K_WORK_FLUSHING_BIT)) {
+			finalize_flush_locked(work);
+		}
 		if (flag_test(&work->flags, K_WORK_CANCELING_BIT)) {
 			finalize_cancel_locked(work);
 		}
@@ -1047,7 +1066,7 @@ bool k_work_cancel_delayable_sync(struct k_work_delayable *dwork,
 	__ASSERT_NO_MSG(!k_is_in_isr());
 #ifdef CONFIG_KERNEL_COHERENCE
 	__ASSERT_NO_MSG(arch_mem_coherent(sync));
-#endif
+#endif /* CONFIG_KERNEL_COHERENCE */
 
 	SYS_PORT_TRACING_OBJ_FUNC_ENTER(k_work, cancel_delayable_sync, dwork, sync);
 
@@ -1079,7 +1098,7 @@ bool k_work_flush_delayable(struct k_work_delayable *dwork,
 	__ASSERT_NO_MSG(!k_is_in_isr());
 #ifdef CONFIG_KERNEL_COHERENCE
 	__ASSERT_NO_MSG(arch_mem_coherent(sync));
-#endif
+#endif /* CONFIG_KERNEL_COHERENCE */
 
 	SYS_PORT_TRACING_OBJ_FUNC_ENTER(k_work, flush_delayable, dwork, sync);
 

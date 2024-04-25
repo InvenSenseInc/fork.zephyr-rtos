@@ -29,6 +29,8 @@ extern "C" {
 
 /**
  * @defgroup ieee802154_driver IEEE 802.15.4 Drivers
+ * @since 1.0
+ * @version 0.8.0
  * @ingroup ieee802154
  *
  * @brief IEEE 802.15.4 driver API
@@ -1241,6 +1243,15 @@ struct ieee802154_config {
 			 * in CPU byte order
 			 */
 			uint16_t short_addr;
+
+			/**
+			 * Flag for purging enh ACK header IEs.
+			 * When flag is set to true, driver should remove all existing
+			 * header IEs, and all other entries in config should be ignored.
+			 * This means that purging current header IEs and
+			 * configuring a new one in the same call is not allowed.
+			 */
+			bool purge_ie;
 		} ack_ie;
 	};
 };

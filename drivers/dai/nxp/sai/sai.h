@@ -7,6 +7,7 @@
 #define ZEPHYR_DRIVERS_DAI_NXP_SAI_H_
 
 #include <zephyr/drivers/clock_control.h>
+#include <zephyr/drivers/pinctrl.h>
 #include <zephyr/logging/log.h>
 #include <fsl_sai.h>
 
@@ -101,13 +102,13 @@ LOG_MODULE_REGISTER(nxp_dai_sai);
 	DT_INST_PROP_OR(inst, rx_fifo_watermark,\
 			FSL_FEATURE_SAI_FIFO_COUNTn(UINT_TO_I2S(DT_INST_REG_ADDR(inst))) / 2)
 
-/* used to retrieve TFR0's address based on SAI's physical address */
-#define SAI_TX_FIFO_BASE(inst)\
-	FSL_FEATURE_SAI_TX_FIFO_BASEn(UINT_TO_I2S(DT_INST_REG_ADDR(inst)), 0)
+/* used to retrieve TDR0's address based on SAI's physical address */
+#define SAI_TX_FIFO_BASE(inst, idx)\
+	POINTER_TO_UINT(&(UINT_TO_I2S(DT_INST_REG_ADDR(inst))->TDR[idx]))
 
-/* used to retrieve RFR0's address based on SAI's physical address */
-#define SAI_RX_FIFO_BASE(inst)\
-	FSL_FEATURE_SAI_RX_FIFO_BASEn(UINT_TO_I2S(DT_INST_REG_ADDR(inst)), 0)
+/* used to retrieve RDR0's address based on SAI's physical address */
+#define SAI_RX_FIFO_BASE(inst, idx)\
+	POINTER_TO_UINT(&(UINT_TO_I2S(DT_INST_REG_ADDR(inst))->RDR[idx]))
 
 /* internal macro used to retrieve the default TX/RX FIFO's size (in FIFO words) */
 #define _SAI_FIFO_DEPTH(inst)\
@@ -124,6 +125,37 @@ LOG_MODULE_REGISTER(nxp_dai_sai);
 /* used to retrieve the DMA MUX for receiver */
 #define SAI_RX_DMA_MUX(inst)\
 	FSL_FEATURE_SAI_RX_DMA_MUXn(UINT_TO_I2S(DT_INST_REG_ADDR(inst)))
+
+/* used to retrieve the synchronization mode of the transmitter. If this
+ * property is not specified, ASYNC mode will be used.
+ */
+#define SAI_TX_SYNC_MODE(inst)\
+	DT_INST_PROP_OR(inst, tx_sync_mode, kSAI_ModeAsync)
+
+/* used to retrieve the synchronization mode of the receiver. If this property
+ * is not specified, ASYNC mode will be used.
+ */
+#define SAI_RX_SYNC_MODE(inst)\
+	DT_INST_PROP_OR(inst, rx_sync_mode, kSAI_ModeAsync)
+
+/* used to retrieve the handshake value for given direction. The handshake
+ * is computed as follows:
+ *	handshake = CHANNEL_ID | (MUX_VALUE << 8)
+ * The channel ID and MUX value are each encoded in 8 bits.
+ */
+#define SAI_TX_RX_DMA_HANDSHAKE(inst, dir)\
+	((DT_INST_DMAS_CELL_BY_NAME(inst, dir, channel) & GENMASK(7, 0)) |\
+	 ((DT_INST_DMAS_CELL_BY_NAME(inst, dir, mux) << 8) & GENMASK(15, 8)))
+
+/* used to retrieve the number of supported transmission/receive lines */
+#define SAI_DLINE_COUNT(inst)\
+	FSL_FEATURE_SAI_CHANNEL_COUNTn(UINT_TO_I2S(DT_INST_REG_ADDR(inst)))
+
+/* used to retrieve the index of the transmission line */
+#define SAI_TX_DLINE_INDEX(inst) DT_INST_PROP_OR(inst, tx_dataline, 0)
+
+/* used to retrieve the index of the receive line */
+#define SAI_RX_DLINE_INDEX(inst) DT_INST_PROP_OR(inst, rx_dataline, 0)
 
 /* utility macros */
 
@@ -178,6 +210,28 @@ LOG_MODULE_REGISTER(nxp_dai_sai);
 	((dir) == DAI_DIR_RX ? ((UINT_TO_I2S(regmap))->RCSR & (which)) : \
 	 ((UINT_TO_I2S(regmap))->TCSR & (which)))
 
+/* used to retrieve the SYNC direction. Use this macro when you know for sure
+ * you have 1 SYNC direction with 1 ASYNC direction.
+ */
+#define SAI_TX_RX_GET_SYNC_DIR(cfg)\
+	((cfg)->tx_sync_mode == kSAI_ModeSync ? DAI_DIR_TX : DAI_DIR_RX)
+
+/* used to retrieve the ASYNC direction. Use this macro when you know for sure
+ * you have 1 SYNC direction with 1 ASYNC direction.
+ */
+#define SAI_TX_RX_GET_ASYNC_DIR(cfg)\
+	((cfg)->tx_sync_mode == kSAI_ModeAsync ? DAI_DIR_TX : DAI_DIR_RX)
+
+/* used to check if transmitter/receiver is SW enabled */
+#define SAI_TX_RX_DIR_IS_SW_ENABLED(dir, data)\
+	((dir) == DAI_DIR_TX ? data->tx_enabled : data->rx_enabled)
+
+/* used to compute the mask for the transmission/receive lines based on
+ * the index passed from the DTS.
+ */
+#define SAI_TX_RX_DLINE_MASK(dir, cfg)\
+	((dir) == DAI_DIR_TX ? BIT((cfg)->tx_dline) : BIT((cfg)->rx_dline))
+
 struct sai_clock_data {
 	uint32_t *clocks;
 	uint32_t clock_num;
@@ -211,7 +265,14 @@ struct sai_config {
 	const struct dai_properties *tx_props;
 	const struct dai_properties *rx_props;
 	uint32_t dai_index;
+	/* RX synchronization mode - may be SYNC or ASYNC */
+	sai_sync_mode_t rx_sync_mode;
+	/* TX synchronization mode - may be SYNC or ASYNC */
+	sai_sync_mode_t tx_sync_mode;
 	void (*irq_config)(void);
+	uint32_t tx_dline;
+	uint32_t rx_dline;
+	const struct pinctrl_dev_config *pincfg;
 };
 
 /* this needs to perfectly match SOF's struct sof_ipc_dai_sai_params */

@@ -16,6 +16,7 @@
 
 #include <zephyr/device.h>
 #include <zephyr/usb/usb_ch9.h>
+#include <zephyr/usb/usbd_msg.h>
 #include <zephyr/net/buf.h>
 #include <zephyr/sys/byteorder.h>
 #include <zephyr/sys/slist.h>
@@ -167,6 +168,8 @@ struct usbd_contex {
 	struct k_mutex mutex;
 	/** Pointer to UDC device */
 	const struct device *dev;
+	/** Notification message recipient callback */
+	usbd_msg_cb_t msg_cb;
 	/** Middle layer runtime data */
 	struct usbd_ch9_data ch9_data;
 	/** slist to manage descriptors like string, bos */
@@ -225,6 +228,9 @@ struct usbd_class_api {
 
 	/** USB power management handler resumed */
 	void (*resumed)(struct usbd_class_node *const node);
+
+	/** Start of Frame */
+	void (*sof)(struct usbd_class_node *const node);
 
 	/** Class associated configuration is selected */
 	void (*enable)(struct usbd_class_node *const node);
@@ -498,6 +504,17 @@ int usbd_unregister_class(struct usbd_contex *uds_ctx,
 			  uint8_t cfg);
 
 /**
+ * @brief Register USB notification message callback
+ *
+ * @param[in] uds_ctx Pointer to USB device support context
+ * @param[in] cb      Pointer to message callback function
+ *
+ * @return 0 on success, other values on fail.
+ */
+int usbd_msg_register_cb(struct usbd_contex *const uds_ctx,
+			 const usbd_msg_cb_t cb);
+
+/**
  * @brief Initialize USB device
  *
  * Initialize USB device descriptors and configuration,
@@ -703,16 +720,16 @@ int usbd_device_set_pid(struct usbd_contex *const uds_ctx,
 /**
  * @brief Set USB device descriptor code triple Base Class, SubClass, and Protocol
  *
- * @param[in] uds_ctx  Pointer to USB device support context
- * @param[in] class    bDeviceClass value
- * @param[in] subclass bDeviceSubClass value
- * @param[in] protocol bDeviceProtocol value
+ * @param[in] uds_ctx    Pointer to USB device support context
+ * @param[in] base_class bDeviceClass value
+ * @param[in] subclass   bDeviceSubClass value
+ * @param[in] protocol   bDeviceProtocol value
  *
  * @return 0 on success, other values on fail.
  */
 int usbd_device_set_code_triple(struct usbd_contex *const uds_ctx,
-				const uint8_t class, const uint8_t subclass,
-				const uint8_t protocol);
+				const uint8_t base_class,
+				const uint8_t subclass, const uint8_t protocol);
 
 /**
  * @brief Setup USB device configuration attribute Remote Wakeup

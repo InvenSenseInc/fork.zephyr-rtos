@@ -164,11 +164,17 @@ Firmware metadata
 |                        |              | in the New firmware core type field.   |
 +------------------------+--------------+----------------------------------------+
 | Application-specific   | <variable>   | Application-specific data to allow     |
-| data for new firmware  | (Optional)   | application to execut some             |
+| data for new firmware  | (Optional)   | application to execute some            |
 |                        |              | vendor-specific behaviors using        |
 |                        |              | this data before it can respond        |
 |                        |              | with a status message.                 |
 +------------------------+--------------+----------------------------------------+
+
+  .. note::
+
+      The AES-CMAC algorithm serves as a hashing function with a fixed key and is not used for
+      encryption in Bluetooth Mesh DFU metadata. The resulting hash is not secure since the key is
+      known.
 
 Firmware URI
    The firmware URI gives the Initiator information about where firmware updates for the image can
