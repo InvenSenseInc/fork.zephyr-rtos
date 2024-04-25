@@ -977,18 +977,11 @@ static int icm42x7x_sensor_init(const struct device *dev)
 		return err;
 	}
 
-	if ((data->chip_id != INV_IMU_ICM42670P_WHOAMI) &&
-	    (data->chip_id != INV_IMU_ICM42670S_WHOAMI)) {
-		LOG_ERR("bad chip id 0x%x", data->chip_id);
+	if (data->chip_id != INV_IMU_WHOAMI) {
+		LOG_ERR("bad chip id 0x%x for %s", data->chip_id, INV_IMU_STRING_ID);
 		return -ENOTSUP;
 	}
-
-	if (data->chip_id == INV_IMU_ICM42670P_WHOAMI) {
-		LOG_DBG("\"%s\" ICM-42670-P OK", dev->name);
-	}
-	if (data->chip_id == INV_IMU_ICM42670S_WHOAMI) {
-		LOG_DBG("\"%s\" ICM-42670-S OK", dev->name);
-	}
+	
 	return err;
 }
 
