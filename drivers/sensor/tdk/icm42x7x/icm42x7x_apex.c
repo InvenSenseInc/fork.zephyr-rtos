@@ -4,12 +4,12 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-#include "icm42670.h"
+#include "icm42x7x.h"
 #include "imu/inv_imu_apex.h"
 
 #if defined(CONFIG_TDK_APEX_PEDOMETER) || defined(CONFIG_TDK_APEX_TILT) ||                         \
 	defined(CONFIG_TDK_APEX_SMD)
-int icm42670_apex_enable(inv_imu_device_t *s)
+int icm42x7x_apex_enable(inv_imu_device_t *s)
 {
 	int err = 0;
 	inv_imu_apex_parameters_t apex_inputs;
@@ -51,18 +51,18 @@ int icm42670_apex_enable(inv_imu_device_t *s)
 #endif
 
 #ifdef CONFIG_TDK_APEX_PEDOMETER
-int icm42670_apex_enable_pedometer(const struct device *dev, inv_imu_device_t *s)
+int icm42x7x_apex_enable_pedometer(const struct device *dev, inv_imu_device_t *s)
 {
-	struct icm42670_data *data = dev->data;
+	struct icm42x7x_data *data = dev->data;
 
 	data->dmp_odr_hz = 50;
 	/* Enable the pedometer */
 	return inv_imu_apex_enable_pedometer(s);
 }
 
-int icm42670_apex_pedometer_fetch_from_dmp(const struct device *dev)
+int icm42x7x_apex_pedometer_fetch_from_dmp(const struct device *dev)
 {
-	struct icm42670_data *data = dev->data;
+	struct icm42x7x_data *data = dev->data;
 	int rc = 0;
 	uint8_t int_status3;
 
@@ -93,7 +93,7 @@ int icm42670_apex_pedometer_fetch_from_dmp(const struct device *dev)
 	return rc;
 }
 
-void icm42670_apex_pedometer_cadence_convert(struct sensor_value *val, uint8_t raw_val,
+void icm42x7x_apex_pedometer_cadence_convert(struct sensor_value *val, uint8_t raw_val,
 					     uint8_t dmp_odr_hz)
 {
 	int64_t conv_val;
@@ -106,15 +106,15 @@ void icm42670_apex_pedometer_cadence_convert(struct sensor_value *val, uint8_t r
 #endif /* CONFIG_TDK_APEX_PEDOMETER */
 
 #ifdef CONFIG_TDK_APEX_TILT
-int icm42670_apex_enable_tilt(inv_imu_device_t *s)
+int icm42x7x_apex_enable_tilt(inv_imu_device_t *s)
 {
 	/* Enable the pedometer */
 	return inv_imu_apex_enable_tilt(s);
 }
 
-int icm42670_apex_tilt_fetch_from_dmp(const struct device *dev)
+int icm42x7x_apex_tilt_fetch_from_dmp(const struct device *dev)
 {
-	struct icm42670_data *data = dev->data;
+	struct icm42x7x_data *data = dev->data;
 	int rc = 0;
 	uint8_t int_status3;
 
@@ -129,7 +129,7 @@ int icm42670_apex_tilt_fetch_from_dmp(const struct device *dev)
 #endif /* CONFIG_TDK_APEX_TILT */
 
 #ifdef CONFIG_TDK_APEX_SMD
-int icm42670_apex_enable_smd(inv_imu_device_t *s)
+int icm42x7x_apex_enable_smd(inv_imu_device_t *s)
 {
 	int rc = 0;
 
@@ -140,9 +140,9 @@ int icm42670_apex_enable_smd(inv_imu_device_t *s)
 	return rc;
 }
 
-int icm42670_apex_smd_fetch_from_dmp(const struct device *dev)
+int icm42x7x_apex_smd_fetch_from_dmp(const struct device *dev)
 {
-	struct icm42670_data *data = dev->data;
+	struct icm42x7x_data *data = dev->data;
 	int rc = 0;
 	uint8_t int_status2;
 
@@ -158,7 +158,7 @@ int icm42670_apex_smd_fetch_from_dmp(const struct device *dev)
 #endif /* CONFIG_TDK_APEX_SMD */
 
 #ifdef CONFIG_TDK_APEX_WOM
-int icm42670_apex_enable_wom(inv_imu_device_t *s)
+int icm42x7x_apex_enable_wom(inv_imu_device_t *s)
 {
 	int rc = 0;
 	inv_imu_interrupt_parameter_t config_int = {(inv_imu_interrupt_value)0};
@@ -193,9 +193,9 @@ int icm42670_apex_enable_wom(inv_imu_device_t *s)
 	return rc;
 }
 
-int icm42670_apex_wom_fetch_from_dmp(const struct device *dev)
+int icm42x7x_apex_wom_fetch_from_dmp(const struct device *dev)
 {
-	struct icm42670_data *data = dev->data;
+	struct icm42x7x_data *data = dev->data;
 	int rc = 0;
 	uint8_t int_status2;
 

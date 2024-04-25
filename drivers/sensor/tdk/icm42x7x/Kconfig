@@ -1,0 +1,81 @@
+# Six-Axis Motion Tracking device :
+# ICM42670-P ICM42670-S ICM42671-P ICM42671-S 
+# Three-Axis Motion Tracking device :
+# ICM42370-P
+# Configuration options :
+#
+# Copyright (c) 2024 TDK Invensense
+# Copyright (c) 2022 Esco Medical ApS
+# Copyright (c) 2020 TDK Invensense
+# SPDX-License-Identifier: Apache-2.0
+
+menuconfig ICM42X7X
+	bool "ICM42X7X 6-Axis or 3-Axis Motion Tracking Device"
+	default y
+	depends on DT_HAS_INVENSENSE_ICM42X7X_ENABLED
+	select I2C if $(dt_compat_on_bus,$(DT_COMPAT_INVENSENSE_ICM42X7X),i2c)
+	select SPI if $(dt_compat_on_bus,$(DT_COMPAT_INVENSENSE_ICM42X7X),spi)
+	help
+	  Enable driver for ICM42X7X I2C-based or SPI-based Six-Axis or Three-Axis Motion Tracking device.
+
+if ICM42X7X
+
+config ICM42X7X_APEX
+	bool "ICM42X7X APEX features"
+	default n
+
+choice APEX_FEATURES
+	prompt "ICM42X7X APEX features"
+	depends on ICM42X7X_APEX
+	default TDK_APEX_PEDOMETER
+	help
+	  Select APEX feature for ICM42X7X sensor.
+config TDK_APEX_PEDOMETER
+	bool "Pedometer: Tracks step count"
+config TDK_APEX_TILT
+	bool "Tilt Detection: Detect the Tilt angle exceeds 35 degrees"
+config TDK_APEX_SMD
+	bool "Significant Motion Detector (SMD): Detects significant motion based on accelerometer data"
+config TDK_APEX_WOM
+	bool "Wake on Motion (WoM): Detects motion when accelerometer samples exceed a programmable threshold"
+endchoice
+
+choice ICM42X7X_TRIGGER_MODE
+	prompt "Trigger mode"
+	default ICM42X7X_TRIGGER_NONE
+	help
+	  Specify the type of triggering to be used by the driver.
+
+config ICM42X7X_TRIGGER_NONE
+	bool "No trigger"
+
+config ICM42X7X_TRIGGER_GLOBAL_THREAD
+	bool "Use global thread"
+	depends on GPIO
+	select ICM42X7X_TRIGGER
+
+config ICM42X7X_TRIGGER_OWN_THREAD
+	bool "Use own thread"
+	depends on GPIO
+	select ICM42X7X_TRIGGER
+
+endchoice
+
+config ICM42X7X_TRIGGER
+	bool
+
+config ICM42X7X_THREAD_PRIORITY
+	int "Thread priority"
+	depends on ICM42X7X_TRIGGER_OWN_THREAD
+	default 10
+	help
+	  Priority of thread used by the driver to handle interrupts.
+
+config ICM42X7X_THREAD_STACK_SIZE
+	int "Thread stack size"
+	depends on ICM42X7X_TRIGGER_OWN_THREAD
+	default 1024
+	help
+	  Stack size of thread used by the driver to handle interrupts.
+
+endif # ICM42X7X

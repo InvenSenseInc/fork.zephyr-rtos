@@ -7,22 +7,22 @@
  */
 
 /*
- * Bus-specific functionality for ICM42670 accessed via SPI.
+ * Bus-specific functionality for ICM42X7X accessed via SPI.
  */
 
-#include "icm42670.h"
+#include "icm42x7x.h"
 
-#if ICM42670_BUS_SPI
+#if ICM42X7X_BUS_SPI
 
 #include <zephyr/logging/log.h>
-LOG_MODULE_DECLARE(ICM42670, CONFIG_SENSOR_LOG_LEVEL);
+LOG_MODULE_DECLARE(ICM42X7X, CONFIG_SENSOR_LOG_LEVEL);
 
-static int icm42670_bus_check_spi(const union icm42670_bus *bus)
+static int icm42x7x_bus_check_spi(const union icm42x7x_bus *bus)
 {
 	return spi_is_ready_dt(&bus->spi) ? 0 : -ENODEV;
 }
 
-static int icm42670_reg_read_spi(const union icm42670_bus *bus, uint8_t start, uint8_t *buf,
+static int icm42x7x_reg_read_spi(const union icm42x7x_bus *bus, uint8_t start, uint8_t *buf,
 				 uint32_t size)
 {
 	uint8_t cmd[] = {(start | 0x80)};
@@ -46,7 +46,7 @@ static int icm42670_reg_read_spi(const union icm42670_bus *bus, uint8_t start, u
 	return 0;
 }
 
-static int icm42670_reg_write_spi(const union icm42670_bus *bus, uint8_t reg, uint8_t *buf,
+static int icm42x7x_reg_write_spi(const union icm42x7x_bus *bus, uint8_t reg, uint8_t *buf,
 				  uint32_t size)
 {
 	uint8_t cmd[] = {reg & 0x7F};
@@ -62,9 +62,9 @@ static int icm42670_reg_write_spi(const union icm42670_bus *bus, uint8_t reg, ui
 	return 0;
 }
 
-const struct icm42670_bus_io icm42670_bus_io_spi = {
-	.check = icm42670_bus_check_spi,
-	.read = icm42670_reg_read_spi,
-	.write = icm42670_reg_write_spi,
+const struct icm42x7x_bus_io icm42x7x_bus_io_spi = {
+	.check = icm42x7x_bus_check_spi,
+	.read = icm42x7x_reg_read_spi,
+	.write = icm42x7x_reg_write_spi,
 };
-#endif /* ICM42670_BUS_SPI */
+#endif /* ICM42X7X_BUS_SPI */

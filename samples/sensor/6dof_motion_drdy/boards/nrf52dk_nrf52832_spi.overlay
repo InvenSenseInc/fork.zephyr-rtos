@@ -9,7 +9,7 @@
  */
 / {
 	aliases {
-		6dof-motion-drdy0 = &icm42670;
+		6dof-motion-drdy0 = &icm42x7x;
 	};
 };
 
@@ -20,8 +20,8 @@
 &arduino_spi {
 	status = "okay";
 	cs-gpios = <&arduino_header 14 GPIO_ACTIVE_LOW>; /* D8 */
-	icm42670: icm42670@0 {
-		compatible = "invensense,icm42670";
+	icm42x7x: icm42x7x@0 {
+		compatible = "invensense,icm42x7x";
 		reg = <0>;
 		spi-max-frequency = <1000000>; /* conservatively set to 1MHz */
 		int-gpios = <&arduino_header 8 GPIO_ACTIVE_HIGH>; /* D2 */

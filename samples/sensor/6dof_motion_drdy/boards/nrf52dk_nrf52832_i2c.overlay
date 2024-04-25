@@ -9,7 +9,7 @@
  */
 / {
 	aliases {
-		6dof-motion-drdy0 = &icm42670;
+		6dof-motion-drdy0 = &icm42x7x;
 	};
 };
 
@@ -23,8 +23,8 @@
  */
 &arduino_i2c {
 	status = "okay";
-	icm42670: icm42670@68 {
-		compatible = "invensense,icm42670";
+	icm42x7x: icm42x7x@68 {
+		compatible = "invensense,icm42x7x";
 		reg = <0x68>;
 		int-gpios = <&arduino_header 8 GPIO_ACTIVE_HIGH>; /* D2 */
 		accel-hz = <100>;

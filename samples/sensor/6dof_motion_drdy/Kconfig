@@ -3,11 +3,11 @@
 
 # Enable trigger to get sensor data
 # Default sensor: ICM42670 TDK 6-axis motion device
-config ICM42670_TRIGGER
+config ICM42X7X_TRIGGER
 	default y
 
-choice ICM42670_TRIGGER_MODE
-	default ICM42670_TRIGGER_OWN_THREAD
+choice ICM42X7X_TRIGGER_MODE
+	default ICM42X7X_TRIGGER_OWN_THREAD
 endchoice
 
 source "Kconfig.zephyr"

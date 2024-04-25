@@ -1,0 +1,8 @@
+# Copyright (c) 2024 TDK Invensense
+# SPDX-License-Identifier: Apache-2.0
+
+description: ICM42X7X integrated environmental sensor, accessed through I2C bus
+
+compatible: "invensense,icm42x7x"
+
+include: ["invensense,icm42x7x-common.yaml", "i2c-device.yaml"]
