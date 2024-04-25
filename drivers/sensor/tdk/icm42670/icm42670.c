@@ -527,11 +527,8 @@ static uint32_t convert_ln_bw_to_bitfield(uint32_t val)
 	} else if (val == 180) {
 		bitfield = ACCEL_CONFIG1_ACCEL_FILT_BW_180; /* (= GYRO_CONFIG1_GYRO_FILT_BW_180) */
 	} else if (val == 0) {
-		bitfield =
-			ACCEL_CONFIG1_ACCEL_FILT_BW_NO_FILTER; /*
-								* (=
-								* GYRO_CONFIG1_GYRO_FILT_BW_NO_FILTER)
-								*/
+		bitfield = ACCEL_CONFIG1_ACCEL_FILT_BW_NO_FILTER;
+		/*(= GYRO_CONFIG1_GYRO_FILT_BW_NO_FILTER)*/
 	}
 	return bitfield;
 }
@@ -1019,6 +1016,7 @@ static int icm42670_init_interrupt(const struct device *dev)
 static int icm42670_init(const struct device *dev)
 {
 	int err = icm42670_bus_check(dev);
+	
 	if (err < 0) {
 		LOG_DBG("bus check failed: %d", err);
 		return err;

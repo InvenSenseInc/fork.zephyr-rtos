@@ -18,8 +18,8 @@ properties:
     description: |
       Power mode.
       Low power mode is allowed for accelerometer sensor only from
-      1.5625Hz to 400Hz. 
-      The default is choosen to support both accelerometer and
+      1.5625Hz to 400Hz.
+      The default is chosen to support both accelerometer and
       gyroscope sensors.
     enum:
       - "low noise"
@@ -79,7 +79,7 @@ properties:
     type: int
     default: 180
     description: |
-      Accelerometer low pass filter bandwidth frequency. 
+      Accelerometer low pass filter bandwidth frequency.
       Maps to ACCEL_UI_FILT_BW field in ACCEL_CONFIG1 setting.
       The default corresponds to the reset value of the register field.
     enum:

@@ -16,7 +16,7 @@ position is held for 4 seconds.
 ** Wake on Motion (WoM): Detects motion per axis exceeding 195 mg threshold.
 ** Significant Motion Detector (SMD): Detects when the user has moved
 significantly.
-APEX feature support and teh different feature are enabled through KConfig.
+APEX feature support and the different feature are enabled through KConfig.
 
 Driver configuration
 ********************

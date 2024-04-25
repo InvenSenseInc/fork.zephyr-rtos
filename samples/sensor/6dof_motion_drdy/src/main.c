@@ -13,7 +13,7 @@
 static struct sensor_trigger data_trigger;
 
 /* Flag set from IMU device irq handler */
-static volatile int irq_from_device = 0;
+static volatile int irq_from_device;
 
 /*
  * Get a device structure from a devicetree node from alias

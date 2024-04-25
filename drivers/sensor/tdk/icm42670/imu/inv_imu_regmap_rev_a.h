@@ -1624,10 +1624,10 @@ extern "C" {
  * the FIFO/INT when the WM interrupt is triggered. The side effect is that the host can receive
  * invalid packets until the system oscillator is off after it has been turned on for other reasons
  * not related to a WM interrupt.
- * * The recommended setting of this bit is ‘1’ before entering and during all power modes excluding
+ * The recommended setting of this bit is 1 before entering and during all power modes excluding
  * ALP with WUOSC. This is in order to avoid having to do a FIFO access/flush before entering sleep
- * mode. During ALP with WUOSC it is recommended to set this bit to ‘0’. It is recommended to reset
- * this bit back to ‘1’ before exiting ALP+WUOSC with a wait time of 1 ODR or higher.
+ * mode. During ALP with WUOSC it is recommended to set this bit to 0. It is recommended to reset
+ * this bit back to 1 before exiting ALP+WUOSC with a wait time of 1 ODR or higher.
  */
 #define FIFO_CONFIG6_RCOSC_REQ_ON_FIFO_THS_DIS_POS  0x00
 #define FIFO_CONFIG6_RCOSC_REQ_ON_FIFO_THS_DIS_MASK 0x01

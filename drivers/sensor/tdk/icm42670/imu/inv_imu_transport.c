@@ -146,7 +146,8 @@ int inv_imu_switch_on_mclk(void *t)
 	} else {
 		/* Make sure it is already on */
 		status |= inv_imu_read_reg(t, PWR_MGMT0, 1, &data);
-		if (0 == (data &= PWR_MGMT0_IDLE_MASK)) {
+		data &= PWR_MGMT0_IDLE_MASK;
+		if (0 == data) {
 			status |= INV_ERROR;
 		}
 	}

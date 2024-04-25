@@ -104,8 +104,7 @@ int inv_imu_apex_disable_smd(inv_imu_device_t *s);
 int inv_imu_apex_init_parameters_struct(inv_imu_device_t *s,
 					inv_imu_apex_parameters_t *apex_inputs);
 
-/** @brief Configures DMP parameters for APEX algorithms. 
- *  @param[in] s Pointer to device.
+/** @brief Configures DMP parameters for APEX algorithms. *  @param[in] s Pointer to device.
  *  @param[in] apex_inputs  The requested input parameters.
  *  @return 0 on success, negative value on error.
  *  @warning APEX inputs can't change on the fly, this should be called before enabling any APEX

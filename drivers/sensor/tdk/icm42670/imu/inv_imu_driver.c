@@ -924,8 +924,8 @@ int inv_imu_decode_fifo_frame(inv_imu_device_t *s, const uint8_t *frame,
 #endif
 
 	/*
-	 * The coarse temperature (8 or 16B FIFO packet format)	 * range is ± 64 degrees with 0.5°C
-	 * resolution. but the fine temperature range (2 bytes) (20B FIFO packet format) is	 * ±
+	 * The coarse temperature (8 or 16B FIFO packet format) range is ±64 degrees with 0.5°C
+	 * resolution but the fine temperature range (2 bytes) (20B FIFO packet format) is ±
 	 * 256 degrees with (1/128)°C resolution
 	 */
 	if (header->bits.twentybits_bit) {

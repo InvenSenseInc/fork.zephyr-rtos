@@ -151,10 +151,9 @@ int icm42670_apex_smd_fetch_from_dmp(const struct device *dev)
 
 	if ((int_status2 & (INT_STATUS2_SMD_INT_MASK)) || (rc != 0)) {
 		return rc;
-	} else {
-		/* Pedometer & SMD data processing */
-		return 0;
-	}
+
+	/* Pedometer & SMD data processing */
+	return 0;
 }
 #endif /* CONFIG_TDK_APEX_SMD */
 
