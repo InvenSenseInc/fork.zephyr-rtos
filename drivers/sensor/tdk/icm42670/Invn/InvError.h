@@ -6,9 +6,6 @@
 
 /** @defgroup InvError Error code
  *	@brief    Common error code
- *
- *	@ingroup EmbUtils
- *	@{
  */
 
 #ifndef _INV_ERROR_H_
@@ -36,5 +33,3 @@ enum inv_error {
 };
 
 #endif /* _INV_ERROR_H_ */
-
-/** @} */

@@ -88,7 +88,7 @@ static int icm42670_fetch_from_fifo(const struct device *dev)
 
 	/* Ensure data ready status bit is set */
 	status |= inv_imu_read_reg(&data->driver, INT_STATUS, 1, &int_status);
-	if (status != INV_ERROR_SUCCESS) {
+	if (status != 0) {
 		return status;
 	}
 
@@ -103,7 +103,7 @@ static int icm42670_fetch_from_fifo(const struct device *dev)
 		status |= inv_imu_get_frame_count(&data->driver, &packet_count);
 
 		/* Check for error */
-		if (status != INV_ERROR_SUCCESS) {
+		if (status != 0) {
 			status |= inv_imu_switch_off_mclk(&data->driver);
 			return status;
 		}
@@ -113,7 +113,7 @@ static int icm42670_fetch_from_fifo(const struct device *dev)
 					   (uint8_t *)&data->driver.fifo_data);
 
 		/* Check for error */
-		if (status != INV_ERROR_SUCCESS) {
+		if (status != 0) {
 			status |= inv_imu_reset_fifo(&data->driver);
 			status |= inv_imu_switch_off_mclk(&data->driver);
 			return status;
@@ -127,7 +127,7 @@ static int icm42670_fetch_from_fifo(const struct device *dev)
 			fifo_idx += packet_size;
 
 			/* Check for error */
-			if (status != INV_ERROR_SUCCESS) {
+			if (status != 0) {
 				status |= inv_imu_reset_fifo(&data->driver);
 				status |= inv_imu_switch_off_mclk(&data->driver);
 				return status;
