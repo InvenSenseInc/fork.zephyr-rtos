@@ -1532,8 +1532,14 @@ endfunction()
 # Usage:
 #   zephyr_build_string(<out-variable>
 #                       BOARD <board>
+#                       [SHORT <out-variable>]
 #                       [BOARD_QUALIFIERS <qualifiers>]
 #                       [BOARD_REVISION <revision>]
+#                       [BUILD <type>]
+#                       [MERGE [REVERSE]]
+#   )
+#   zephyr_build_string(<out-variable>
+#                       BOARD_QUALIFIERS <qualifiers>
 #                       [BUILD <type>]
 #                       [MERGE [REVERSE]]
 #   )
@@ -1565,10 +1571,14 @@ endfunction()
 # `alpha_soc_bar_1_0_0;alpha_soc_bar` in `build_string` parameter.
 #
 # calling
-#   zephyr_build_string(build_string SHORTENED short_build_string BOARD alpha BOARD_REVISION 1.0.0 BOARD_QUALIFIERS /soc/bar MERGE)
+#   zephyr_build_string(build_string SHORT short_build_string BOARD alpha BOARD_REVISION 1.0.0 BOARD_QUALIFIERS /soc/bar MERGE)
 # will return two lists of the following strings
 # `alpha_soc_bar_1_0_0;alpha_soc_bar` in `build_string` parameter.
 # `alpha_bar_1_0_0;alpha_bar` in `short_build_string` parameter.
+#
+# calling
+#   zephyr_build_string(build_string BOARD_QUALIFIERS /soc/bar/foo)
+# will return the string `soc_bar_foo` in `build_string` parameter.
 #
 function(zephyr_build_string outvar)
   set(options MERGE REVERSE)
@@ -1589,10 +1599,17 @@ function(zephyr_build_string outvar)
     )
   endif()
 
-  if(DEFINED BUILD_STR_BOARD_QUALIFIERS AND NOT BUILD_STR_BOARD)
+  if(DEFINED BUILD_STR_BOARD_REVISION AND NOT DEFINED BUILD_STR_BOARD)
     message(FATAL_ERROR
-      "zephyr_build_string(${ARGV0} <list> BOARD_QUALIFIERS ${BUILD_STR_BOARD_QUALIFIERS} ...)"
-      " given without BOARD argument, please specify BOARD"
+      "zephyr_build_string(${ARGV0} <list> BOARD_REVISION ${BUILD_STR_BOARD_REVISION} ...)"
+      " given without BOARD argument, these must be used together"
+    )
+  endif()
+
+  if(DEFINED BUILD_STR_SHORT AND NOT DEFINED BUILD_STR_BOARD)
+    message(FATAL_ERROR
+      "zephyr_build_string(${ARGV0} <list> SHORT ${BUILD_STR_SHORT} ...)"
+      " given without BOARD argument, these must be used together"
     )
   endif()
 
@@ -2571,7 +2588,7 @@ Please provide one of following: APPLICATION_ROOT, CONF_FILES")
   if(${ARGV0} STREQUAL APPLICATION_ROOT)
     set(single_args APPLICATION_ROOT)
   elseif(${ARGV0} STREQUAL CONF_FILES)
-    set(options REQUIRED)
+    set(options QUALIFIERS REQUIRED)
     set(single_args BOARD BOARD_REVISION BOARD_QUALIFIERS DTS KCONF DEFCONFIG BUILD SUFFIX)
     set(multi_args CONF_FILES NAMES)
   endif()
@@ -2640,14 +2657,22 @@ Relative paths are only allowed with `-D${ARGV1}=<path>`")
       set(dts_filename_list ${ZFILE_NAMES})
       set(kconf_filename_list ${ZFILE_NAMES})
     else()
-      zephyr_build_string(filename_list
-                          SHORT shortened_filename_list
-                          BOARD ${ZFILE_BOARD}
-                          BOARD_REVISION ${ZFILE_BOARD_REVISION}
-                          BOARD_QUALIFIERS ${ZFILE_BOARD_QUALIFIERS}
-                          BUILD ${ZFILE_BUILD}
-                          MERGE REVERSE
-      )
+      if(NOT ZFILE_QUALIFIERS)
+        zephyr_build_string(filename_list
+                            SHORT shortened_filename_list
+                            BOARD ${ZFILE_BOARD}
+                            BOARD_REVISION ${ZFILE_BOARD_REVISION}
+                            BOARD_QUALIFIERS ${ZFILE_BOARD_QUALIFIERS}
+                            BUILD ${ZFILE_BUILD}
+                            MERGE REVERSE
+        )
+      else()
+        zephyr_build_string(filename_list
+                            BOARD_QUALIFIERS ${ZFILE_BOARD_QUALIFIERS}
+                            BUILD ${ZFILE_BUILD}
+                            MERGE REVERSE
+        )
+      endif()
 
       set(dts_filename_list ${filename_list})
       set(dts_shortened_filename_list ${shortened_filename_list})
@@ -2865,9 +2890,9 @@ endfunction()
 #
 function(zephyr_file_suffix filename)
   set(single_args SUFFIX)
-  cmake_parse_arguments(FILE "" "${single_args}" "" ${ARGN})
+  cmake_parse_arguments(SFILE "" "${single_args}" "" ${ARGN})
 
-  if(NOT DEFINED FILE_SUFFIX OR NOT DEFINED ${filename})
+  if(NOT DEFINED SFILE_SUFFIX OR NOT DEFINED ${filename})
     # If the file suffix variable is not known then there is nothing to do, return early
     return()
   endif()
@@ -2883,7 +2908,7 @@ function(zephyr_file_suffix filename)
     # Search for the full stop so we know where to add the file suffix before the file extension
     cmake_path(GET file EXTENSION file_ext)
     cmake_path(REMOVE_EXTENSION file OUTPUT_VARIABLE new_filename)
-    cmake_path(APPEND_STRING new_filename "_${FILE_SUFFIX}${file_ext}")
+    cmake_path(APPEND_STRING new_filename "_${SFILE_SUFFIX}${file_ext}")
 
     # Use the filename with the suffix if it exists, if not then fall back to the default
     if(EXISTS "${new_filename}")
@@ -5302,6 +5327,11 @@ function(add_llext_target target_name)
        OUTPUT_VARIABLE llext_remove_flags_regexp
   )
   string(REPLACE ";" "|" llext_remove_flags_regexp "${llext_remove_flags_regexp}")
+  if ("${llext_remove_flags_regexp}" STREQUAL "")
+    # an empty regexp would match anything, we actually need the opposite
+    # so set it to match empty strings
+    set(llext_remove_flags_regexp "^$")
+  endif()
   set(zephyr_flags
       "$<TARGET_PROPERTY:zephyr_interface,INTERFACE_COMPILE_OPTIONS>"
   )
@@ -5328,7 +5358,8 @@ function(add_llext_target target_name)
     # output a relocatable file. The output file suffix is changed so
     # the result looks like the object file it actually is.
     add_executable(${llext_lib_target} EXCLUDE_FROM_ALL ${source_files})
-    target_link_options(${llext_lib_target} PRIVATE -r)
+    target_link_options(${llext_lib_target} PRIVATE
+      $<TARGET_PROPERTY:linker,partial_linking>)
     set_target_properties(${llext_lib_target} PROPERTIES
       SUFFIX ${CMAKE_C_OUTPUT_EXTENSION})
     set(llext_lib_output $<TARGET_FILE:${llext_lib_target}>)

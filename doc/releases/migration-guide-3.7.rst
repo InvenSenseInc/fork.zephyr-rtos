@@ -30,6 +30,11 @@ Boards
 
 * Reordered D1 and D0 in the `pro_micro` connector gpio-map for SparkFun Pro Micro RP2040 to match
   original Pro Micro definition. Out-of-tree shields must be updated to reflect this change.
+* ITE: Rename all SoC variant Kconfig options, e.g., ``CONFIG_SOC_IT82202_AX`` is renamed to
+  ``CONFIG_SOC_IT82202AX``.
+  All symbols are renamed as follows: ``SOC_IT81202BX``, ``SOC_IT81202CX``, ``SOC_IT81302BX``,
+  ``SOC_IT81302CX``, ``SOC_IT82002AW``, ``SOC_IT82202AX``, ``SOC_IT82302AX``.
+  And, rename the ``SOC_SERIES_ITE_IT8XXX2`` to ``SOC_SERIES_IT8XXX2``.
 
 Modules
 *******
@@ -70,6 +75,36 @@ Device Drivers and Devicetree
             };
     };
 
+* The :dtcompatible:`nxp,kinetis-ethernet` has been deprecated in favor of
+  :dtcompatible:`nxp,enet`. All in tree SOCs were converted to use this new schema.
+  Thus, all boards using NXP's ENET peripheral will need to align to this binding
+  in DT, which also comes with a different version driver. Alternatively,
+  the Ethernet node can be deleted and redefined as the old binding to use
+  the deprecated legacy driver. The primary advantage of the new binding
+  is to be able to abstract an arbitrary phy through the mdio API. Example
+  of a basic board level ENET DT definition:
+
+  .. code-block:: devicetree
+
+    &enet_mac {
+        status = "okay";
+        pinctrl-0 = <&pinmux_enet>;
+        pinctrl-names = "default";
+        phy-handle = <&phy>;
+        zephyr,random-mac-address;
+        phy-connection-type = "rmii";
+    };
+
+    &enet_mdio {
+        status = "okay";
+        pinctrl-0 = <&pinmux_enet_mdio>;
+        pinctrl-names = "default";
+        phy: phy@3 {
+            compatible = "ethernet-phy";
+            reg = <3>;
+            status = "okay";
+        };
+    };
 
 Analog-to-Digital Converter (ADC)
 =================================
@@ -129,6 +164,14 @@ Flash
 General Purpose I/O (GPIO)
 ==========================
 
+GNSS
+====
+
+* Basic power management support has been added to the ``gnss-nmea-generic`` driver.
+  If ``CONFIG_PM_DEVICE=y`` the driver is now initialized in suspended mode and the
+  application needs to call :c:func:`pm_device_action_run` with :c:macro:`PM_DEVICE_ACTION_RESUME`
+  to start up the driver.
+
 Input
 =====
 
@@ -177,6 +220,20 @@ Bluetooth Classic
   The Header files of Host BR/EDR have been moved to ``include/zephyr/bluetooth/classic``.
   Removed the :kconfig:option:`CONFIG_BT_BREDR`. It is replaced by new option
   :kconfig:option:`CONFIG_BT_CLASSIC`. (:github:`69651`)
+
+Bluetooth Host
+==============
+
+* The advertiser options :code:`BT_LE_ADV_OPT_USE_NAME` and :code:`BT_LE_ADV_OPT_FORCE_NAME_IN_AD`
+  are deprecated in this release. The application need to include the device name explicitly. One
+  way to do it is by adding the following to the advertising data or scan response data passed to
+  the host:
+
+  .. code-block:: c
+
+   BT_DATA(BT_DATA_NAME_COMPLETE, CONFIG_BT_DEVICE_NAME, sizeof(CONFIG_BT_DEVICE_NAME) - 1)
+
+  (:github:`71686`)
 
 Networking
 **********
@@ -232,6 +289,14 @@ Networking
 
 Other Subsystems
 ****************
+
+hawkBit
+=======
+
+  * :kconfig:option:`CONFIG_HAWKBIT_PORT` is now an int instead of a string.
+
+  * :kconfig:option:`CONFIG_SETTINGS` needs to be enabled to use hawkBit, as it now uses the
+    settings subsystem to store the hawkBit configuration.
 
 LoRaWAN
 =======
