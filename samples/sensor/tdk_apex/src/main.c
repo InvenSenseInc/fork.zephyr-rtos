@@ -123,7 +123,7 @@ int main(void)
 		if (irq_from_device) {
 #ifdef CONFIG_TDK_APEX_PEDOMETER
 			struct sensor_value apex_pedometer[3];
-			
+
 			sensor_channel_get(dev, SENSOR_CHAN_APEX_MOTION, apex_pedometer);
 
 			printf("[%s]: STEP_DET     count: %d steps  cadence: %.1f steps/s  "
@@ -139,7 +139,7 @@ int main(void)
 #endif
 #ifdef CONFIG_TDK_APEX_WOM
 			struct sensor_value apex_wom[3];
-			
+
 			sensor_channel_get(dev, SENSOR_CHAN_APEX_MOTION, apex_wom);
 
 			printf("[%s]: WOM x=%d y=%d z=%d\n", now_str(), apex_wom[0].val1,

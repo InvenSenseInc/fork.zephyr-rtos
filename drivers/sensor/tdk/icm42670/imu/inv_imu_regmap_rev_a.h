@@ -192,8 +192,8 @@ extern "C" {
 
 /*
  * fifo_flush * When set to 1, FIFO will get flushed. * FIFO flush requires the following
- * programming sequence: • Write FIFO_FLUSH =1 • Wait for 1.5 µs • Read FIFO_FLUSH, it should now be
- * 0 Host can only program this register bit to 1.
+ * programming sequence: • Write FIFO_FLUSH =1 • Wait for 1.5 µs • Read FIFO_FLUSH, it should
+ * now be 0 Host can only program this register bit to 1.
  */
 #define SIGNAL_PATH_RESET_FIFO_FLUSH_POS  0x02
 #define SIGNAL_PATH_RESET_FIFO_FLUSH_MASK (0x01 << SIGNAL_PATH_RESET_FIFO_FLUSH_POS)

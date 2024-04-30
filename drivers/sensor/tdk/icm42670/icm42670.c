@@ -1016,7 +1016,7 @@ static int icm42670_init_interrupt(const struct device *dev)
 static int icm42670_init(const struct device *dev)
 {
 	int err = icm42670_bus_check(dev);
-	
+
 	if (err < 0) {
 		LOG_DBG("bus check failed: %d", err);
 		return err;
