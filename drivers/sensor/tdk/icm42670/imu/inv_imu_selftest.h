@@ -33,8 +33,7 @@ typedef struct {
 	int8_t ay_status;    /**< AY self-test status */
 	int8_t az_status;    /**< AZ self-test status */
 #if INV_IMU_IS_GYRO_SUPPORTED
-	int8_t gyro_status; /**< global gyro self-test status: st_pass (bit0),
-	                      * st_incomplete (bit1) */
+	int8_t gyro_status; /**< global gyro self-test status: pass (bit0), incomplete (bit1) */
 	int8_t gx_status;   /**< GX self-test status */
 	int8_t gy_status;   /**< GY self-test status */
 	int8_t gz_status;   /**< GZ self-test status */
