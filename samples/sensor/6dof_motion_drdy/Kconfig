@@ -1,0 +1,13 @@
+# Copyright (c) 2024, TDK Invensense
+# SPDX-License-Identifier: Apache-2.0
+
+# Enable trigger to get sensor data
+# Default sensor: ICM42670 TDK 6-axis motion device
+config ICM42670_TRIGGER
+	default y
+
+choice ICM42670_TRIGGER_MODE
+	default ICM42670_TRIGGER_OWN_THREAD
+endchoice
+
+source "Kconfig.zephyr"
