@@ -9,6 +9,7 @@ menuconfig ICM42670
 	bool "ICM42670 6-Axis Motion Tracking Device"
 	default y
 	depends on DT_HAS_INVENSENSE_ICM42670_ENABLED
+	depends on ZEPHYR_HAL_TDK_MODULE
 	select I2C if $(dt_compat_on_bus,$(DT_COMPAT_INVENSENSE_ICM42670),i2c)
 	select SPI if $(dt_compat_on_bus,$(DT_COMPAT_INVENSENSE_ICM42670),spi)
 	help
@@ -16,16 +17,26 @@ menuconfig ICM42670
 
 if ICM42670
 
-config ICM42670_APEX
-	bool "ICM42670 APEX features"
+choice ICM_VARIANT
+	prompt "ICM variant to identify the sensor"
+	help
+	  Select the ICM variant
+config ICM42670P
+	bool "ICM42670-P IMU 6-Axis Motion Tracking"
+config ICM42670S
+	bool "ICM42670-S IMU 6-Axis Motion Tracking with Air Motion Library (AML)"
+endchoice
+
+config TDK_APEX
+	bool "TDK APEX features"
 	default n
 
 choice APEX_FEATURES
-	prompt "ICM42670 APEX features"
-	depends on ICM42670_APEX
+	prompt "TDK APEX features"
+	depends on TDK_APEX
 	default TDK_APEX_PEDOMETER
 	help
-	  Select APEX feature for ICM42670 sensor.
+	  Select APEX feature for IMU sensor.
 config TDK_APEX_PEDOMETER
 	bool "Pedometer: Tracks step count"
 config TDK_APEX_TILT

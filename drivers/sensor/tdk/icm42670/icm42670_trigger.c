@@ -31,7 +31,7 @@ int icm42670_trigger_set(const struct device *dev, const struct sensor_trigger *
 	if (trig->type == SENSOR_TRIG_DATA_READY) {
 		data->data_ready_handler = handler;
 		data->data_ready_trigger = trig;
-#ifdef CONFIG_ICM42670_APEX
+#ifdef CONFIG_TDK_APEX
 	} else if (trig->type == SENSOR_TRIG_MOTION) {
 		data->data_ready_handler = handler;
 		data->data_ready_trigger = trig;

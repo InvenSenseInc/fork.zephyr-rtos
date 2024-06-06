@@ -17,14 +17,11 @@
 #include <zephyr/drivers/sensor.h>
 
 #include "imu/inv_imu_driver.h"
-#ifdef CONFIG_ICM42670_APEX
+#ifdef CONFIG_TDK_APEX
 #include "imu/inv_imu_apex.h"
 #endif
 
 #define DT_DRV_COMPAT invensense_icm42670
-
-#define INV_IMU_ICM42670P_WHOAMI 0x67
-#define INV_IMU_ICM42670S_WHOAMI 0x69
 
 #define ICM42670_BUS_SPI DT_ANY_INST_ON_BUS_STATUS_OKAY(spi)
 #define ICM42670_BUS_I2C DT_ANY_INST_ON_BUS_STATUS_OKAY(i2c)
