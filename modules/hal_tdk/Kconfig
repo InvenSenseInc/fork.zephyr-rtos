@@ -1,6 +1,7 @@
 # Copyright (c) 2024 TDK Invensense
 # SPDX-License-Identifier: Apache-2.0
 
+
 config ZEPHYR_HAL_TDK_MODULE
 	bool "TDK HAL sensor drivers"
 	help
@@ -9,7 +10,7 @@ config ZEPHYR_HAL_TDK_MODULE
 choice TDK_EMD_DRIVERS
 	prompt "TDK eMD drivers"
 	depends on ZEPHYR_HAL_TDK_MODULE
-
+  
 config USE_EMD_ICM42670P
 	bool "ICM42670-P High Performance 6-Axis MotionTracking IMU"
 	depends on ICM42670P
@@ -19,3 +20,14 @@ config USE_EMD_ICM42670S
 	depends on ICM42670S
 
 endchoice
+
+config USE_EMD_ICP101XX
+	bool "ICP101XX Barometric Pressure and Temperature Sensor"
+	depends on ZEPHYR_HAL_TDK_MODULE
+	depends on ICP101XX
+  
+config USE_EMD_ICP201XX
+	bool "ICP201XX Barometric Pressure and Temperature Sensor"
+	depends on ZEPHYR_HAL_TDK_MODULE
+	depends on ICP201XX
+
