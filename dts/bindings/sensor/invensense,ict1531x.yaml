@@ -1,0 +1,8 @@
+# Copyright (c) 2024 TDK Invensense
+# SPDX-License-Identifier: Apache-2.0
+
+description: ICT1531x high precision 3-axis electronic magnetometer sensor IC.
+
+compatible: "invensense,ict1531x"
+
+include: [sensor-device.yaml, i2c-device.yaml]

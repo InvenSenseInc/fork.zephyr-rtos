@@ -1,0 +1,14 @@
+# Copyright (c) 2024 TDK Invensense
+
+# ICT1531X high precision 3-axis electronic magnetometer sensor IC
+
+# SPDX-License-Identifier: Apache-2.0
+config ICT1531X
+	bool "high precision 3-axis electronic magnetometer sensor"
+	default y
+	depends on DT_HAS_INVENSENSE_ICT1531X_ENABLED
+	select I2C
+  select ZEPHYR_HAL_TDK_MODULE
+  select USE_EMD_ICT1531X
+	help
+	  Enable driver for ICT1531X high precision 3-axis electronic magnetometer sensor.

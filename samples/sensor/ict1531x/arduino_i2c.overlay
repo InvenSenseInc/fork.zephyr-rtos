@@ -1,0 +1,27 @@
+/*
+ * Copyright (c) 2024, TDK Invensense
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
+/*
+ * Example configuration of a ict1531x device on an Arduino I2C bus.
+ *
+ * Device address 0x1E is assumed.
+ */
+&arduino_i2c {
+	status = "okay";
+	ict1531x@1E {
+		compatible = "invensense,ict1531x";
+		reg = <0x1E>;
+	};
+};
+
+/*
+ * Increase native UART speed to report sensor data.
+ */
+&uart0 {
+	compatible = "nordic,nrf-uarte";
+	status = "okay";
+	current-speed = <1000000>;
+};

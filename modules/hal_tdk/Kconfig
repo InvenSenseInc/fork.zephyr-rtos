@@ -31,3 +31,8 @@ config USE_EMD_ICP201XX
 	depends on ZEPHYR_HAL_TDK_MODULE
 	depends on ICP201XX
 
+config USE_EMD_ICT1531X
+	bool "ICT1531X high precision 3-axis electronic magnetometer sensor"
+	depends on ZEPHYR_HAL_TDK_MODULE
+	depends on ICT1531X
+

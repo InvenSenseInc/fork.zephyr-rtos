@@ -1,0 +1,11 @@
+sample:
+  name: ICT1531X Sensor data sample
+tests:
+  sample.sensor.ict1531x:
+    build_only: true
+    depends_on: i2c
+    tags: sensors
+    integration_platforms:
+      - nrf52dk/nrf52832
+    platform_exclude:
+      - tdk_robokit1
