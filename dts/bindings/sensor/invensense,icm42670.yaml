@@ -56,7 +56,7 @@ properties:
 
   power-mode:
     type: string
-    default: "low noise"
+    default: "low-noise"
     description: |
       Power mode.
       Low power mode is allowed for accelerometer sensor only from
@@ -64,8 +64,8 @@ properties:
       The default is chosen to support both accelerometer and
       gyroscope sensors.
     enum:
-      - "low noise"
-      - "low power"
+      - "low-noise"
+      - "low-power"
 
 
   accel-fs:
@@ -101,7 +101,7 @@ properties:
     type: int
     default: 180
     description: |
-      Accelerometer low pass filter bandwidth frequency.
+      Accelerometer low pass filter bandwidth frequency (Unit - Hz).
       Maps to ACCEL_UI_FILT_BW field in ACCEL_CONFIG1 setting.
       The default corresponds to the reset value of the register field.
     enum:
@@ -132,7 +132,7 @@ properties:
     type: int
     default: 180
     description: |
-      Gyroscope low pass filter bandwidth frequency.
+      Gyroscope low pass filter bandwidth frequency (Unit - Hz).
       Maps to GYRO_UI_FILT_BW field in GYRO_CONFIG1 setting.
       The default corresponds to the reset value of the register field.
     enum:

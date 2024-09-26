@@ -23,12 +23,6 @@ static const struct device *get_6dof_motion_device(void)
 {
 	const struct device *const dev = DEVICE_DT_GET(DT_ALIAS(6dof_motion_drdy0));
 
-	if (dev == NULL) {
-		/* No such node, or the node does not have status "okay". */
-		printk("\nError: no device found.\n");
-		return NULL;
-	}
-
 	if (!device_is_ready(dev)) {
 		printk("\nError: Device \"%s\" is not ready; "
 		       "check the driver initialization logs for errors.\n",
