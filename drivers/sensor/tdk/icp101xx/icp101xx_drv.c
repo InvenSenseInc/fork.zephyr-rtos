@@ -147,23 +147,37 @@ static int icp101xx_sample_fetch(const struct device *dev, const enum sensor_cha
 static int icp101xx_channel_get(const struct device *dev, enum sensor_channel chan,
 				struct sensor_value *val)
 {
-	float pressure;
+
 	struct icp101xx_data *data = (struct icp101xx_data *)dev->data;
+
+	val->val1 = 0;
+	val->val2 = 0;
 
 	if (!(chan == SENSOR_CHAN_AMBIENT_TEMP || chan == SENSOR_CHAN_PRESS ||
 	      SENSOR_CHAN_ALTITUDE)) {
 		return -ENOTSUP;
 	}
 	/* Zephyr expects kPa while ICP101xx returns Pa */
-	pressure = data->pressure / 1000;
 	if (chan == SENSOR_CHAN_AMBIENT_TEMP) {
-		sensor_value_from_float(val, data->temperature);
+#ifdef ICP101XX_DRV_USE_FLOATS
+    sensor_value_from_float(val, data->temperature);
+#else
+		val->val1 = data->temperature >> 4 ;
+		val->val2 = (data->temperature % 16)*1000000/16;
+#endif
 	} else if (chan == SENSOR_CHAN_PRESS) {
-		sensor_value_from_float(val, pressure);
+#ifdef ICP101XX_DRV_USE_FLOATS
+		sensor_value_from_float(val, data->pressure / 1000);
+#else
+		val->val1 = data->pressure / 1000;
+		val->val2 = (data->pressure % 1000) * 1000;
+#endif
+#ifdef ICP101XX_DRV_USE_FLOATS
 	} else if (chan == SENSOR_CHAN_ALTITUDE) {
-		float altitude = convertToHeight(pressure, data->temperature);
+		float altitude = convertToHeight(data->pressure / 1000, data->temperature);
 
 		sensor_value_from_float(val, altitude);
+#endif
 	} else {
 		return -ENOTSUP;
 	}

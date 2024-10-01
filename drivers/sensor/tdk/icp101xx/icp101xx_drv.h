@@ -22,8 +22,13 @@
 struct icp101xx_data {
 	int raw_pressure;
 	int raw_temperature;
+#ifdef ICP101XX_DRV_USE_FLOATS
 	float pressure;
 	float temperature;
+#else
+	int32_t pressure;
+	int32_t temperature;
+#endif
 	inv_icp101xx_t icp_device;
 };
 
