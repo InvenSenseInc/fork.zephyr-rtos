@@ -1,6 +1,6 @@
 .. _icp101xx:
 
-ICP101xx: Barometric Pressure and Temperature Sensor
+Barometric Pressure and Temperature Sensor polling
 ####################################################
 
 Description
@@ -24,7 +24,7 @@ After providing a devicetree overlay that specifies the sensor location,
 build this sample app using:
 
 .. zephyr-app-commands::
-   :zephyr-app: samples/sensor/icp101xx
+   :zephyr-app: samples/sensor/pressure_polling
    :board: nrf52dk_nrf52832
    :goals: build flash
 
@@ -36,7 +36,7 @@ Sample Output
 ## Default configuration
 
 Found device "icp101xx@63", getting sensor data
-[00:00:00.266,479] <inf> ICP101XX_SAMPLE: Starting ICP101xx sample.
+[00:00:00.266,479] <inf> ICP101XX_SAMPLE: Starting pressure and altitude polling sample.
 [00:00:00.273,803] <inf> ICP101XX_SAMPLE: temp 25.49 Cel, pressure 96.271438 kPa, altitude 447.208465 m
 [00:00:00.280,914] <inf> ICP101XX_SAMPLE: temp 25.50 Cel, pressure 96.271331 kPa, altitude 447.234161 m
 [00:00:00.288,024] <inf> ICP101XX_SAMPLE: temp 25.49 Cel, pressure 96.266685 kPa, altitude 447.636077 m
