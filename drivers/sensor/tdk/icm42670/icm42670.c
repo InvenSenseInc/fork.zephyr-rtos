@@ -1048,16 +1048,15 @@ static const struct sensor_driver_api icm42670_api_funcs = {
 
 /* Initializes a common struct icm42670_config */
 #define ICM42670_CONFIG_COMMON(inst)                                                               \
-	IF_ENABLED(CONFIG_ICM42670_TRIGGER,                                                        \
-		   (.gpio_int = GPIO_DT_SPEC_INST_GET_OR(inst, int_gpios, {0}), ))                 \
-		.accel_fs = DT_INST_ENUM_IDX(inst, accel_fs),                                      \
-	      .accel_hz = DT_INST_ENUM_IDX(inst, accel_hz),                                        \
-	      .accel_avg = DT_INST_ENUM_IDX(inst, accel_avg),                                      \
-	      .accel_filt_bw = DT_INST_ENUM_IDX(inst, accel_filt_bw_hz),                              \
-	      .gyro_fs = DT_INST_ENUM_IDX(inst, gyro_fs),                                          \
-	      .gyro_hz = DT_INST_ENUM_IDX(inst, gyro_hz),                                          \
-	      .gyro_filt_bw = DT_INST_ENUM_IDX(inst, gyro_filt_bw_hz),                                \
-	      .accel_pwr_mode = DT_INST_ENUM_IDX(inst, power_mode),
+	IF_ENABLED(CONFIG_ICM42670_TRIGGER,	\
+		   (.gpio_int = GPIO_DT_SPEC_INST_GET_OR(inst, int_gpios, {0}), )) .accel_fs = DT_INST_ENUM_IDX(inst, accel_fs),                 \
+				     .accel_hz = DT_INST_ENUM_IDX(inst, accel_hz),                 \
+				     .accel_avg = DT_INST_ENUM_IDX(inst, accel_avg),               \
+				     .accel_filt_bw = DT_INST_ENUM_IDX(inst, accel_filt_bw_hz),    \
+				     .gyro_fs = DT_INST_ENUM_IDX(inst, gyro_fs),                   \
+				     .gyro_hz = DT_INST_ENUM_IDX(inst, gyro_hz),                   \
+				     .gyro_filt_bw = DT_INST_ENUM_IDX(inst, gyro_filt_bw_hz),      \
+				     .accel_pwr_mode = DT_INST_ENUM_IDX(inst, power_mode),
 
 /* Initializes the bus members for an instance on a SPI bus. */
 #define ICM42670_CONFIG_SPI(inst)                                                                  \
@@ -1079,9 +1078,8 @@ static const struct sensor_driver_api icm42670_api_funcs = {
  */
 #define ICM42670_DEFINE(inst)                                                                      \
 	static struct icm42670_data icm42670_data_##inst;                                          \
-	static const struct icm42670_config icm42670_config_##inst =                               \
-		COND_CODE_1(DT_INST_ON_BUS(inst, spi), (ICM42670_CONFIG_SPI(inst)),                \
-			    (ICM42670_CONFIG_I2C(inst)));                                          \
+	static const struct icm42670_config icm42670_config_##inst = COND_CODE_1(DT_INST_ON_BUS(inst, spi), (ICM42670_CONFIG_SPI(inst)),	\
+			    (ICM42670_CONFIG_I2C(inst)));             \
                                                                                                    \
 	SENSOR_DEVICE_DT_INST_DEFINE(inst, icm42670_init, NULL, &icm42670_data_##inst,             \
 				     &icm42670_config_##inst, POST_KERNEL,                         \
