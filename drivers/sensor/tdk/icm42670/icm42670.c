@@ -1053,10 +1053,10 @@ static const struct sensor_driver_api icm42670_api_funcs = {
 		.accel_fs = DT_INST_ENUM_IDX(inst, accel_fs),                                      \
 	      .accel_hz = DT_INST_ENUM_IDX(inst, accel_hz),                                        \
 	      .accel_avg = DT_INST_ENUM_IDX(inst, accel_avg),                                      \
-	      .accel_filt_bw = DT_INST_ENUM_IDX(inst, accel_filt_bw),                              \
+	      .accel_filt_bw = DT_INST_ENUM_IDX(inst, accel_filt_bw_hz),                              \
 	      .gyro_fs = DT_INST_ENUM_IDX(inst, gyro_fs),                                          \
 	      .gyro_hz = DT_INST_ENUM_IDX(inst, gyro_hz),                                          \
-	      .gyro_filt_bw = DT_INST_ENUM_IDX(inst, gyro_filt_bw),                                \
+	      .gyro_filt_bw = DT_INST_ENUM_IDX(inst, gyro_filt_bw_hz),                                \
 	      .accel_pwr_mode = DT_INST_ENUM_IDX(inst, power_mode),
 
 /* Initializes the bus members for an instance on a SPI bus. */

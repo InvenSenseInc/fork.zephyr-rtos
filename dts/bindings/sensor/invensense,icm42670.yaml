@@ -97,7 +97,7 @@ properties:
       - 32
       - 64
 
-  accel-filt-bw:
+  accel-filt-bw-hz:
     type: int
     default: 180
     description: |
@@ -128,7 +128,7 @@ properties:
       - 500
       - 250
 
-  gyro-filt-bw:
+  gyro-filt-bw-hz:
     type: int
     default: 180
     description: |
