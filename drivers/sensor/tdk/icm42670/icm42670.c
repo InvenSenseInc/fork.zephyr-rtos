@@ -1047,42 +1047,43 @@ static const struct sensor_driver_api icm42670_api_funcs = {
 #define ICM42670_SPI_CFG (SPI_WORD_SET(8) | SPI_TRANSFER_MSB | SPI_MODE_CPOL | SPI_MODE_CPHA)
 
 /* Initializes a common struct icm42670_config */
-#define ICM42670_CONFIG_COMMON(inst)                                                               \
+#define ICM42670_CONFIG_COMMON(inst)	\
 	IF_ENABLED(CONFIG_ICM42670_TRIGGER,	\
-		   (.gpio_int = GPIO_DT_SPEC_INST_GET_OR(inst, int_gpios, {0}), )) .accel_fs = DT_INST_ENUM_IDX(inst, accel_fs),                 \
-				     .accel_hz = DT_INST_ENUM_IDX(inst, accel_hz),                 \
-				     .accel_avg = DT_INST_ENUM_IDX(inst, accel_avg),               \
-				     .accel_filt_bw = DT_INST_ENUM_IDX(inst, accel_filt_bw_hz),    \
-				     .gyro_fs = DT_INST_ENUM_IDX(inst, gyro_fs),                   \
-				     .gyro_hz = DT_INST_ENUM_IDX(inst, gyro_hz),                   \
-				     .gyro_filt_bw = DT_INST_ENUM_IDX(inst, gyro_filt_bw_hz),      \
+		   (.gpio_int = GPIO_DT_SPEC_INST_GET_OR(inst, int_gpios, {0}),))	\
+		   .accel_fs = DT_INST_ENUM_IDX(inst, accel_fs),	\
+				     .accel_hz = DT_INST_ENUM_IDX(inst, accel_hz),	\
+				     .accel_avg = DT_INST_ENUM_IDX(inst, accel_avg),	\
+				     .accel_filt_bw = DT_INST_ENUM_IDX(inst, accel_filt_bw_hz),	\
+				     .gyro_fs = DT_INST_ENUM_IDX(inst, gyro_fs),	\
+				     .gyro_hz = DT_INST_ENUM_IDX(inst, gyro_hz),	\
+				     .gyro_filt_bw = DT_INST_ENUM_IDX(inst, gyro_filt_bw_hz),	\
 				     .accel_pwr_mode = DT_INST_ENUM_IDX(inst, power_mode),
 
 /* Initializes the bus members for an instance on a SPI bus. */
-#define ICM42670_CONFIG_SPI(inst)                                                                  \
-	{                                                                                          \
-		.bus.spi = SPI_DT_SPEC_INST_GET(inst, ICM42670_SPI_CFG, 0),                        \
-		.bus_io = &icm42670_bus_io_spi, ICM42670_CONFIG_COMMON(inst)                       \
+#define ICM42670_CONFIG_SPI(inst)	\
+	{	\
+		.bus.spi = SPI_DT_SPEC_INST_GET(inst, ICM42670_SPI_CFG, 0),	\
+		.bus_io = &icm42670_bus_io_spi, ICM42670_CONFIG_COMMON(inst)	\
 	}
 
 /* Initializes the bus members for an instance on an I2C bus. */
-#define ICM42670_CONFIG_I2C(inst)                                                                  \
-	{                                                                                          \
-		.bus.i2c = I2C_DT_SPEC_INST_GET(inst), .bus_io = &icm42670_bus_io_i2c,             \
-		ICM42670_CONFIG_COMMON(inst)                                                       \
+#define ICM42670_CONFIG_I2C(inst)	\
+	{	\
+		.bus.i2c = I2C_DT_SPEC_INST_GET(inst), .bus_io = &icm42670_bus_io_i2c,	\
+		ICM42670_CONFIG_COMMON(inst)	\
 	}
 
 /*
  * Main instantiation macro, which selects the correct bus-specific
  * instantiation macros for the instance.
  */
-#define ICM42670_DEFINE(inst)                                                                      \
-	static struct icm42670_data icm42670_data_##inst;                                          \
+#define ICM42670_DEFINE(inst)	\
+	static struct icm42670_data icm42670_data_##inst;	\
 	static const struct icm42670_config icm42670_config_##inst = COND_CODE_1(DT_INST_ON_BUS(inst, spi), (ICM42670_CONFIG_SPI(inst)),	\
-			    (ICM42670_CONFIG_I2C(inst)));             \
-                                                                                                   \
-	SENSOR_DEVICE_DT_INST_DEFINE(inst, icm42670_init, NULL, &icm42670_data_##inst,             \
-				     &icm42670_config_##inst, POST_KERNEL,                         \
+			    (ICM42670_CONFIG_I2C(inst)));	\
+	\
+	SENSOR_DEVICE_DT_INST_DEFINE(inst, icm42670_init, NULL, &icm42670_data_##inst,	\
+				     &icm42670_config_##inst, POST_KERNEL,	\
 				     CONFIG_SENSOR_INIT_PRIORITY, &icm42670_api_funcs);
 
 /* Create the struct device for every status "okay" node in the devicetree. */
