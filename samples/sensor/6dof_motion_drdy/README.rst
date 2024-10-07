@@ -1,12 +1,13 @@
-.. _6dof_motion_drdy:
+.. zephyr:code-sample:: 6dof_motion_drdy
+   :name: Generic 6DOF Motion Dataready
+   :relevant-api: sensor_interface
 
-6DOF Motion Dataready:
-############################################
+   Get 6-Axis accelerometer and gyroscope data from a sensor (data ready interrupt mode).
 
 Overview
 ********
 
-This sample application periodically (100 Hz) measures the 6-axis sensor with
+This sample application periodically (100 Hz) measures the 6-axis IMU sensor with
 temperature, acceleration, and angular velocity, displaying the
 values on the console along with a timestamp since startup.
 Trigger options could be configured through KConfig.
@@ -18,13 +19,23 @@ This sample uses an external breakout for the sensor.  A devicetree
 overlay must be provided to identify the 6-axis motion sensor, the SPI or I2C bus interface and the interrupt
 sensor GPIO.
 
-Building and Running instructions
-*********************************
+Building and Running
+********************
 
-After providing a devicetree overlay that specifies the sensor location,
-build this sample app using:
+This sample supports up to 6-Axis IMU devices. Each device needs
+to be aliased as ``6dof-motion-drdyN`` where ``N`` goes from ``0`` to ``9``. For example:
 
-.. zephyr-app-commands:
+.. code-block:: devicetree
+
+  / {
+  	aliases {
+  			6dof-motion-drdy0 = &icm42670;
+  		};
+  	};
+
+Make sure the aliases are in devicetree, then build and run with:
+
+.. zephyr-app-commands::
    :zephyr-app: samples/sensor/6dof_motion_dry
    :board: nrf52dk/nrf52832
    :goals: build flash
@@ -34,10 +45,6 @@ Sample Output
 
 .. code-block:: console
 
-## Default configuration
-ICM42670 TDK Invensense Motion Tracking Device
-
-*** Booting Zephyr OS build zephyr-v3.5.0-3192-g528359f60dd9 ***
 Found device "icm42670@68", getting sensor data
 [0:00:01.716]: temp 23.00 Cel   accel 0.150839 -0.140065 9.994899 m/s/s   gyro  -0.001597 0.005859 0.001597 rad/s
 [0:00:01.726]: temp 23.00 Cel   accel 0.140065 -0.146050 9.988914 m/s/s   gyro  -0.002663 0.005859 0.003195 rad/s

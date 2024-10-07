@@ -1,7 +1,8 @@
-.. _tdk_apex:
+.. zephyr:code-sample:: tdk_apex
+   :name: TDK Advanced Pedometer and Event Detection (APEX)
+   :relevant-api: sensor_interface
 
-TDK Advanced Pedometer and Event Detection (APEX)
-#################################################
+   Get TDK APEX event detection (trigger mode).
 
 Overview
 ********
@@ -16,7 +17,12 @@ position is held for 4 seconds.
 ** Wake on Motion (WoM): Detects motion per axis exceeding 195 mg threshold.
 ** Significant Motion Detector (SMD): Detects when the user has moved
 significantly.
-APEX feature support and the different feature are enabled through KConfig.
+APEX feature support and the different features are configured through KConfig.
+
+References
+**********
+
+ - https://invensense.tdk.com/download-pdf/an-000271-icm-42607x-and-icm-42670x-apex-motion-functions-description-and-usage/
 
 Driver configuration
 ********************
@@ -31,8 +37,8 @@ This sample uses an external breakout for the sensor. A devicetree
 overlay must be provided to identify the TDK sensor, the SPI or I2C bus interface and the interrupt
 sensor GPIO.
 
-Building and Running instructions
-*********************************
+Building and Running
+********************
 
 After providing a devicetree overlay that specifies the sensor location,
 build this sample app using:
@@ -45,57 +51,51 @@ build this sample app using:
 Sample Output with TDK sensor : ICM-42670-P 6-axis Sensor
 =========================================================
 
-.. code-block:: console
-
 ## Default configuration
 ## APEX_FEATURES = TDK_APEX_PEDOMETER
 
-Pedometer data sample.
-Configured for APEX data collecting.
-*** Booting Zephyr OS build zephyr-v3.5.0-3192-g528359f60dd9 ***
-Found device "icm42670@68", getting sensor data
-[0:00:09.287]: STEP_DET     count: 6 steps  cadence: 2.0 steps/s  activity: Unknown
-[0:00:09.689]: STEP_DET     count: 7 steps  cadence: 2.1 steps/s  activity: Walk
-[0:00:10.051]: STEP_DET     count: 8 steps  cadence: 2.2 steps/s  activity: Walk
-[0:00:10.433]: STEP_DET     count: 9 steps  cadence: 2.2 steps/s  activity: Walk
-[0:00:10.835]: STEP_DET     count: 10 steps  cadence: 2.3 steps/s  activity: Walk
+.. code-block:: console
 
-<repeats endlessly>
+   Found device "icm42670@68", getting sensor data
+   [0:00:09.287]: STEP_DET     count: 6 steps  cadence: 2.0 steps/s  activity: Unknown
+   [0:00:09.689]: STEP_DET     count: 7 steps  cadence: 2.1 steps/s  activity: Walk
+   [0:00:10.051]: STEP_DET     count: 8 steps  cadence: 2.2 steps/s  activity: Walk
+   [0:00:10.433]: STEP_DET     count: 9 steps  cadence: 2.2 steps/s  activity: Walk
+   [0:00:10.835]: STEP_DET     count: 10 steps  cadence: 2.3 steps/s  activity: Walk
+
+   <repeats endlessly>
 
 ## APEX_FEATURES = TDK_APEX_TILT
 
-Tilt data sample.
-Configured for APEX data collecting.
-*** Booting Zephyr OS build zephyr-v3.5.0-3192-g528359f60dd9 ***
-Found device "icm42670@68", getting sensor data
-[0:00:15.249]: TILT
-[0:00:21.479]: TILT
-[0:00:26.765]: TILT
+.. code-block:: console
 
-<repeats endlessly>
+   Found device "icm42670@68", getting sensor data
+   [0:00:15.249]: TILT
+   [0:00:21.479]: TILT
+   [0:00:26.765]: TILT
+
+   <repeats endlessly>
 
 ## APEX_FEATURES = TDK_APEX_WOM
 
-WOM data sample.
-Configured for APEX data collecting.
-*** Booting Zephyr OS build zephyr-v3.5.0-3192-g528359f60dd9 ***
-Found device "icm42670@68", getting sensor data
-[0:00:02.555]: WOM x=1 y=0 z=1
-[0:00:02.636]: WOM x=0 y=0 z=1
-[0:00:02.797]: WOM x=0 y=1 z=0
-[0:00:02.877]: WOM x=0 y=0 z=1
-[0:00:02.957]: WOM x=1 y=1 z=1
+.. code-block:: console
 
-<repeats endlessly>
+   Found device "icm42670@68", getting sensor data
+   [0:00:02.555]: WOM x=1 y=0 z=1
+   [0:00:02.636]: WOM x=0 y=0 z=1
+   [0:00:02.797]: WOM x=0 y=1 z=0
+   [0:00:02.877]: WOM x=0 y=0 z=1
+   [0:00:02.957]: WOM x=1 y=1 z=1
+
+   <repeats endlessly>
 
 ## APEX_FEATURES = TDK_APEX_SMD
 
-SMD data sample.
-Configured for APEX data collecting.
-*** Booting Zephyr OS build zephyr-v3.5.0-3192-g528359f60dd9 ***
-Found device "icm42670@68", getting sensor data
-[0:00:04.622]: SMD
-[0:00:05.084]: SMD
-[0:00:05.566]: SMD
+.. code-block:: console
 
-<repeats endlessly>
+   Found device "icm42670@68", getting sensor data
+   [0:00:04.622]: SMD
+   [0:00:05.084]: SMD
+   [0:00:05.566]: SMD
+
+   <repeats endlessly>

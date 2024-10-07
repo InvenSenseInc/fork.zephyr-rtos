@@ -30,12 +30,3 @@
 		gyro-fs = <2000>;
 	};
 };
-
-/*
- * Increase native UART speed to report all IMU data at 100Hz.
- */
-&uart0 {
-	compatible = "nordic,nrf-uarte";
-	status = "okay";
-	current-speed = <1000000>;
-};
