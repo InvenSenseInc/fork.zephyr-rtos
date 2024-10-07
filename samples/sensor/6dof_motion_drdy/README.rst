@@ -27,11 +27,11 @@ to be aliased as ``6dof-motion-drdyN`` where ``N`` goes from ``0`` to ``9``. For
 
 .. code-block:: devicetree
 
-  / {
-  	aliases {
-  			6dof-motion-drdy0 = &icm42670;
-  		};
-  	};
+ / {
+	aliases {
+			6dof-motion-drdy0 = &icm42670;
+		};
+	};
 
 Make sure the aliases are in devicetree, then build and run with:
 

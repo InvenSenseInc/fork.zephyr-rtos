@@ -1079,7 +1079,9 @@ static const struct sensor_driver_api icm42670_api_funcs = {
  */
 #define ICM42670_DEFINE(inst)	\
 	static struct icm42670_data icm42670_data_##inst;	\
-	static const struct icm42670_config icm42670_config_##inst = COND_CODE_1(DT_INST_ON_BUS(inst, spi), (ICM42670_CONFIG_SPI(inst)),	\
+	static const struct icm42670_config icm42670_config_##inst =	\
+			    COND_CODE_1(DT_INST_ON_BUS(inst, spi),	\
+			    (ICM42670_CONFIG_SPI(inst)),	\
 			    (ICM42670_CONFIG_I2C(inst)));	\
 	\
 	SENSOR_DEVICE_DT_INST_DEFINE(inst, icm42670_init, NULL, &icm42670_data_##inst,	\
