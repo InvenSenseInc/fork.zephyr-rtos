@@ -15,6 +15,12 @@ properties:
       property value should ensure the flags properly describe the
       signal that is presented to the driver.
 
+  is-variant-s:
+    type: boolean
+    description: |
+      Specifies that the driver should adapt to the ICM-42670-S.
+      This affects the chip ID.
+
   accel-hz:
     type: int
     required: true

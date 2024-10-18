@@ -481,13 +481,13 @@ static int icm42670_sensor_init(const struct device *dev)
 		return err;
 	}
 
-	if (data->chip_id != INV_IMU_WHOAMI) {
+	if (data->chip_id != data->imu_whoami) {
 		LOG_ERR("invalid WHO_AM_I value, was 0x%x but expected 0x%x for %s", data->chip_id,
-			INV_IMU_WHOAMI, INV_IMU_STRING_ID);
+			data->imu_whoami, data->imu_name);
 		return -ENOTSUP;
 	}
 
-	LOG_DBG("\"%s\" %s OK", dev->name, INV_IMU_STRING_ID);
+	LOG_DBG("\"%s\" %s OK", dev->name, data->imu_name);
 	return err;
 }
 
@@ -1050,14 +1050,14 @@ static const struct sensor_driver_api icm42670_api_funcs = {
 #define ICM42670_CONFIG_COMMON(inst)	\
 	IF_ENABLED(CONFIG_ICM42670_TRIGGER,	\
 		   (.gpio_int = GPIO_DT_SPEC_INST_GET_OR(inst, int_gpios, {0}),))	\
-		   .accel_fs = DT_INST_ENUM_IDX(inst, accel_fs),	\
-				     .accel_hz = DT_INST_ENUM_IDX(inst, accel_hz),	\
-				     .accel_avg = DT_INST_ENUM_IDX(inst, accel_avg),	\
-				     .accel_filt_bw = DT_INST_ENUM_IDX(inst, accel_filt_bw_hz),	\
-				     .gyro_fs = DT_INST_ENUM_IDX(inst, gyro_fs),	\
-				     .gyro_hz = DT_INST_ENUM_IDX(inst, gyro_hz),	\
-				     .gyro_filt_bw = DT_INST_ENUM_IDX(inst, gyro_filt_bw_hz),	\
-				     .accel_pwr_mode = DT_INST_ENUM_IDX(inst, power_mode),
+		.accel_fs = DT_INST_ENUM_IDX(inst, accel_fs),	\
+		.accel_hz = DT_INST_ENUM_IDX(inst, accel_hz),	\
+		.accel_avg = DT_INST_ENUM_IDX(inst, accel_avg),	\
+		.accel_filt_bw = DT_INST_ENUM_IDX(inst, accel_filt_bw_hz),	\
+		.gyro_fs = DT_INST_ENUM_IDX(inst, gyro_fs),	\
+		.gyro_hz = DT_INST_ENUM_IDX(inst, gyro_hz),	\
+		.gyro_filt_bw = DT_INST_ENUM_IDX(inst, gyro_filt_bw_hz),	\
+		.accel_pwr_mode = DT_INST_ENUM_IDX(inst, power_mode),
 
 /* Initializes the bus members for an instance on a SPI bus. */
 #define ICM42670_CONFIG_SPI(inst)	\
@@ -1073,12 +1073,29 @@ static const struct sensor_driver_api icm42670_api_funcs = {
 		ICM42670_CONFIG_COMMON(inst)	\
 	}
 
+/* Initializes icm42670s specific */
+#define ICM42670S_DEFINE(inst)	\
+	{	\
+			.imu_whoami = INV_ICM42670S_WHOAMI,	\
+			.imu_name = INV_ICM42670S_STRING_ID,	\
+	}	\
+
+/* Initializes icm42670p specific */
+#define ICM42670P_DEFINE(inst)	\
+	{	\
+			.imu_whoami = INV_ICM42670P_WHOAMI,	\
+			.imu_name = INV_ICM42670P_STRING_ID,	\
+	}	\
+
 /*
  * Main instantiation macro, which selects the correct bus-specific
  * instantiation macros for the instance.
  */
 #define ICM42670_DEFINE(inst)	\
-	static struct icm42670_data icm42670_data_##inst;	\
+	static struct icm42670_data icm42670_data_##inst =	\
+			COND_CODE_1(DT_INST_PROP(inst, is_variant_s), \
+			(ICM42670S_DEFINE(inst)),	\
+			(ICM42670P_DEFINE(inst)));	\
 	static const struct icm42670_config icm42670_config_##inst =	\
 			    COND_CODE_1(DT_INST_ON_BUS(inst, spi),	\
 			    (ICM42670_CONFIG_SPI(inst)),	\

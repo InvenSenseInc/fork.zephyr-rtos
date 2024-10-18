@@ -7,16 +7,8 @@ config ZEPHYR_HAL_TDK_MODULE
 	help
 	  Use the TDK HAL
 
-choice TDK_EMD_IMU_DRIVERS
-	prompt "TDK eMD IMU drivers"
+config USE_EMD_ICM42670
+	bool "ICM42x7x High Performance 6-Axis MotionTracking IMU"
+	default y
 	depends on ZEPHYR_HAL_TDK_MODULE
-
-config USE_EMD_ICM42670P
-	bool "ICM42670-P High Performance 6-Axis MotionTracking IMU"
-	depends on ICM42670P
-
-config USE_EMD_ICM42670S
-	bool "ICM42670-S High Performance 6-Axis MotionTracking IMU with Motion Processing Software Library"
-	depends on ICM42670S
-
-endchoice
+	depends on DT_HAS_INVENSENSE_ICM42670_ENABLED

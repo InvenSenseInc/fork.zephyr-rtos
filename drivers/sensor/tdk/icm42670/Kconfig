@@ -18,15 +18,6 @@ menuconfig ICM42670
 
 if ICM42670
 
-choice ICM_VARIANT
-	prompt "ICM variant to identify the sensor"
-	help
-	  Select the ICM variant
-config ICM42670P
-	bool "ICM42670-P IMU 6-Axis Motion Tracking"
-config ICM42670S
-	bool "ICM42670-S IMU 6-Axis Motion Tracking with Air Motion Library (AML)"
-endchoice
 
 config TDK_APEX
 	bool "TDK APEX features"

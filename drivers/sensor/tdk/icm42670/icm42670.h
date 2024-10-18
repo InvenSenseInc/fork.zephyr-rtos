@@ -57,6 +57,8 @@ extern const struct icm42670_bus_io icm42670_bus_io_i2c;
 struct icm42670_data {
 	struct inv_imu_serif serif;
 	struct inv_imu_device driver;
+	uint8_t imu_whoami;
+	char* imu_name;
 	uint8_t chip_id;
 	int32_t accel_x;
 	int32_t accel_y;
