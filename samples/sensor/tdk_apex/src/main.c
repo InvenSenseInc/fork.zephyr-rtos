@@ -35,8 +35,6 @@ static const struct device *get_tdk_apex_device(void)
 	return dev;
 }
 
-#if defined(CONFIG_TDK_APEX_PEDOMETER) || defined(CONFIG_TDK_APEX_TILT) ||                         \
-	defined(CONFIG_TDK_APEX_WOM) || defined(CONFIG_TDK_APEX_SMD)
 static const char *now_str(void)
 {
 	static char buf[16]; /* ...HH:MM:SS.MMM */
@@ -56,7 +54,6 @@ static const char *now_str(void)
 	snprintf(buf, sizeof(buf), "%u:%02u:%02u.%03u", h, min, s, ms);
 	return buf;
 }
-#endif
 
 static void handle_tdk_apex_drdy(const struct device *dev, const struct sensor_trigger *trig)
 {
@@ -83,23 +80,16 @@ int main(void)
 		return 0;
 	}
 
-	/* Setting APEX Pedometer feature */
-#ifdef CONFIG_TDK_APEX_PEDOMETER
-	apex_mode.val1 = TDK_APEX_PEDOMETER;
-	printf("Pedometer data sample.\n");
-#endif
-#ifdef CONFIG_TDK_APEX_TILT
-	apex_mode.val1 = TDK_APEX_TILT;
-	printf("Tilt data sample.\n");
-#endif
-#ifdef CONFIG_TDK_APEX_WOM
-	apex_mode.val1 = TDK_APEX_WOM;
-	printf("WOM data sample.\n");
-#endif
-#ifdef CONFIG_TDK_APEX_SMD
-	apex_mode.val1 = TDK_APEX_SMD;
-	printf("SMD data sample.\n");
-#endif
+	sensor_attr_get(dev, SENSOR_CHAN_APEX_MOTION, SENSOR_ATTR_CONFIGURATION, &apex_mode);
+	if (apex_mode.val1 == TDK_APEX_PEDOMETER) {
+		printf("Pedometer data sample.\n");
+	} else if (apex_mode.val1 == TDK_APEX_TILT) {
+		printf("Tilt data sample.\n");
+	} else if (apex_mode.val1 == TDK_APEX_WOM) {
+		printf("WOM data sample.\n");
+	} else if (apex_mode.val1 == TDK_APEX_SMD) {
+		printf("SMD data sample.\n");
+	}
 	apex_mode.val2 = 0;
 	sensor_attr_set(dev, SENSOR_CHAN_APEX_MOTION, SENSOR_ATTR_CONFIGURATION, &apex_mode);
 
@@ -119,33 +109,38 @@ int main(void)
 	while (1) {
 
 		if (irq_from_device) {
-#ifdef CONFIG_TDK_APEX_PEDOMETER
-			struct sensor_value apex_pedometer[3];
+			if (apex_mode.val1 == TDK_APEX_PEDOMETER) {
+				struct sensor_value apex_pedometer[3];
 
-			sensor_channel_get(dev, SENSOR_CHAN_APEX_MOTION, apex_pedometer);
+				sensor_channel_get(dev, SENSOR_CHAN_APEX_MOTION, apex_pedometer);
 
-			printf("[%s]: STEP_DET     count: %d steps  cadence: %.1f steps/s  "
-			       "activity: %s\n",
-			       now_str(), apex_pedometer[0].val1,
-			       sensor_value_to_double(&apex_pedometer[2]),
-			       apex_pedometer[1].val1 == 1   ? "Walk"
-			       : apex_pedometer[1].val1 == 2 ? "Run"
-							     : "Unknown");
-#endif
-#ifdef CONFIG_TDK_APEX_TILT
-			printf("[%s]: TILT\n", now_str());
-#endif
-#ifdef CONFIG_TDK_APEX_WOM
-			struct sensor_value apex_wom[3];
+				printf("[%s]: STEP_DET     count: %d steps  cadence: %.1f steps/s  "
+					   "activity: %s\n",
+					   now_str(), apex_pedometer[0].val1,
+					   sensor_value_to_double(&apex_pedometer[2]),
+					   apex_pedometer[1].val1 == 1   ? "Walk"
+					   : apex_pedometer[1].val1 == 2 ? "Run"
+									 : "Unknown");
+			} else if (apex_mode.val1 == TDK_APEX_TILT) {
+				struct sensor_value apex_tilt;
+				
+				sensor_channel_get(dev, SENSOR_CHAN_APEX_MOTION, &apex_tilt);
 
-			sensor_channel_get(dev, SENSOR_CHAN_APEX_MOTION, apex_wom);
+				printf("[%s]: %s\n", now_str(), apex_tilt.val1?"TILT":"Unknown trig");
+			} else if (apex_mode.val1 == TDK_APEX_WOM) {
+				struct sensor_value apex_wom[3];
 
-			printf("[%s]: WOM x=%d y=%d z=%d\n", now_str(), apex_wom[0].val1,
-			       apex_wom[1].val1, apex_wom[2].val1);
-#endif
-#ifdef CONFIG_TDK_APEX_SMD
-			printf("[%s]: SMD\n", now_str());
-#endif
+				sensor_channel_get(dev, SENSOR_CHAN_APEX_MOTION, apex_wom);
+
+				printf("[%s]: WOM x=%d y=%d z=%d\n", now_str(), apex_wom[0].val1,
+					   apex_wom[1].val1, apex_wom[2].val1);
+			} else if (apex_mode.val1 == TDK_APEX_SMD) {
+				struct sensor_value apex_smd;
+				
+				sensor_channel_get(dev, SENSOR_CHAN_APEX_MOTION, &apex_smd);
+				
+				printf("[%s]: %s\n", now_str(), apex_smd.val1?"SMD":"Unknwon trig");
+			}
 			irq_from_device = 0;
 		}
 	}

@@ -25,9 +25,10 @@
 		compatible = "invensense,icm42670";
 		reg = <0x68>;
 		int-gpios = <&arduino_header 8 GPIO_ACTIVE_HIGH>; /* D2 */
-		accel-hz = <100>;
-		gyro-hz = <100>;
+		accel-hz = <50>;
+		gyro-hz = <50>;
 		accel-fs = <16>;
 		gyro-fs = <2000>;
+		apex = "pedometer";
 	};
 };

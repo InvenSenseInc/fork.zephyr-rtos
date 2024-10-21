@@ -7,8 +7,6 @@
 #include "icm42670.h"
 #include "imu/inv_imu_apex.h"
 
-#if defined(CONFIG_TDK_APEX_PEDOMETER) || defined(CONFIG_TDK_APEX_TILT) ||                         \
-	defined(CONFIG_TDK_APEX_SMD)
 int icm42670_apex_enable(inv_imu_device_t *s)
 {
 	int err = 0;
@@ -48,27 +46,18 @@ int icm42670_apex_enable(inv_imu_device_t *s)
 
 	return err;
 }
-#endif
 
-#ifdef CONFIG_TDK_APEX_PEDOMETER
-int icm42670_apex_enable_pedometer(const struct device *dev, inv_imu_device_t *s)
-{
-	struct icm42670_data *data = dev->data;
-
-	data->dmp_odr_hz = 50;
-	/* Enable the pedometer */
-	return inv_imu_apex_enable_pedometer(s);
-}
-
-int icm42670_apex_pedometer_fetch_from_dmp(const struct device *dev)
+int icm42670_apex_fetch_from_dmp(const struct device *dev)
 {
 	struct icm42670_data *data = dev->data;
 	int rc = 0;
-	uint8_t int_status3;
+	uint8_t int_status2, int_status3;
 
-	/* Read Pedometer interrupt status */
+	/* Read APEX interrupt status */
+	rc |= inv_imu_read_reg(&data->driver, INT_STATUS2, 1, &int_status2);
 	rc |= inv_imu_read_reg(&data->driver, INT_STATUS3, 1, &int_status3);
-
+	
+	/* Test Pedometer interrupt */
 	if (int_status3 & (INT_STATUS3_STEP_DET_INT_MASK)) {
 		inv_imu_apex_step_activity_t apex_pedometer;
 		uint8_t step_cnt_ovflw = 0;
@@ -90,6 +79,28 @@ int icm42670_apex_pedometer_fetch_from_dmp(const struct device *dev)
 			rc = 1;
 		}
 	}
+	/* Test Tilt interrupt */
+	if (int_status3 & (INT_STATUS3_TILT_DET_INT_MASK)) {
+		data->apex_status = ICM42670_APEX_STATUS_MASK_TILT;
+	}
+	/* Test SMD interrupt */
+	if ((int_status2 & (INT_STATUS2_SMD_INT_MASK)) || (rc != 0)) {
+		data->apex_status = ICM42670_APEX_STATUS_MASK_SMD;
+	}
+	/* Test WOM interrupts */
+	if (int_status2 & (INT_STATUS2_WOM_X_INT_MASK | INT_STATUS2_WOM_Y_INT_MASK |
+			   INT_STATUS2_WOM_Z_INT_MASK)) {
+		data->apex_status = 0;
+		if (int_status2 & INT_STATUS2_WOM_X_INT_MASK) {
+			data->apex_status |= ICM42670_APEX_STATUS_MASK_WOM_X;
+		}
+		if (int_status2 & INT_STATUS2_WOM_Y_INT_MASK) {
+			data->apex_status |= ICM42670_APEX_STATUS_MASK_WOM_Y;
+		}
+		if (int_status2 & INT_STATUS2_WOM_Z_INT_MASK) {
+			data->apex_status |= ICM42670_APEX_STATUS_MASK_WOM_Z;
+		}
+	}
 	return rc;
 }
 
@@ -103,32 +114,22 @@ void icm42670_apex_pedometer_cadence_convert(struct sensor_value *val, uint8_t r
 	val->val1 = conv_val / 1000000;
 	val->val2 = conv_val % 1000000;
 }
-#endif /* CONFIG_TDK_APEX_PEDOMETER */
 
-#ifdef CONFIG_TDK_APEX_TILT
+int icm42670_apex_enable_pedometer(const struct device *dev, inv_imu_device_t *s)
+{
+	struct icm42670_data *data = dev->data;
+
+	data->dmp_odr_hz = 50;
+	/* Enable the pedometer */
+	return inv_imu_apex_enable_pedometer(s);
+}
+
 int icm42670_apex_enable_tilt(inv_imu_device_t *s)
 {
-	/* Enable the pedometer */
+	/* Enable Tilt */
 	return inv_imu_apex_enable_tilt(s);
 }
 
-int icm42670_apex_tilt_fetch_from_dmp(const struct device *dev)
-{
-	struct icm42670_data *data = dev->data;
-	int rc = 0;
-	uint8_t int_status3;
-
-	/* Read Tilt interrupt status */
-	rc |= inv_imu_read_reg(&data->driver, INT_STATUS3, 1, &int_status3);
-
-	if (int_status3 & (INT_STATUS3_TILT_DET_INT_MASK)) {
-		return rc;
-	}
-	return -1;
-}
-#endif /* CONFIG_TDK_APEX_TILT */
-
-#ifdef CONFIG_TDK_APEX_SMD
 int icm42670_apex_enable_smd(inv_imu_device_t *s)
 {
 	int rc = 0;
@@ -140,24 +141,6 @@ int icm42670_apex_enable_smd(inv_imu_device_t *s)
 	return rc;
 }
 
-int icm42670_apex_smd_fetch_from_dmp(const struct device *dev)
-{
-	struct icm42670_data *data = dev->data;
-	int rc = 0;
-	uint8_t int_status2;
-
-	/* Read SMD interrupt status */
-	rc |= inv_imu_read_reg(&data->driver, INT_STATUS2, 1, &int_status2);
-
-	if ((int_status2 & (INT_STATUS2_SMD_INT_MASK)) || (rc != 0)) {
-		return rc;
-	}
-	/* Pedometer & SMD data processing */
-	return 0;
-}
-#endif /* CONFIG_TDK_APEX_SMD */
-
-#ifdef CONFIG_TDK_APEX_WOM
 int icm42670_apex_enable_wom(inv_imu_device_t *s)
 {
 	int rc = 0;
@@ -192,34 +175,3 @@ int icm42670_apex_enable_wom(inv_imu_device_t *s)
 
 	return rc;
 }
-
-int icm42670_apex_wom_fetch_from_dmp(const struct device *dev)
-{
-	struct icm42670_data *data = dev->data;
-	int rc = 0;
-	uint8_t int_status2;
-
-	data->wom_x = 0;
-	data->wom_y = 0;
-	data->wom_z = 0;
-
-	/* Read SMD interrupt status */
-	rc |= inv_imu_read_reg(&data->driver, INT_STATUS2, 1, &int_status2);
-
-	if (int_status2 & (INT_STATUS2_WOM_X_INT_MASK | INT_STATUS2_WOM_Y_INT_MASK |
-			   INT_STATUS2_WOM_Z_INT_MASK)) {
-		if (int_status2 & INT_STATUS2_WOM_X_INT_MASK) {
-			data->wom_x = 1;
-		}
-		if (int_status2 & INT_STATUS2_WOM_Y_INT_MASK) {
-			data->wom_y = 1;
-		}
-		if (int_status2 & INT_STATUS2_WOM_Z_INT_MASK) {
-			data->wom_z = 1;
-		}
-		return rc;
-	} else {
-		return -1;
-	}
-}
-#endif /* CONFIG_TDK_APEX_WOM */

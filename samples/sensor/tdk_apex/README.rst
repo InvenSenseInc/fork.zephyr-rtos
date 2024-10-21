@@ -17,7 +17,7 @@ position is held for 4 seconds.
 ** Wake on Motion (WoM): Detects motion per axis exceeding 195 mg threshold.
 ** Significant Motion Detector (SMD): Detects when the user has moved
 significantly.
-APEX feature support and the different features are configured through KConfig.
+APEX features support are configured through devicetree.
 
 References
 **********
@@ -40,19 +40,40 @@ sensor GPIO.
 Building and Running
 ********************
 
-After providing a devicetree overlay that specifies the sensor location,
-build this sample app using:
+This sample supports TDK IMU devices. Each device needs
+to be aliased as ``tdk-apex-sensorN`` where ``N`` goes from ``0`` to ``9``. For example:
+
+.. code-block:: devicetree
+
+ / {
+	aliases {
+			tdk-apex-sensor0 = &icm42670;
+		};
+	};
+
+This sample supports APEX feature of TDK device. It needs to be specified as bellow:
+
+.. code-block:: devicetree
+
+	icm42670: icm42670@0 {
+		apex = "pedometer";
+	}
+
+Make sure the apex feature used is in devicetree, then build and run with:
 
 .. zephyr-app-commands:
    :zephyr-app: samples/sensor/tdk_apex
    :board: nrf52dk/nrf52832
    :goals: build flash
 
-Sample Output with TDK sensor : ICM-42670-P 6-axis Sensor
-=========================================================
+Sample Output
+=============
 
-## Default configuration
-## APEX_FEATURES = TDK_APEX_PEDOMETER
+.. code-block:: devicetree
+
+	icm42670: icm42670@0 {
+		apex = "pedometer";
+	}
 
 .. code-block:: console
 
@@ -65,7 +86,11 @@ Sample Output with TDK sensor : ICM-42670-P 6-axis Sensor
 
    <repeats endlessly>
 
-## APEX_FEATURES = TDK_APEX_TILT
+.. code-block:: devicetree
+
+	icm42670: icm42670@0 {
+		apex = "tilt";
+	}
 
 .. code-block:: console
 
@@ -76,7 +101,11 @@ Sample Output with TDK sensor : ICM-42670-P 6-axis Sensor
 
    <repeats endlessly>
 
-## APEX_FEATURES = TDK_APEX_WOM
+.. code-block:: devicetree
+
+	icm42670: icm42670@0 {
+		apex = "wom";
+	}
 
 .. code-block:: console
 
@@ -89,7 +118,11 @@ Sample Output with TDK sensor : ICM-42670-P 6-axis Sensor
 
    <repeats endlessly>
 
-## APEX_FEATURES = TDK_APEX_SMD
+.. code-block:: devicetree
+
+	icm42670: icm42670@0 {
+		apex = "smd";
+	}
 
 .. code-block:: console
 

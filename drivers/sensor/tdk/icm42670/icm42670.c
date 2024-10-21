@@ -604,6 +604,9 @@ static int icm42670_channel_get(const struct device *dev, enum sensor_channel ch
 {
 	int res = 0;
 	struct icm42670_data *data = dev->data;
+#ifdef CONFIG_TDK_APEX
+	const struct icm42670_config *cfg = dev->config;
+#endif
 
 	icm42670_lock(dev);
 
@@ -629,18 +632,20 @@ static int icm42670_channel_get(const struct device *dev, enum sensor_channel ch
 		icm42670_convert_gyro(val, data->gyro_z, data->gyro_fs);
 	} else if (chan == SENSOR_CHAN_DIE_TEMP) {
 		icm42670_convert_temp(val, data->temp);
-#ifdef CONFIG_TDK_APEX_PEDOMETER
+#ifdef CONFIG_TDK_APEX
 	} else if ((enum sensor_channel_tdk_apex)chan == SENSOR_CHAN_APEX_MOTION) {
-		val[0].val1 = data->pedometer_cnt;
-		val[1].val1 = data->pedometer_activity;
-		icm42670_apex_pedometer_cadence_convert(&val[2], data->pedometer_cadence,
-							data->dmp_odr_hz);
-#endif
-#ifdef CONFIG_TDK_APEX_WOM
-	} else if ((enum sensor_channel_tdk_apex)chan == SENSOR_CHAN_APEX_MOTION) {
-		val[0].val1 = data->wom_x;
-		val[1].val1 = data->wom_y;
-		val[2].val1 = data->wom_z;
+		if (cfg->apex == TDK_APEX_PEDOMETER) {
+			val[0].val1 = data->pedometer_cnt;
+			val[1].val1 = data->pedometer_activity;
+			icm42670_apex_pedometer_cadence_convert(&val[2], data->pedometer_cadence,
+								data->dmp_odr_hz);
+		} else if (cfg->apex == TDK_APEX_WOM) {
+			val[0].val1 = (data->apex_status & ICM42670_APEX_STATUS_MASK_WOM_X)?1:0;
+			val[1].val1 = (data->apex_status & ICM42670_APEX_STATUS_MASK_WOM_Y)?1:0;
+			val[2].val1 = (data->apex_status & ICM42670_APEX_STATUS_MASK_WOM_Z)?1:0;
+		} else if ((cfg->apex == TDK_APEX_TILT) || (cfg->apex == TDK_APEX_SMD)) {
+			val[0].val1 = data->apex_status;
+		}
 #endif
 	} else {
 		res = -ENOTSUP;
@@ -839,18 +844,12 @@ static int icm42670_sample_fetch(const struct device *dev, enum sensor_channel c
 	int status = -ENOTSUP;
 
 	icm42670_lock(dev);
-
+	
+#ifdef CONFIG_TDK_APEX
 	if ((enum sensor_channel_tdk_apex)chan == SENSOR_CHAN_APEX_MOTION) {
-#ifdef CONFIG_TDK_APEX_PEDOMETER
-		status = icm42670_apex_pedometer_fetch_from_dmp(dev);
-#elif defined(CONFIG_TDK_APEX_TILT)
-		status = icm42670_apex_tilt_fetch_from_dmp(dev);
-#elif defined(CONFIG_TDK_APEX_SMD)
-		status = icm42670_apex_smd_fetch_from_dmp(dev);
-#elif defined(CONFIG_TDK_APEX_WOM)
-		status = icm42670_apex_wom_fetch_from_dmp(dev);
-#endif
+		status = icm42670_apex_fetch_from_dmp(dev);
 	}
+#endif
 
 	if ((chan == SENSOR_CHAN_ALL) || (chan == SENSOR_CHAN_ACCEL_XYZ) ||
 	    (chan == SENSOR_CHAN_ACCEL_X) || (chan == SENSOR_CHAN_ACCEL_Y) ||
@@ -880,27 +879,24 @@ static int icm42670_attr_set(const struct device *dev, enum sensor_channel chan,
 
 	if ((enum sensor_channel_tdk_apex)chan == SENSOR_CHAN_APEX_MOTION) {
 		if (attr == SENSOR_ATTR_CONFIGURATION) {
-#ifdef CONFIG_TDK_APEX_PEDOMETER
+#ifdef CONFIG_TDK_APEX
 			if (val->val1 == TDK_APEX_PEDOMETER) {
 				err |= icm42670_apex_enable(&drv_data->driver);
 				err |= icm42670_apex_enable_pedometer(dev, &drv_data->driver);
 			}
-#elif defined(CONFIG_TDK_APEX_TILT)
-			if (val->val1 == TDK_APEX_TILT) {
+			else if (val->val1 == TDK_APEX_TILT) {
 				err |= icm42670_apex_enable(&drv_data->driver);
 				err |= icm42670_apex_enable_tilt(&drv_data->driver);
 			}
-#elif defined(CONFIG_TDK_APEX_SMD)
-			if (val->val1 == TDK_APEX_SMD) {
+			else if (val->val1 == TDK_APEX_SMD) {
 				err |= icm42670_apex_enable(&drv_data->driver);
 				err |= icm42670_apex_enable_smd(&drv_data->driver);
 			}
-#elif defined(CONFIG_TDK_APEX_WOM)
-			if (val->val1 == TDK_APEX_WOM) {
+			else if (val->val1 == TDK_APEX_WOM) {
 				err |= icm42670_apex_enable_wom(&drv_data->driver);
-			}
-#else
+			} else {
 			LOG_ERR("Not supported ATTR value");
+		}
 #endif
 		} else {
 			LOG_ERR("Not supported ATTR");
@@ -929,6 +925,7 @@ static int icm42670_attr_get(const struct device *dev, enum sensor_channel chan,
 			     enum sensor_attribute attr, struct sensor_value *val)
 {
 	const struct icm42670_data *data = dev->data;
+	const struct icm42670_config *cfg = dev->config;
 	int res = 0;
 
 	__ASSERT_NO_MSG(val != NULL);
@@ -961,6 +958,12 @@ static int icm42670_attr_get(const struct device *dev, enum sensor_channel chan,
 		} else {
 			LOG_ERR("Unsupported attribute");
 			res = -EINVAL;
+		}
+		break;
+
+	case SENSOR_CHAN_APEX_MOTION:
+		if (attr == SENSOR_ATTR_CONFIGURATION) {
+			val->val1 = cfg->apex;
 		}
 		break;
 
@@ -1057,7 +1060,8 @@ static const struct sensor_driver_api icm42670_api_funcs = {
 		.gyro_fs = DT_INST_ENUM_IDX(inst, gyro_fs),	\
 		.gyro_hz = DT_INST_ENUM_IDX(inst, gyro_hz),	\
 		.gyro_filt_bw = DT_INST_ENUM_IDX(inst, gyro_filt_bw_hz),	\
-		.accel_pwr_mode = DT_INST_ENUM_IDX(inst, power_mode),
+		.accel_pwr_mode = DT_INST_ENUM_IDX(inst, power_mode),	\
+		.apex = DT_INST_ENUM_IDX(inst, apex),
 
 /* Initializes the bus members for an instance on a SPI bus. */
 #define ICM42670_CONFIG_SPI(inst)	\
