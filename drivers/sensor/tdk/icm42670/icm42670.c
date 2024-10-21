@@ -640,9 +640,9 @@ static int icm42670_channel_get(const struct device *dev, enum sensor_channel ch
 			icm42670_apex_pedometer_cadence_convert(&val[2], data->pedometer_cadence,
 								data->dmp_odr_hz);
 		} else if (cfg->apex == TDK_APEX_WOM) {
-			val[0].val1 = (data->apex_status & ICM42670_APEX_STATUS_MASK_WOM_X)?1:0;
-			val[1].val1 = (data->apex_status & ICM42670_APEX_STATUS_MASK_WOM_Y)?1:0;
-			val[2].val1 = (data->apex_status & ICM42670_APEX_STATUS_MASK_WOM_Z)?1:0;
+			val[0].val1 = (data->apex_status & ICM42670_APEX_STATUS_MASK_WOM_X) ? 1 : 0;
+			val[1].val1 = (data->apex_status & ICM42670_APEX_STATUS_MASK_WOM_Y) ? 1 : 0;
+			val[2].val1 = (data->apex_status & ICM42670_APEX_STATUS_MASK_WOM_Z) ? 1 : 0;
 		} else if ((cfg->apex == TDK_APEX_TILT) || (cfg->apex == TDK_APEX_SMD)) {
 			val[0].val1 = data->apex_status;
 		}
@@ -844,7 +844,7 @@ static int icm42670_sample_fetch(const struct device *dev, enum sensor_channel c
 	int status = -ENOTSUP;
 
 	icm42670_lock(dev);
-	
+
 #ifdef CONFIG_TDK_APEX
 	if ((enum sensor_channel_tdk_apex)chan == SENSOR_CHAN_APEX_MOTION) {
 		status = icm42670_apex_fetch_from_dmp(dev);
@@ -883,20 +883,17 @@ static int icm42670_attr_set(const struct device *dev, enum sensor_channel chan,
 			if (val->val1 == TDK_APEX_PEDOMETER) {
 				err |= icm42670_apex_enable(&drv_data->driver);
 				err |= icm42670_apex_enable_pedometer(dev, &drv_data->driver);
-			}
-			else if (val->val1 == TDK_APEX_TILT) {
+			} else if (val->val1 == TDK_APEX_TILT) {
 				err |= icm42670_apex_enable(&drv_data->driver);
 				err |= icm42670_apex_enable_tilt(&drv_data->driver);
-			}
-			else if (val->val1 == TDK_APEX_SMD) {
+			} else if (val->val1 == TDK_APEX_SMD) {
 				err |= icm42670_apex_enable(&drv_data->driver);
 				err |= icm42670_apex_enable_smd(&drv_data->driver);
-			}
-			else if (val->val1 == TDK_APEX_WOM) {
+			} else if (val->val1 == TDK_APEX_WOM) {
 				err |= icm42670_apex_enable_wom(&drv_data->driver);
 			} else {
-			LOG_ERR("Not supported ATTR value");
-		}
+				LOG_ERR("Not supported ATTR value");
+			}
 #endif
 		} else {
 			LOG_ERR("Not supported ATTR");

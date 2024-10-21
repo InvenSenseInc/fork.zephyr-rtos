@@ -56,7 +56,7 @@ int icm42670_apex_fetch_from_dmp(const struct device *dev)
 	/* Read APEX interrupt status */
 	rc |= inv_imu_read_reg(&data->driver, INT_STATUS2, 1, &int_status2);
 	rc |= inv_imu_read_reg(&data->driver, INT_STATUS3, 1, &int_status3);
-	
+
 	/* Test Pedometer interrupt */
 	if (int_status3 & (INT_STATUS3_STEP_DET_INT_MASK)) {
 		inv_imu_apex_step_activity_t apex_pedometer;

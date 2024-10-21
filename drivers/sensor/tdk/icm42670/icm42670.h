@@ -58,7 +58,7 @@ struct icm42670_data {
 	struct inv_imu_serif serif;
 	struct inv_imu_device driver;
 	uint8_t imu_whoami;
-	char* imu_name;
+	char *imu_name;
 	uint8_t chip_id;
 	int32_t accel_x;
 	int32_t accel_y;
@@ -114,11 +114,11 @@ struct icm42670_config {
 
 #ifdef CONFIG_TDK_APEX
 
-#define ICM42670_APEX_STATUS_MASK_TILT   BIT(0)
-#define ICM42670_APEX_STATUS_MASK_SMD    BIT(1)
-#define ICM42670_APEX_STATUS_MASK_WOM_X  BIT(2)
-#define ICM42670_APEX_STATUS_MASK_WOM_Y  BIT(3)
-#define ICM42670_APEX_STATUS_MASK_WOM_Z  BIT(4)
+#define ICM42670_APEX_STATUS_MASK_TILT  BIT(0)
+#define ICM42670_APEX_STATUS_MASK_SMD   BIT(1)
+#define ICM42670_APEX_STATUS_MASK_WOM_X BIT(2)
+#define ICM42670_APEX_STATUS_MASK_WOM_Y BIT(3)
+#define ICM42670_APEX_STATUS_MASK_WOM_Z BIT(4)
 
 int icm42670_apex_enable(inv_imu_device_t *s);
 int icm42670_apex_fetch_from_dmp(const struct device *dev);
