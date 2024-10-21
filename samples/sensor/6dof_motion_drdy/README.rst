@@ -36,7 +36,7 @@ to be aliased as ``6dof-motion-drdyN`` where ``N`` goes from ``0`` to ``9``. For
 Make sure the aliases are in devicetree, then build and run with:
 
 .. zephyr-app-commands::
-   :zephyr-app: samples/sensor/6dof_motion_dry
+   :zephyr-app: samples/sensor/6dof_motion_drdy
    :board: nrf52dk/nrf52832
    :goals: build flash
 
