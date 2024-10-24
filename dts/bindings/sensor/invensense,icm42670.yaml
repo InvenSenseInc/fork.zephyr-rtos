@@ -155,7 +155,7 @@ properties:
     type: string
     default: "none"
     description: |
-      APEX (Advanced Pedometer and Event Detection) features. It consists of: 
+      APEX (Advanced Pedometer and Event Detection) features. It consists of:
       * Pedometer: Tracks step count, and provide details such as the cadence and
                    the estimated activity type (Walk, Run, Unknown).
       * Tilt Detection: Detects the Tilt when tilting the board with an angle of

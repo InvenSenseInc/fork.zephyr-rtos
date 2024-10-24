@@ -141,7 +141,7 @@ int main(void)
 				sensor_channel_get(dev, SENSOR_CHAN_APEX_MOTION, &apex_smd);
 
 				printf("[%s]: %s\n", now_str(),
-				       apex_smd.val1 ? "SMD" : "Unknwon trig");
+				       apex_smd.val1 ? "SMD" : "Unknown trig");
 			}
 			irq_from_device = 0;
 		}
