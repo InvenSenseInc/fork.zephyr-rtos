@@ -3,7 +3,6 @@
 
 config ZEPHYR_HAL_TDK_MODULE
 	bool "TDK HAL sensor drivers"
-	default n
 	help
 	  Use the TDK HAL
 
