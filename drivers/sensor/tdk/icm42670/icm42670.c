@@ -29,6 +29,10 @@ LOG_MODULE_REGISTER(ICM42670, CONFIG_SENSOR_LOG_LEVEL);
 /* Convert DT enum to sensor ODR selection */
 #define ICM42670_CONVERT_ENUM_TO_ODR_POS (4)
 
+/* Maximum bytes to read/write on ICM42670 serial interface */
+#define ICM42670_SERIAL_INTERFACE_MAX_READ  (1024 * 32)
+#define ICM42670_SERIAL_INTERFACE_MAX_WRITE (1024 * 32)
+
 static inline int icm42670_reg_read(const struct device *dev, uint8_t reg, uint8_t *buf,
 				    uint32_t size)
 {
@@ -447,8 +451,8 @@ static int icm42670_sensor_init(const struct device *dev)
 	data->serif.context = (struct device *)dev;
 	data->serif.read_reg = inv_io_hal_read_reg;
 	data->serif.write_reg = inv_io_hal_write_reg;
-	data->serif.max_read = 1024 * 32;
-	data->serif.max_write = 1024 * 32;
+	data->serif.max_read = ICM42670_SERIAL_INTERFACE_MAX_READ;
+	data->serif.max_write = ICM42670_SERIAL_INTERFACE_MAX_WRITE;
 #if ICM42670_BUS_SPI
 	data->serif.serif_type = UI_SPI4;
 #endif
