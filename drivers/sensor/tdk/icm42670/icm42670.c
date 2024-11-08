@@ -461,7 +461,7 @@ static int icm42670_sensor_init(const struct device *dev)
 #endif
 	err = inv_imu_init(&data->driver, &data->serif, NULL);
 	if (err < 0) {
-		LOG_DBG("Init failed: %d", err);
+		LOG_ERR("Init failed: %d", err);
 		return err;
 	}
 
@@ -493,7 +493,7 @@ static int icm42670_turn_on_sensor(const struct device *dev)
 		convert_bitfield_to_acc_fs((cfg->accel_fs << ACCEL_CONFIG0_ACCEL_UI_FS_SEL_POS));
 	if ((err < 0) || (data->accel_fs == 0)) {
 		LOG_ERR("Failed to configure accel FSR");
-		return EIO;
+		return -EIO;
 	}
 	LOG_DBG("Set accel full scale to: %d G", data->accel_fs);
 
@@ -503,7 +503,7 @@ static int icm42670_turn_on_sensor(const struct device *dev)
 		convert_bitfield_to_gyr_fs((cfg->gyro_fs << GYRO_CONFIG0_GYRO_UI_FS_SEL_POS));
 	if ((err < 0) || (data->gyro_fs == 0)) {
 		LOG_ERR("Failed to configure gyro FSR");
-		return EIO;
+		return -EIO;
 	}
 	LOG_DBG("Set gyro full scale to: %d dps", data->gyro_fs);
 
@@ -515,7 +515,7 @@ static int icm42670_turn_on_sensor(const struct device *dev)
 				      (cfg->gyro_filt_bw << GYRO_CONFIG1_GYRO_UI_FILT_BW_POS));
 	if (err < 0) {
 		LOG_ERR("Failed to configure filtering.");
-		return EIO;
+		return -EIO;
 	}
 
 	if (cfg->accel_hz != 0) {
@@ -539,7 +539,7 @@ static int icm42670_turn_on_sensor(const struct device *dev)
 
 	if (err < 0) {
 		LOG_ERR("Failed to configure ODR.");
-		return EIO;
+		return -EIO;
 	}
 
 	data->accel_pwr_mode = cfg->accel_pwr_mode;
@@ -786,7 +786,7 @@ static int icm42670_sample_fetch_temp(const struct device *dev)
 static int icm42670_fetch_from_registers(const struct device *dev, enum sensor_channel chan)
 {
 	struct icm42670_data *data = dev->data;
-	int res = 0;
+	int err = 0;
 	uint8_t int_status;
 
 	LOG_ERR("Fetch from reg");
@@ -794,29 +794,29 @@ static int icm42670_fetch_from_registers(const struct device *dev, enum sensor_c
 	icm42670_lock(dev);
 
 	/* Ensure data ready status bit is set */
-	res |= inv_imu_read_reg(&data->driver, INT_STATUS_DRDY, 1, &int_status);
+	err |= inv_imu_read_reg(&data->driver, INT_STATUS_DRDY, 1, &int_status);
 
 	if (int_status & INT_STATUS_DRDY_DATA_RDY_INT_MASK) {
 		switch (chan) {
 		case SENSOR_CHAN_ALL:
-			res |= icm42670_sample_fetch_accel(dev);
-			res |= icm42670_sample_fetch_gyro(dev);
-			res |= icm42670_sample_fetch_temp(dev);
+			err |= icm42670_sample_fetch_accel(dev);
+			err |= icm42670_sample_fetch_gyro(dev);
+			err |= icm42670_sample_fetch_temp(dev);
 			break;
 		case SENSOR_CHAN_ACCEL_XYZ:
 		case SENSOR_CHAN_ACCEL_X:
 		case SENSOR_CHAN_ACCEL_Y:
 		case SENSOR_CHAN_ACCEL_Z:
-			res = icm42670_sample_fetch_accel(dev);
+			err |= icm42670_sample_fetch_accel(dev);
 			break;
 		case SENSOR_CHAN_GYRO_XYZ:
 		case SENSOR_CHAN_GYRO_X:
 		case SENSOR_CHAN_GYRO_Y:
 		case SENSOR_CHAN_GYRO_Z:
-			res = icm42670_sample_fetch_gyro(dev);
+			err |= icm42670_sample_fetch_gyro(dev);
 			break;
 		case SENSOR_CHAN_DIE_TEMP:
-			res = icm42670_sample_fetch_temp(dev);
+			err |= icm42670_sample_fetch_temp(dev);
 			break;
 		default:
 			res = -ENOTSUP;
@@ -825,6 +825,10 @@ static int icm42670_fetch_from_registers(const struct device *dev, enum sensor_c
 	}
 
 	icm42670_unlock(dev);
+
+	if (err < 0) {
+		res = -EIO;
+	}
 	return res;
 }
 #endif

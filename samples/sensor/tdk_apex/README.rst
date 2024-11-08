@@ -61,7 +61,7 @@ This sample supports APEX feature of TDK device. It needs to be specified as bel
 
 Make sure the apex feature used is in devicetree, then build and run with:
 
-.. zephyr-app-commands:
+.. zephyr-app-commands::
    :zephyr-app: samples/sensor/tdk_apex
    :board: nrf52dk/nrf52832
    :goals: build flash
