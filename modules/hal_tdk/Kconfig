@@ -10,4 +10,5 @@ config USE_EMD_ICM42670
 	bool "ICM42x7x High Performance 6-Axis MotionTracking IMU"
 	default y
 	depends on ZEPHYR_HAL_TDK_MODULE
-	depends on DT_HAS_INVENSENSE_ICM42670_ENABLED
+	depends on DT_HAS_INVENSENSE_ICM42670P_ENABLED \
+		|| DT_HAS_INVENSENSE_ICM42670S_ENABLED

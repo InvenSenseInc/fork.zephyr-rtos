@@ -22,10 +22,6 @@
 #include <zephyr/logging/log.h>
 LOG_MODULE_REGISTER(ICM42670, CONFIG_SENSOR_LOG_LEVEL);
 
-#if DT_NUM_INST_STATUS_OKAY(DT_DRV_COMPAT) == 0
-#warning "ICM42670 driver enabled without any devices"
-#endif
-
 /* Convert DT enum to sensor ODR selection */
 #define ICM42670_CONVERT_ENUM_TO_ODR_POS (4)
 
@@ -453,10 +449,10 @@ static int icm42670_sensor_init(const struct device *dev)
 	data->serif.write_reg = inv_io_hal_write_reg;
 	data->serif.max_read = ICM42670_SERIAL_INTERFACE_MAX_READ;
 	data->serif.max_write = ICM42670_SERIAL_INTERFACE_MAX_WRITE;
-#if ICM42670_BUS_SPI
+#if CONFIG_SPI
 	data->serif.serif_type = UI_SPI4;
 #endif
-#if ICM42670_BUS_I2C
+#if CONFIG_I2C
 	data->serif.serif_type = UI_I2C;
 #endif
 	err = inv_imu_init(&data->driver, &data->serif, NULL);
@@ -716,7 +712,7 @@ static int icm42670_fetch_from_fifo(const struct device *dev)
 			if (event.sensor_mask & (1 << INV_SENSOR_TEMPERATURE)) {
 				data->temp = event.temperature;
 			}
-			/* TODO use a ringbuffer to handle multiple samples in FIFO */
+			/* TODO use the sensor streaming interface with RTIO to handle multiple samples in FIFO */
 
 		} /* end of FIFO read for loop */
 
@@ -1067,27 +1063,13 @@ static const struct sensor_driver_api icm42670_api_funcs = {
 		ICM42670_CONFIG_COMMON(inst)                                                       \
 	}
 
-/* Initializes icm42670s specific */
-#define ICM42670S_DEFINE(inst)                                                                     \
-	{                                                                                          \
-		.imu_whoami = INV_ICM42670S_WHOAMI, .imu_name = INV_ICM42670S_STRING_ID,           \
-	}
-
-/* Initializes icm42670p specific */
-#define ICM42670P_DEFINE(inst)                                                                     \
-	{                                                                                          \
-		.imu_whoami = INV_ICM42670P_WHOAMI, .imu_name = INV_ICM42670P_STRING_ID,           \
-	}
-
 /*
  * Main instantiation macro, which selects the correct bus-specific
  * instantiation macros for the instance.
  */
-#define ICM42670_DEFINE(inst)                                                                      \
+#define ICM42670_DEFINE(inst, name, whoami) \
 	static struct icm42670_data icm42670_data_##inst =	\
-			COND_CODE_1(DT_INST_PROP(inst, is_variant_s), \
-			(ICM42670S_DEFINE(inst)),	\
-			(ICM42670P_DEFINE(inst)));          \
+		{.imu_name = name, .imu_whoami = whoami,};           \
 	static const struct icm42670_config icm42670_config_##inst =	\
 			COND_CODE_1(DT_INST_ON_BUS(inst, spi),	\
 			(ICM42670_CONFIG_SPI(inst)),	\
@@ -1097,5 +1079,13 @@ static const struct sensor_driver_api icm42670_api_funcs = {
 				     &icm42670_config_##inst, POST_KERNEL,                         \
 				     CONFIG_SENSOR_INIT_PRIORITY, &icm42670_api_funcs);
 
-/* Create the struct device for every status "okay" node in the devicetree. */
-DT_INST_FOREACH_STATUS_OKAY(ICM42670_DEFINE)
+#define DT_DRV_COMPAT invensense_icm42670p
+#if DT_HAS_COMPAT_STATUS_OKAY(DT_DRV_COMPAT)
+DT_INST_FOREACH_STATUS_OKAY_VARGS(ICM42670_DEFINE, INV_ICM42670P_STRING_ID, INV_ICM42670P_WHOAMI);
+#endif
+#undef DT_DRV_COMPAT
+
+#define DT_DRV_COMPAT invensense_icm42670s
+#if DT_HAS_COMPAT_STATUS_OKAY(DT_DRV_COMPAT)
+DT_INST_FOREACH_STATUS_OKAY_VARGS(ICM42670_DEFINE, INV_ICM42670S_STRING_ID, INV_ICM42670S_WHOAMI);
+#endif

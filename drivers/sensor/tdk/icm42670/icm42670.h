@@ -20,16 +20,11 @@
 #include "imu/inv_imu_apex.h"
 #endif
 
-#define DT_DRV_COMPAT invensense_icm42670
-
-#define ICM42670_BUS_SPI DT_ANY_INST_ON_BUS_STATUS_OKAY(spi)
-#define ICM42670_BUS_I2C DT_ANY_INST_ON_BUS_STATUS_OKAY(i2c)
-
 union icm42670_bus {
-#if ICM42670_BUS_SPI
+#if CONFIG_SPI
 	struct spi_dt_spec spi;
 #endif
-#if ICM42670_BUS_I2C
+#if CONFIG_I2C
 	struct i2c_dt_spec i2c;
 #endif
 };
@@ -46,11 +41,11 @@ struct icm42670_bus_io {
 	icm42670_reg_write_fn write;
 };
 
-#if ICM42670_BUS_SPI
+#if CONFIG_SPI
 extern const struct icm42670_bus_io icm42670_bus_io_spi;
 #endif
 
-#if ICM42670_BUS_I2C
+#if CONFIG_I2C
 extern const struct icm42670_bus_io icm42670_bus_io_i2c;
 #endif
 

@@ -47,7 +47,7 @@ to be aliased as ``tdk-apex-sensorN`` where ``N`` goes from ``0`` to ``9``. For 
 
  / {
 	aliases {
-			tdk-apex-sensor0 = &icm42670;
+			tdk-apex-sensor0 = &icm42670p;
 		};
 	};
 
@@ -55,7 +55,7 @@ This sample supports APEX feature of TDK device. It needs to be specified as bel
 
 .. code-block:: devicetree
 
-	icm42670: icm42670@0 {
+	icm42670p: icm42670p@0 {
 		apex = "pedometer";
 	}
 
@@ -71,13 +71,13 @@ Sample Output
 
 .. code-block:: devicetree
 
-	icm42670: icm42670@0 {
+	icm42670p: icm42670p@0 {
 		apex = "pedometer";
 	}
 
 .. code-block:: console
 
-   Found device "icm42670@68", getting sensor data
+   Found device "icm42670p@68", getting sensor data
    [0:00:09.287]: STEP_DET     count: 6 steps  cadence: 2.0 steps/s  activity: Unknown
    [0:00:09.689]: STEP_DET     count: 7 steps  cadence: 2.1 steps/s  activity: Walk
    [0:00:10.051]: STEP_DET     count: 8 steps  cadence: 2.2 steps/s  activity: Walk
@@ -88,13 +88,13 @@ Sample Output
 
 .. code-block:: devicetree
 
-	icm42670: icm42670@0 {
+	icm42670p: icm42670p@0 {
 		apex = "tilt";
 	}
 
 .. code-block:: console
 
-   Found device "icm42670@68", getting sensor data
+   Found device "icm42670p@68", getting sensor data
    [0:00:15.249]: TILT
    [0:00:21.479]: TILT
    [0:00:26.765]: TILT
@@ -103,13 +103,13 @@ Sample Output
 
 .. code-block:: devicetree
 
-	icm42670: icm42670@0 {
+	icm42670p: icm42670p@0 {
 		apex = "wom";
 	}
 
 .. code-block:: console
 
-   Found device "icm42670@68", getting sensor data
+   Found device "icm42670p@68", getting sensor data
    [0:00:02.555]: WOM x=1 y=0 z=1
    [0:00:02.636]: WOM x=0 y=0 z=1
    [0:00:02.797]: WOM x=0 y=1 z=0
@@ -120,7 +120,7 @@ Sample Output
 
 .. code-block:: devicetree
 
-	icm42670: icm42670@0 {
+	icm42670p: icm42670p@0 {
 		apex = "smd";
 	}
 

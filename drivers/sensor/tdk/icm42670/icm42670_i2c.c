@@ -11,7 +11,7 @@
 
 #include "icm42670.h"
 
-#if ICM42670_BUS_I2C
+#if CONFIG_I2C
 static int icm42670_bus_check_i2c(const union icm42670_bus *bus)
 {
 	return device_is_ready(bus->i2c.bus) ? 0 : -ENODEV;
@@ -34,4 +34,4 @@ const struct icm42670_bus_io icm42670_bus_io_i2c = {
 	.read = icm42670_reg_read_i2c,
 	.write = icm42670_reg_write_i2c,
 };
-#endif /* ICM42670_BUS_I2C */
+#endif /* CONFIG_I2C */

@@ -12,7 +12,7 @@
 
 #include "icm42670.h"
 
-#if ICM42670_BUS_SPI
+#if CONFIG_SPI
 
 #include <zephyr/logging/log.h>
 LOG_MODULE_DECLARE(ICM42670, CONFIG_SENSOR_LOG_LEVEL);
@@ -69,4 +69,4 @@ const struct icm42670_bus_io icm42670_bus_io_spi = {
 	.write = icm42670_reg_write_spi,
 };
 
-#endif /* ICM42670_BUS_SPI */
+#endif /* CONFIG_SPI */

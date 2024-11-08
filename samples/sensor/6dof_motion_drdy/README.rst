@@ -29,7 +29,7 @@ to be aliased as ``6dof-motion-drdyN`` where ``N`` goes from ``0`` to ``9``. For
 
  / {
 	aliases {
-			6dof-motion-drdy0 = &icm42670;
+			6dof-motion-drdy0 = &icm42670p;
 		};
 	};
 
@@ -45,7 +45,7 @@ Sample Output
 
 .. code-block:: console
 
-Found device "icm42670@68", getting sensor data
+Found device "icm42670p@68", getting sensor data
 [0:00:01.716]: temp 23.00 Cel   accel 0.150839 -0.140065 9.994899 m/s/s   gyro  -0.001597 0.005859 0.001597 rad/s
 [0:00:01.726]: temp 23.00 Cel   accel 0.140065 -0.146050 9.988914 m/s/s   gyro  -0.002663 0.005859 0.003195 rad/s
 [0:00:01.736]: temp 23.50 Cel   accel 0.146050 -0.130487 9.988914 m/s/s   gyro  -0.001597 0.006391 0.003195 rad/s
