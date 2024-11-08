@@ -340,7 +340,7 @@ static int icm42670_set_accel_fs(struct icm42670_data *drv_data, const struct se
 		return -EINVAL;
 	}
 	inv_imu_set_accel_fsr(&drv_data->driver,
-				     convert_acc_fs_to_bitfield(val->val1, &drv_data->accel_fs));
+			      convert_acc_fs_to_bitfield(val->val1, &drv_data->accel_fs));
 	LOG_DBG("Set accel full scale to: %d G", drv_data->accel_fs);
 	return 0;
 }
@@ -362,16 +362,14 @@ static int icm42670_accel_config(struct icm42670_data *drv_data, enum sensor_att
 			LOG_ERR("Incorrect low pass filter bandwidth value");
 			return -EINVAL;
 		}
-		inv_imu_set_accel_ln_bw(&drv_data->driver,
-					       convert_ln_bw_to_bitfield(val->val1));
+		inv_imu_set_accel_ln_bw(&drv_data->driver, convert_ln_bw_to_bitfield(val->val1));
 
 	} else if ((enum sensor_attribute_icm42670)attr == SENSOR_ATTR_AVERAGING) {
 		if (val->val1 > 64 || val->val1 < 2) {
 			LOG_ERR("Incorrect averaging filter value");
 			return -EINVAL;
 		}
-		inv_imu_set_accel_lp_avg(&drv_data->driver,
-						convert_lp_avg_to_bitfield(val->val1));
+		inv_imu_set_accel_lp_avg(&drv_data->driver, convert_lp_avg_to_bitfield(val->val1));
 	} else {
 		LOG_ERR("Unsupported attribute");
 		return -EINVAL;
@@ -409,7 +407,7 @@ static int icm42670_set_gyro_fs(struct icm42670_data *drv_data, const struct sen
 		return -EINVAL;
 	}
 	inv_imu_set_gyro_fsr(&drv_data->driver,
-				    convert_gyr_fs_to_bitfield(val->val1, &drv_data->gyro_fs));
+			     convert_gyr_fs_to_bitfield(val->val1, &drv_data->gyro_fs));
 	LOG_DBG("Set gyro fullscale to: %d dps", drv_data->gyro_fs);
 	return 0;
 }
@@ -428,8 +426,7 @@ static int icm42670_gyro_config(struct icm42670_data *drv_data, enum sensor_attr
 			LOG_ERR("Incorrect low pass filter bandwidth value");
 			return -EINVAL;
 		}
-		inv_imu_set_gyro_ln_bw(&drv_data->driver,
-					      convert_ln_bw_to_bitfield(val->val1));
+		inv_imu_set_gyro_ln_bw(&drv_data->driver, convert_ln_bw_to_bitfield(val->val1));
 
 	} else {
 		LOG_ERR("Unsupported attribute");
@@ -484,7 +481,7 @@ static int icm42670_turn_on_sensor(const struct device *dev)
 	int err = 0;
 
 	err = inv_imu_set_accel_fsr(&data->driver,
-				     (cfg->accel_fs << ACCEL_CONFIG0_ACCEL_UI_FS_SEL_POS));
+				    (cfg->accel_fs << ACCEL_CONFIG0_ACCEL_UI_FS_SEL_POS));
 	data->accel_fs =
 		convert_bitfield_to_acc_fs((cfg->accel_fs << ACCEL_CONFIG0_ACCEL_UI_FS_SEL_POS));
 	if ((err < 0) || (data->accel_fs == 0)) {
@@ -494,7 +491,7 @@ static int icm42670_turn_on_sensor(const struct device *dev)
 	LOG_DBG("Set accel full scale to: %d G", data->accel_fs);
 
 	err = inv_imu_set_gyro_fsr(&data->driver,
-				    (cfg->gyro_fs << GYRO_CONFIG0_GYRO_UI_FS_SEL_POS));
+				   (cfg->gyro_fs << GYRO_CONFIG0_GYRO_UI_FS_SEL_POS));
 	data->gyro_fs =
 		convert_bitfield_to_gyr_fs((cfg->gyro_fs << GYRO_CONFIG0_GYRO_UI_FS_SEL_POS));
 	if ((err < 0) || (data->gyro_fs == 0)) {
@@ -504,7 +501,7 @@ static int icm42670_turn_on_sensor(const struct device *dev)
 	LOG_DBG("Set gyro full scale to: %d dps", data->gyro_fs);
 
 	err = inv_imu_set_accel_lp_avg(&data->driver,
-					(cfg->accel_avg << ACCEL_CONFIG1_ACCEL_UI_AVG_POS));
+				       (cfg->accel_avg << ACCEL_CONFIG1_ACCEL_UI_AVG_POS));
 	err |= inv_imu_set_accel_ln_bw(&data->driver,
 				       (cfg->accel_filt_bw << ACCEL_CONFIG1_ACCEL_UI_FILT_BW_POS));
 	err |= inv_imu_set_gyro_ln_bw(&data->driver,
@@ -712,7 +709,10 @@ static int icm42670_fetch_from_fifo(const struct device *dev)
 			if (event.sensor_mask & (1 << INV_SENSOR_TEMPERATURE)) {
 				data->temp = event.temperature;
 			}
-			/* TODO use the sensor streaming interface with RTIO to handle multiple samples in FIFO */
+			/*
+			 * TODO use the sensor streaming interface with RTIO to handle multiple
+			 * samples in FIFO
+			 */
 
 		} /* end of FIFO read for loop */
 
@@ -1038,16 +1038,16 @@ static const struct sensor_driver_api icm42670_api_funcs = {
 /* Initializes a common struct icm42670_config */
 #define ICM42670_CONFIG_COMMON(inst)                                                               \
 	IF_ENABLED(CONFIG_ICM42670_TRIGGER,	\
-				(.gpio_int = GPIO_DT_SPEC_INST_GET_OR(inst, int_gpios, {0}),))	\
-		.accel_fs = DT_INST_ENUM_IDX(inst, accel_fs),                  \
-		.accel_hz = DT_INST_ENUM_IDX(inst, accel_hz),                  \
-		.accel_avg = DT_INST_ENUM_IDX(inst, accel_avg),                \
-		.accel_filt_bw = DT_INST_ENUM_IDX(inst, accel_filt_bw_hz),     \
-		.gyro_fs = DT_INST_ENUM_IDX(inst, gyro_fs),                    \
-		.gyro_hz = DT_INST_ENUM_IDX(inst, gyro_hz),                    \
-		.gyro_filt_bw = DT_INST_ENUM_IDX(inst, gyro_filt_bw_hz),       \
-		.accel_pwr_mode = DT_INST_ENUM_IDX(inst, power_mode),          \
-		.apex = DT_INST_ENUM_IDX(inst, apex),
+				(.gpio_int = GPIO_DT_SPEC_INST_GET_OR(inst, int_gpios, {0}),))     \
+				    .accel_fs = DT_INST_ENUM_IDX(inst, accel_fs),                  \
+				    .accel_hz = DT_INST_ENUM_IDX(inst, accel_hz),                  \
+				    .accel_avg = DT_INST_ENUM_IDX(inst, accel_avg),                \
+				    .accel_filt_bw = DT_INST_ENUM_IDX(inst, accel_filt_bw_hz),     \
+				    .gyro_fs = DT_INST_ENUM_IDX(inst, gyro_fs),                    \
+				    .gyro_hz = DT_INST_ENUM_IDX(inst, gyro_hz),                    \
+				    .gyro_filt_bw = DT_INST_ENUM_IDX(inst, gyro_filt_bw_hz),       \
+				    .accel_pwr_mode = DT_INST_ENUM_IDX(inst, power_mode),          \
+				    .apex = DT_INST_ENUM_IDX(inst, apex),
 
 /* Initializes the bus members for an instance on a SPI bus. */
 #define ICM42670_CONFIG_SPI(inst)                                                                  \
@@ -1067,10 +1067,12 @@ static const struct sensor_driver_api icm42670_api_funcs = {
  * Main instantiation macro, which selects the correct bus-specific
  * instantiation macros for the instance.
  */
-#define ICM42670_DEFINE(inst, name, whoami) \
-	static struct icm42670_data icm42670_data_##inst =	\
-		{.imu_name = name, .imu_whoami = whoami,};           \
-	static const struct icm42670_config icm42670_config_##inst =	\
+#define ICM42670_DEFINE(inst, name, whoami)                                                        \
+	static struct icm42670_data icm42670_data_##inst = {                                       \
+		.imu_name = name,                                                                  \
+		.imu_whoami = whoami,                                                              \
+	};                                                                                         \
+	static const struct icm42670_config icm42670_config_##inst = \
 			COND_CODE_1(DT_INST_ON_BUS(inst, spi),	\
 			(ICM42670_CONFIG_SPI(inst)),	\
 			(ICM42670_CONFIG_I2C(inst)));             \
