@@ -782,7 +782,7 @@ static int icm42670_sample_fetch_temp(const struct device *dev)
 static int icm42670_fetch_from_registers(const struct device *dev, enum sensor_channel chan)
 {
 	struct icm42670_data *data = dev->data;
-	int err = 0;
+	int res = 0;
 	uint8_t int_status;
 
 	LOG_ERR("Fetch from reg");
@@ -790,7 +790,7 @@ static int icm42670_fetch_from_registers(const struct device *dev, enum sensor_c
 	icm42670_lock(dev);
 
 	/* Ensure data ready status bit is set */
-	err |= inv_imu_read_reg(&data->driver, INT_STATUS_DRDY, 1, &int_status);
+	int err = inv_imu_read_reg(&data->driver, INT_STATUS_DRDY, 1, &int_status);
 
 	if (int_status & INT_STATUS_DRDY_DATA_RDY_INT_MASK) {
 		switch (chan) {
