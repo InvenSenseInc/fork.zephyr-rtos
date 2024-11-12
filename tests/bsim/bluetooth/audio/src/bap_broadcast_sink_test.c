@@ -24,7 +24,7 @@
 #include <zephyr/bluetooth/iso.h>
 #include <zephyr/bluetooth/uuid.h>
 #include <zephyr/kernel.h>
-#include <zephyr/net/buf.h>
+#include <zephyr/net_buf.h>
 #include <zephyr/sys/byteorder.h>
 #include <zephyr/sys/printk.h>
 #include <zephyr/sys/util.h>
@@ -138,13 +138,13 @@ static bool valid_base_subgroup(const struct bt_bap_base_subgroup *subgroup)
 		return false;
 	}
 
-	ret = bt_audio_codec_cfg_get_chan_allocation(&codec_cfg, &chan_allocation, false);
+	ret = bt_audio_codec_cfg_get_chan_allocation(&codec_cfg, &chan_allocation, true);
 	if (ret == 0) {
 		chan_cnt = bt_audio_get_chan_count(chan_allocation);
 	} else {
-		printk("Could not get subgroup channel allocation: %d\n", ret);
-		/* Channel allocation is an optional field, and omitting it implicitly means mono */
-		chan_cnt = 1U;
+		FAIL("Could not get subgroup channel allocation: %d\n", ret);
+
+		return false;
 	}
 
 	if (chan_cnt == 0 || (BIT(chan_cnt - 1) & SUPPORTED_CHAN_COUNTS) == 0) {
@@ -169,13 +169,13 @@ static bool valid_base_subgroup(const struct bt_bap_base_subgroup *subgroup)
 		return false;
 	}
 
-	ret = bt_audio_codec_cfg_get_frame_blocks_per_sdu(&codec_cfg, false);
+	ret = bt_audio_codec_cfg_get_frame_blocks_per_sdu(&codec_cfg, true);
 	if (ret > 0) {
 		frames_blocks_per_sdu = (uint8_t)ret;
 	} else {
-		printk("Could not get subgroup octets per frame: %d\n", ret);
-		/* Frame blocks per SDU is optional and is implicitly 1 */
-		frames_blocks_per_sdu = 1U;
+		FAIL("Could not get frame blocks per SDU: %d\n", ret);
+
+		return false;
 	}
 
 	/* An SDU can consist of X frame blocks, each with Y frames (one per channel) of size Z in
@@ -410,7 +410,14 @@ static void broadcast_code_cb(struct bt_conn *conn,
 	memcpy(recv_state_broadcast_code, broadcast_code, BT_AUDIO_BROADCAST_CODE_SIZE);
 }
 
+static void scanning_state_cb(struct bt_conn *conn, bool is_scanning)
+{
+	printk("Assistant scanning %s\n", is_scanning ? "started" : "stopped");
+
+}
+
 static struct bt_bap_scan_delegator_cb scan_delegator_cbs = {
+	.scanning_state = scanning_state_cb,
 	.pa_sync_req = pa_sync_req_cb,
 	.pa_sync_term_req = pa_sync_term_req_cb,
 	.bis_sync_req = bis_sync_req_cb,
@@ -460,7 +467,7 @@ static void validate_stream_codec_cfg(const struct bt_bap_stream *stream)
 	/* The broadcast source sets the channel allocation in the BIS to
 	 * BT_AUDIO_LOCATION_FRONT_LEFT
 	 */
-	ret = bt_audio_codec_cfg_get_chan_allocation(codec_cfg, &chan_allocation, false);
+	ret = bt_audio_codec_cfg_get_chan_allocation(codec_cfg, &chan_allocation, true);
 	if (ret == 0) {
 		if (chan_allocation != BT_AUDIO_LOCATION_FRONT_CENTER) {
 			FAIL("Unexpected channel allocation: 0x%08X", chan_allocation);
@@ -497,13 +504,12 @@ static void validate_stream_codec_cfg(const struct bt_bap_stream *stream)
 		return;
 	}
 
-	ret = bt_audio_codec_cfg_get_frame_blocks_per_sdu(codec_cfg, false);
+	ret = bt_audio_codec_cfg_get_frame_blocks_per_sdu(codec_cfg, true);
 	if (ret > 0) {
 		frames_blocks_per_sdu = (uint8_t)ret;
 	} else {
-		printk("Could not get octets per frame: %d\n", ret);
-		/* Frame blocks per SDU is optional and is implicitly 1 */
-		frames_blocks_per_sdu = 1U;
+		FAIL("Could not get frame blocks per SDU: %d\n", ret);
+		return;
 	}
 
 	/* An SDU can consist of X frame blocks, each with Y frames (one per channel) of size Z in
@@ -643,6 +649,12 @@ static int init(void)
 		return err;
 	}
 
+	err = bt_bap_scan_delegator_register(&scan_delegator_cbs);
+	if (err) {
+		FAIL("Scan delegator register failed (err %d)\n", err);
+		return err;
+	}
+
 	/* Test invalid input */
 	err = bt_bap_broadcast_sink_register_cb(NULL);
 	if (err == 0) {
@@ -656,7 +668,6 @@ static int init(void)
 		return err;
 	}
 
-	bt_bap_scan_delegator_register_cb(&scan_delegator_cbs);
 	bt_le_per_adv_sync_cb_register(&bap_pa_sync_cb);
 	bt_le_scan_cb_register(&bap_scan_cb);
 
@@ -751,7 +762,7 @@ static void test_broadcast_sink_create_inval(void)
 		return;
 	}
 
-	err = bt_bap_broadcast_sink_create(pa_sync, INVALID_BROADCAST_ID, &g_sink);
+	err = bt_bap_broadcast_sink_create(pa_sync, BT_BAP_INVALID_BROADCAST_ID, &g_sink);
 	if (err == 0) {
 		FAIL("bt_bap_broadcast_sink_create did not fail with invalid broadcast ID\n");
 		return;

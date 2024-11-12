@@ -1,15 +1,9 @@
-.. _sim3u1xx_dk:
-
-Silicon Labs SiM3U1xx 32-bit MCU USB Development Kit
-####################################################
+.. zephyr:board:: sim3u1xx_dk
 
 Overview
 ********
 
 This is a `development kit`_ that is used to develop software for the SiM3U1xx MCUs.
-
-.. figure:: sim3u1xx_dk.webp
-   :align: center
 
 Hardware
 ********
@@ -55,6 +49,10 @@ The board configuration supports the following hardware features:
 +-----------+------------+-------------------------------------+
 | SYSTICK   | on-chip    | systick                             |
 +-----------+------------+-------------------------------------+
+| AES       | on-chip    | crypto                              |
++-----------+------------+-------------------------------------+
+| DMA       | on-chip    | dma                                 |
++-----------+------------+-------------------------------------+
 | FLASH     | on-chip    | flash memory                        |
 +-----------+------------+-------------------------------------+
 | GPIO      | on-chip    | gpio                                |
@@ -96,7 +94,7 @@ Programming and Debugging
 Flashing
 ========
 
-The sample application :ref:`hello_world` is used for this example. Build the Zephyr kernel and
+The sample application :zephyr:code-sample:`hello_world` is used for this example. Build the Zephyr kernel and
 application:
 
 .. zephyr-app-commands::

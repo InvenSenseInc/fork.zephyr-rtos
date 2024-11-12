@@ -1,18 +1,10 @@
-.. _bytesensi_l:
-
-bytesatwork byteSENSI-L
-#######################
+.. zephyr:board:: bytesensi_l
 
 Overview
 ********
 
 The byteSENSI-L is a fun LoRa device based on nRF52 MCU that integrates many
 sensors.
-
-.. image:: img/byteSENSI-L.jpg
-   :width: 800px
-   :align: center
-   :alt: byteSENSI-L
 
 Hardware
 ********
@@ -134,7 +126,7 @@ Flashing
 The byteSENSI-L board can be flashed with the SEGGER JLink programmer.
 
 You can build and flash applications in the usual way. Here is an example for
-the :ref:`hello_world` application.
+the :zephyr:code-sample:`hello_world` application.
 
    .. zephyr-app-commands::
       :zephyr-app: samples/hello_world

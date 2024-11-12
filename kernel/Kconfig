@@ -245,8 +245,9 @@ if DYNAMIC_THREAD
 
 config DYNAMIC_THREAD_STACK_SIZE
 	int "Size of each pre-allocated thread stack"
-	default 1024 if !64BIT
-	default 2048 if 64BIT
+	default 4096 if X86
+	default 1024 if !X86 && !64BIT
+	default 2048 if !X86 && 64BIT
 	help
 	  Default stack size (in bytes) for dynamic threads.
 
@@ -449,6 +450,7 @@ config BOOT_BANNER
 config BOOT_BANNER_STRING
 	string "Boot banner string"
 	depends on BOOT_BANNER
+	default "Booting Zephyr OS build (tainted)" if TAINT
 	default "Booting Zephyr OS build"
 	help
 	  Use this option to set the boot banner.
@@ -998,7 +1000,33 @@ config STATIC_INIT_GNU
 	  Note the option CMAKE_LINKER_GENERATOR does not yet support this feature
 	  or CPP.
 
+config BOOTARGS
+	bool "Support bootargs"
+	help
+	  Enables bootargs support and passing them to main().
+
+config DYNAMIC_BOOTARGS
+	bool "Support dynamic bootargs"
+	depends on BOOTARGS && (MULTIBOOT_INFO || BUILD_OUTPUT_EFI)
+	help
+	  Enables dynamic bootargs support.
+
+config BOOTARGS_STRING
+	string "static bootargs string"
+	depends on BOOTARGS && !DYNAMIC_BOOTARGS
+	help
+	  Static bootargs string. It includes argv[0], so if its expected that it
+	  contains executable name it should be put at the beginning of this string.
+
+config BOOTARGS_ARGS_BUFFER_SIZE
+	int "Size of buffer containing main arguments in bytes"
+	default 1024
+	depends on BOOTARGS
+	help
+	  Configures size of buffer containing all arguments passed to main.
+
 endmenu
 
 rsource "Kconfig.device"
 rsource "Kconfig.vm"
+rsource "Kconfig.init"

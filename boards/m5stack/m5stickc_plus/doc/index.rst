@@ -1,7 +1,4 @@
-.. _m5stickc_plus:
-
-M5StickC PLUS
-#############
+.. zephyr:board:: m5stickc_plus
 
 Overview
 ********
@@ -87,12 +84,15 @@ below to retrieve those files.
 Building & Flashing
 *******************
 
-ESP-IDF bootloader
-==================
+Simple boot
+===========
 
-The board is using the ESP-IDF bootloader as the default 2nd stage bootloader.
-It is build as a subproject at each application build. No further attention
-is expected from the user.
+The board could be loaded using the single binary image, without 2nd stage bootloader.
+It is the default option when building the application without additional configuration.
+
+.. note::
+
+   Simple boot does not provide any security features nor OTA updates.
 
 MCUboot bootloader
 ==================
@@ -124,7 +124,7 @@ To build the sample application using sysbuild use the command:
 
 .. zephyr-app-commands::
    :tool: west
-   :app: samples/hello_world
+   :zephyr-app: samples/hello_world
    :board: m5stickc_plus
    :goals: build
    :west-args: --sysbuild
@@ -178,7 +178,7 @@ Build and flash applications as usual (see :ref:`build_an_application` and
    :goals: build
 
 The usual ``flash`` target will work with the ``m5stickc_plus`` board
-configuration. Here is an example for the :ref:`hello_world`
+configuration. Here is an example for the :zephyr:code-sample:`hello_world`
 application.
 
 .. zephyr-app-commands::

@@ -23,50 +23,47 @@ class TestFilter:
         (
             'x86',
             [
-                r'(it8xxx2_evb).*?(SKIPPED: Command line testsuite arch filter)',
-                r'(DEBUG\s+- adding qemu_x86)',
+                r'(it8xxx2_evb/it81302bx).*?(SKIPPED: Command line testsuite arch filter)',
             ],
         ),
         (
             'arm',
             [
-                r'(it8xxx2_evb).*?(SKIPPED: Command line testsuite arch filter)',
-                r'(qemu_x86).*?(SKIPPED: Command line testsuite arch filter)',
-                r'(hsdk).*?(SKIPPED: Command line testsuite arch filter)',
+                r'(it8xxx2_evb/it81302bx).*?(SKIPPED: Command line testsuite arch filter)',
+                r'(qemu_x86/atom).*?(SKIPPED: Command line testsuite arch filter)',
+                r'(hsdk/arc_hsdk).*?(SKIPPED: Command line testsuite arch filter)',
             ]
         ),
         (
             'riscv',
             [
-                r'(qemu_x86).*?(SKIPPED: Command line testsuite arch filter)',
-                r'(hsdk).*?(SKIPPED: Command line testsuite arch filter)',
-                r'(DEBUG\s+- adding it8xxx2_evb)'
-            ]
+                r'(qemu_x86/atom).*?(SKIPPED: Command line testsuite arch filter)',
+                r'(hsdk/arc_hsdk).*?(SKIPPED: Command line testsuite arch filter)',            ]
         )
     ]
     TESTDATA_2 = [
         (
             'nxp',
             [
-                r'(it8xxx2_evb).*?(SKIPPED: Not a selected vendor platform)',
-                r'(hsdk).*?(SKIPPED: Not a selected vendor platform)',
+                r'(it8xxx2_evb/it81302bx).*?(SKIPPED: Not a selected vendor platform)',
+                r'(hsdk/arc_hsdk).*?(SKIPPED: Not a selected vendor platform)',
                 r'(qemu_x86).*?(SKIPPED: Not a selected vendor platform)',
             ],
         ),
         (
             'intel',
             [
-                r'(it8xxx2_evb).*?(SKIPPED: Not a selected vendor platform)',
-                r'(qemu_x86).*?(SKIPPED: Not a selected vendor platform)',
+                r'(it8xxx2_evb/it81302bx).*?(SKIPPED: Not a selected vendor platform)',
+                r'(qemu_x86/atom).*?(SKIPPED: Not a selected vendor platform)',
                 r'(DEBUG\s+- adding intel_adl_crb)'
             ]
         ),
         (
             'ite',
             [
-                r'(qemu_x86).*?(SKIPPED: Not a selected vendor platform)',
-                r'(intel_adl_crb).*?(SKIPPED: Not a selected vendor platform)',
-                r'(hsdk).*?(SKIPPED: Not a selected vendor platform)',
+                r'(qemu_x86/atom).*?(SKIPPED: Not a selected vendor platform)',
+                r'(intel_adl_crb/alder_lake).*?(SKIPPED: Not a selected vendor platform)',
+                r'(hsdk/arc_hsdk).*?(SKIPPED: Not a selected vendor platform)',
                 r'(DEBUG\s+- adding it8xxx2_evb)'
             ]
         )
@@ -191,7 +188,7 @@ class TestFilter:
     def test_arch(self, capfd, out_path, arch, expected):
         path = os.path.join(TEST_DATA, 'tests', 'no_filter')
         test_platforms = ['qemu_x86', 'hsdk', 'intel_adl_crb', 'it8xxx2_evb']
-        args = ['--outdir', out_path, '-T', path, '-vv'] + \
+        args = ['--outdir', out_path, '-T', path, '-vv', '-ll', 'DEBUG'] + \
                ['--arch', arch] + \
                [val for pair in zip(
                    ['-p'] * len(test_platforms), test_platforms
@@ -208,6 +205,7 @@ class TestFilter:
         assert str(sys_exit.value) == '0'
 
         for line in expected:
+            print(err)
             assert re.search(line, err)
 
     @pytest.mark.parametrize(
@@ -224,7 +222,7 @@ class TestFilter:
     def test_vendor(self, capfd, out_path, vendor, expected):
         path = os.path.join(TEST_DATA, 'tests', 'no_filter')
         test_platforms = ['qemu_x86', 'hsdk', 'intel_adl_crb', 'it8xxx2_evb']
-        args = ['--outdir', out_path, '-T', path, '-vv'] + \
+        args = ['--outdir', out_path, '-T', path, '-vv', '-ll', 'DEBUG'] + \
                ['--vendor', vendor] + \
                [val for pair in zip(
                    ['-p'] * len(test_platforms), test_platforms

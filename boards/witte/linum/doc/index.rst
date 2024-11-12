@@ -1,7 +1,4 @@
-.. _linum:
-
-Witte Technology Linum Board
-############################
+.. zephyr:board:: linum
 
 Overview
 ********
@@ -10,10 +7,6 @@ STM32H753BI microcontroller. The board has 2 expansion connectors used by the LC
 touchscreen and another for access to other peripherals of microcontroller. Also it brings plenty
 of communications interfaces like UART with RS232 and RS485 capabillities, CAN bus compatible to
 FD standard, and networking over Ethernet.
-
-.. image:: img/linum-stm32h753bi-top.jpg
-     :align: center
-     :alt: Linum development board
 
 Hardware
 ********
@@ -48,6 +41,8 @@ Expansion connector 2 features.
   - 2 DACs
   - 6 PWM Channels
   - 10 ADCs
+
+More information about the board, can be found at the `Witte Linum website`_.
 
 Supported Features
 ==================
@@ -94,7 +89,7 @@ features:
 Other hardware features are not yet supported on this Zephyr port.
 
 The default configuration can be found in the defconfig file:
-:zephyr_file:`boards/witte_technology/linum/linum_defconfig`
+:zephyr_file:`boards/witte/linum/linum_defconfig`
 
 
 Default Zephyr Peripheral Mapping:
@@ -369,7 +364,7 @@ Flashing
 Flashing an application to the Linum board
 -------------------------------------------
 
-Here is an example for the :ref:`hello_world` application.
+Here is an example for the :zephyr:code-sample:`hello_world` application.
 
 Run a serial host program to connect with your Nucleo board.
 
@@ -394,7 +389,7 @@ Debugging
 =========
 
 You can debug an application in the usual way.  Here is an example for the
-:ref:`hello_world` application.
+:zephyr:code-sample:`hello_world` application.
 
 .. zephyr-app-commands::
    :zephyr-app: samples/hello_world

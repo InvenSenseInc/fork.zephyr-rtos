@@ -35,10 +35,10 @@ set(actinius_icarus_som_ns_DEPRECATED
     actinius_icarus_som/nrf9160/ns
 )
 set(adafruit_feather_DEPRECATED
-    adafruit_feather_nrf52840_express
+    adafruit_feather_nrf52840/nrf52840
 )
 set(adafruit_feather_nrf52840_DEPRECATED
-    adafruit_feather_nrf52840_express
+    adafruit_feather_nrf52840/nrf52840
 )
 set(adafruit_itsybitsy_nrf52840_DEPRECATED
     adafruit_itsybitsy
@@ -365,7 +365,7 @@ set(mimx8mm_evk_a53_smp_DEPRECATED
     imx8mm_evk/mimx8mm6/a53/smp
 )
 set(mimx8mm_phyboard_polis_DEPRECATED
-    mimx8mm_phyboard_polis/mimx8mm6/m4
+    phyboard_polis/mimx8mm6/m4
 )
 set(mimx8mn_evk_a53_DEPRECATED
     imx8mn_evk/mimx8mn6/a53
@@ -386,7 +386,7 @@ set(mimx8mp_evk_itcm_DEPRECATED
     imx8mp_evk/mimx8ml8/m7
 )
 set(mimx8mp_phyboard_pollux_DEPRECATED
-    mimx8mp_phyboard_pollux/mimx8ml8/m7
+    phyboard_pollux/mimx8ml8/m7
 )
 set(mimx8mq_evk_cm4_DEPRECATED
     imx8mq_evk/mimx8mq6/m4
@@ -507,9 +507,6 @@ set(nrf5340dk_nrf5340_cpuapp_ns_DEPRECATED
 )
 set(nrf5340dk_nrf5340_cpunet_DEPRECATED
     nrf5340dk/nrf5340/cpunet
-)
-set(nrf54l15pdk_nrf54l15_cpuapp_DEPRECATED
-    nrf54l15pdk/nrf54l15/cpuapp
 )
 set(nrf9131ek_nrf9131_DEPRECATED
     nrf9131ek
@@ -721,6 +718,9 @@ set(qemu_x86_virt_DEPRECATED
 set(qemu_x86_xip_DEPRECATED
     qemu_x86/atom/xip
 )
+set(qemu_xtensa_DEPRECATED
+    qemu_xtensa/dc233c
+)
 set(qemu_xtensa_mmu_DEPRECATED
     qemu_xtensa/dc233c/mmu
 )
@@ -909,4 +909,10 @@ set(xiao_esp32s3_DEPRECATED
 )
 set(yd_esp32_DEPRECATED
     yd_esp32/esp32/procpu
+)
+set(mimx8mp_phyboard_pollux/mimx8ml8/m7_DEPRECATED
+    phyboard_pollux/mimx8ml8/m7
+)
+set(mimx8mm_phyboard_polis/mimx8mm6/m4_DEPRECATED
+    phyboard_polis/mimx8mm6/m4
 )

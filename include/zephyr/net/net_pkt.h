@@ -19,7 +19,7 @@
 #include <zephyr/types.h>
 #include <stdbool.h>
 
-#include <zephyr/net/buf.h>
+#include <zephyr/net_buf.h>
 
 #if defined(CONFIG_IEEE802154)
 #include <zephyr/net/ieee802154_pkt.h>
@@ -49,6 +49,28 @@ extern "C" {
 struct net_context;
 
 /** @cond INTERNAL_HIDDEN */
+
+#if defined(CONFIG_NET_PKT_ALLOC_STATS)
+struct net_pkt_alloc_stats {
+	uint64_t alloc_sum;
+	uint64_t time_sum;
+	uint32_t count;
+};
+
+struct net_pkt_alloc_stats_slab {
+	struct net_pkt_alloc_stats ok;
+	struct net_pkt_alloc_stats fail;
+	struct k_mem_slab *slab;
+};
+
+#define NET_PKT_ALLOC_STATS_DEFINE(alloc_name, slab_name)		  \
+	STRUCT_SECTION_ITERABLE(net_pkt_alloc_stats_slab, alloc_name) = { \
+		.slab = &slab_name,					  \
+	}
+
+#else
+#define NET_PKT_ALLOC_STATS_DEFINE(name, slab)
+#endif /* CONFIG_NET_PKT_ALLOC_STATS */
 
 /* buffer cursor used in net_pkt */
 struct net_pkt_cursor {
@@ -144,6 +166,10 @@ struct net_pkt {
 	  CONFIG_NET_PKT_RXTIME_STATS_DETAIL */
 	};
 #endif /* CONFIG_NET_PKT_RXTIME_STATS || CONFIG_NET_PKT_TXTIME_STATS */
+
+#if defined(CONFIG_NET_PKT_ALLOC_STATS)
+	struct net_pkt_alloc_stats_slab *alloc_stats;
+#endif /* CONFIG_NET_PKT_ALLOC_STATS */
 
 	/** Reference counter */
 	atomic_t atomic_ref;
@@ -1139,35 +1165,6 @@ static inline void net_pkt_set_create_time(struct net_pkt *pkt,
 	* CONFIG_TRACING_NET_CORE
 	*/
 
-/**
- * @deprecated Use @ref net_pkt_timestamp or @ref net_pkt_timestamp_ns instead.
- */
-static inline uint64_t net_pkt_txtime(struct net_pkt *pkt)
-{
-#if defined(CONFIG_NET_PKT_TXTIME)
-	return pkt->timestamp.second * NSEC_PER_SEC + pkt->timestamp.nanosecond;
-#else
-	ARG_UNUSED(pkt);
-
-	return 0;
-#endif /* CONFIG_NET_PKT_TXTIME */
-}
-
-/**
- * @deprecated Use @ref net_pkt_set_timestamp or @ref net_pkt_set_timestamp_ns
- * instead.
- */
-static inline void net_pkt_set_txtime(struct net_pkt *pkt, uint64_t txtime)
-{
-#if defined(CONFIG_NET_PKT_TXTIME)
-	pkt->timestamp.second = txtime / NSEC_PER_SEC;
-	pkt->timestamp.nanosecond = txtime % NSEC_PER_SEC;
-#else
-	ARG_UNUSED(pkt);
-	ARG_UNUSED(txtime);
-#endif /* CONFIG_NET_PKT_TXTIME */
-}
-
 #if defined(CONFIG_NET_PKT_TXTIME_STATS_DETAIL) || \
 	defined(CONFIG_NET_PKT_RXTIME_STATS_DETAIL)
 static inline uint32_t *net_pkt_stats_tick(struct net_pkt *pkt)
@@ -1481,7 +1478,8 @@ static inline void net_pkt_set_remote_address(struct net_pkt *pkt,
  * @param count Number of net_pkt in this slab.
  */
 #define NET_PKT_SLAB_DEFINE(name, count)				\
-	K_MEM_SLAB_DEFINE(name, sizeof(struct net_pkt), count, 4)
+	K_MEM_SLAB_DEFINE(name, sizeof(struct net_pkt), count, 4);      \
+	NET_PKT_ALLOC_STATS_DEFINE(pkt_alloc_stats_##name, name)
 
 /** @cond INTERNAL_HIDDEN */
 

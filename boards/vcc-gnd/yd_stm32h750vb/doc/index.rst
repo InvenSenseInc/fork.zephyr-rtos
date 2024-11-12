@@ -1,7 +1,4 @@
-.. _yd_stm32h750vb:
-
-YD-STM32H750VB
-##############
+.. zephyr:board:: yd_stm32h750vb
 
 Overview
 ********
@@ -9,10 +6,6 @@ Overview
 The YD-STM32H750VB development board is a complete demonstration and development
 platform for Arm |reg| Cortex |reg|-M7 core-based STM32H750VBT6 microcontroller, with
 128Kbytes of Flash memory and 1 Mbytes of SRAM.
-
-.. image:: img/yd_stm32h750vb.png
-     :align: center
-     :alt: YD-STM32H750VB
 
 More information about STM32H750 can be found here:
 
@@ -105,7 +98,7 @@ Debugging
 =========
 
 You can debug an application in the usual way.  Here is an example for the
-:ref:`hello_world` application.
+:zephyr:code-sample:`hello_world` application.
 
 .. zephyr-app-commands::
    :zephyr-app: samples/hello_world

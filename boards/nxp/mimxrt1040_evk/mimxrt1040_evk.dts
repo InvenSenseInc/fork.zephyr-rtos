@@ -19,6 +19,7 @@
 		sw0 = &user_button;
 		pwm-0 = &flexpwm1_pwm3;
 		accel0 = &fxls8974;
+		mcuboot-button0 = &user_button;
 	};
 
 	chosen {
@@ -30,6 +31,7 @@
 		zephyr,flash = &w25q64jvssiq;
 		zephyr,flash-controller = &w25q64jvssiq;
 		zephyr,code-partition = &slot0_partition;
+		zephyr,uart-mcumgr = &lpuart1;
 		zephyr,bt-hci = &bt_hci_uart;
 	};
 

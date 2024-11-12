@@ -52,6 +52,11 @@ LOG_MODULE_REGISTER(bt_conn);
 
 K_FIFO_DEFINE(free_tx);
 
+#if defined(CONFIG_BT_CONN_TX_NOTIFY_WQ)
+static struct k_work_q conn_tx_workq;
+static K_KERNEL_STACK_DEFINE(conn_tx_workq_thread_stack, CONFIG_BT_CONN_TX_NOTIFY_WQ_STACK_SIZE);
+#endif /* CONFIG_BT_CONN_TX_NOTIFY_WQ */
+
 static void tx_free(struct bt_conn_tx *tx);
 
 static void conn_tx_destroy(struct bt_conn *conn, struct bt_conn_tx *tx)
@@ -155,7 +160,7 @@ static struct net_buf *get_data_frag(struct net_buf *outside, size_t winsize)
 	window = bt_buf_make_view(window, outside,
 				  winsize, &get_frag_md(window)->view_meta);
 
-	LOG_DBG("get-acl-frag: outside %p window %p size %d", outside, window, winsize);
+	LOG_DBG("get-acl-frag: outside %p window %p size %zu", outside, window, winsize);
 
 	return window;
 }
@@ -254,12 +259,21 @@ static void tx_free(struct bt_conn_tx *tx)
 }
 
 #if defined(CONFIG_BT_CONN_TX)
-static void tx_notify(struct bt_conn *conn)
+static struct k_work_q *tx_notify_workqueue_get(void)
 {
-	__ASSERT_NO_MSG(k_current_get() ==
-			k_work_queue_thread_get(&k_sys_work_q));
+#if defined(CONFIG_BT_CONN_TX_NOTIFY_WQ)
+	return &conn_tx_workq;
+#else
+	return &k_sys_work_q;
+#endif /* CONFIG_BT_CONN_TX_NOTIFY_WQ */
+}
 
-	LOG_DBG("conn %p", conn);
+static void tx_notify_process(struct bt_conn *conn)
+{
+	/* TX notify processing is done only from a single thread. */
+	__ASSERT_NO_MSG(k_current_get() == k_work_queue_thread_get(tx_notify_workqueue_get()));
+
+	LOG_DBG("conn %p", (void *)conn);
 
 	while (1) {
 		struct bt_conn_tx *tx = NULL;
@@ -300,7 +314,30 @@ static void tx_notify(struct bt_conn *conn)
 		bt_tx_irq_raise();
 	}
 }
-#endif	/* CONFIG_BT_CONN_TX */
+#endif /* CONFIG_BT_CONN_TX */
+
+void bt_conn_tx_notify(struct bt_conn *conn, bool wait_for_completion)
+{
+#if defined(CONFIG_BT_CONN_TX)
+	/* Ensure that function is called only from a single context. */
+	if (k_current_get() == k_work_queue_thread_get(tx_notify_workqueue_get())) {
+		tx_notify_process(conn);
+	} else {
+		struct k_work_sync sync;
+		int err;
+
+		err = k_work_submit_to_queue(tx_notify_workqueue_get(), &conn->tx_complete_work);
+		__ASSERT(err >= 0, "couldn't submit (err %d)", err);
+
+		if (wait_for_completion) {
+			(void)k_work_flush(&conn->tx_complete_work, &sync);
+		}
+	}
+#else
+	ARG_UNUSED(conn);
+	ARG_UNUSED(wait_for_completion);
+#endif /* CONFIG_BT_CONN_TX */
+}
 
 struct bt_conn *bt_conn_new(struct bt_conn *conns, size_t size)
 {
@@ -439,38 +476,15 @@ static void bt_acl_recv(struct bt_conn *conn, struct net_buf *buf, uint8_t flags
 	bt_l2cap_recv(conn, buf, true);
 }
 
-static void wait_for_tx_work(struct bt_conn *conn)
-{
-#if defined(CONFIG_BT_CONN_TX)
-	LOG_DBG("conn %p", conn);
-
-	if (IS_ENABLED(CONFIG_BT_RECV_WORKQ_SYS) ||
-	    k_current_get() == k_work_queue_thread_get(&k_sys_work_q)) {
-		tx_notify(conn);
-	} else {
-		struct k_work_sync sync;
-		int err;
-
-		err = k_work_submit(&conn->tx_complete_work);
-		__ASSERT(err >= 0, "couldn't submit (err %d)", err);
-
-		k_work_flush(&conn->tx_complete_work, &sync);
-	}
-	LOG_DBG("done");
-#else
-	ARG_UNUSED(conn);
-#endif	/* CONFIG_BT_CONN_TX */
-}
-
 void bt_conn_recv(struct bt_conn *conn, struct net_buf *buf, uint8_t flags)
 {
 	/* Make sure we notify any pending TX callbacks before processing
 	 * new data for this connection.
 	 *
 	 * Always do so from the same context for sanity. In this case that will
-	 * be the system workqueue.
+	 * be either a dedicated Bluetooth connection TX workqueue or system workqueue.
 	 */
-	wait_for_tx_work(conn);
+	bt_conn_tx_notify(conn, true);
 
 	LOG_DBG("handle %u len %u flags %02x", conn->handle, buf->len, flags);
 
@@ -651,7 +665,7 @@ static int send_buf(struct bt_conn *conn, struct net_buf *buf,
 		return -EIO;
 	}
 
-	LOG_DBG("conn %p buf %p len %u buf->len %u cb %p ud %p",
+	LOG_DBG("conn %p buf %p len %zu buf->len %u cb %p ud %p",
 		conn, buf, len, buf->len, cb, ud);
 
 	/* Acquire the right to send 1 packet to the controller */
@@ -1240,7 +1254,7 @@ void bt_conn_set_state(struct bt_conn *conn, bt_conn_state_t state)
 		 */
 		switch (old_state) {
 		case BT_CONN_DISCONNECT_COMPLETE:
-			wait_for_tx_work(conn);
+			bt_conn_tx_notify(conn, true);
 
 			bt_conn_reset_rx_state(conn);
 
@@ -1475,6 +1489,18 @@ struct bt_conn *bt_conn_ref(struct bt_conn *conn)
 	return conn;
 }
 
+static K_SEM_DEFINE(pending_recycled_events, 0, K_SEM_MAX_LIMIT);
+
+static void recycled_work_handler(struct k_work *work)
+{
+	if (k_sem_take(&pending_recycled_events, K_NO_WAIT) == 0) {
+		notify_recycled_conn_slot();
+		k_work_submit(work);
+	}
+}
+
+static K_WORK_DEFINE(recycled_work, recycled_work_handler);
+
 void bt_conn_unref(struct bt_conn *conn)
 {
 	atomic_val_t old;
@@ -1505,7 +1531,8 @@ void bt_conn_unref(struct bt_conn *conn)
 	 * to claim connection object as only the first claim will be served.
 	 */
 	if (deallocated) {
-		notify_recycled_conn_slot();
+		k_sem_give(&pending_recycled_events);
+		k_work_submit(&recycled_work);
 	}
 
 	if (IS_ENABLED(CONFIG_BT_PERIPHERAL) && conn_type == BT_CONN_TYPE_LE &&
@@ -1568,7 +1595,7 @@ struct net_buf *bt_conn_create_pdu_timeout(struct net_buf_pool *pool,
 
 	if (!K_TIMEOUT_EQ(timeout, K_NO_WAIT) &&
 	    k_current_get() == k_work_queue_thread_get(&k_sys_work_q)) {
-		LOG_DBG("Timeout discarded. No blocking in syswq.");
+		LOG_WRN("Timeout discarded. No blocking in syswq.");
 		timeout = K_NO_WAIT;
 	}
 
@@ -1618,12 +1645,9 @@ struct net_buf *bt_conn_create_pdu_timeout(struct net_buf_pool *pool,
 #if defined(CONFIG_BT_CONN_TX)
 static void tx_complete_work(struct k_work *work)
 {
-	struct bt_conn *conn = CONTAINER_OF(work, struct bt_conn,
-					    tx_complete_work);
+	struct bt_conn *conn = CONTAINER_OF(work, struct bt_conn, tx_complete_work);
 
-	LOG_DBG("conn %p", conn);
-
-	tx_notify(conn);
+	tx_notify_process(conn);
 }
 #endif /* CONFIG_BT_CONN_TX */
 
@@ -1661,8 +1685,150 @@ int bt_conn_disconnect(struct bt_conn *conn, uint8_t reason)
 /* Group Connected BT_CONN only in this */
 #if defined(CONFIG_BT_CONN)
 
+/* We don't want the application to get a PHY update callback upon connection
+ * establishment on 2M PHY. Therefore we must prevent issuing LE Set PHY
+ * in this scenario.
+ *
+ * It is ifdef'd because the struct fields don't exist in some configs.
+ */
+static bool uses_symmetric_2mbit_phy(struct bt_conn *conn)
+{
+#if defined(CONFIG_BT_USER_PHY_UPDATE)
+	if (IS_ENABLED(CONFIG_BT_EXT_ADV)) {
+		if (conn->le.phy.tx_phy == BT_HCI_LE_PHY_2M &&
+		    conn->le.phy.rx_phy == BT_HCI_LE_PHY_2M) {
+			return true;
+		}
+	}
+#else
+	ARG_UNUSED(conn);
+#endif
+
+	return false;
+}
+
+static bool can_initiate_feature_exchange(struct bt_conn *conn)
+{
+	/* Spec says both central and peripheral can send the command. However,
+	 * peripheral-initiated feature exchange is an optional feature.
+	 *
+	 * We provide an optimization if we are in the same image as the
+	 * controller, as we know at compile time whether it supports or not
+	 * peripheral feature exchange.
+	 */
+	bool onboard_controller = IS_ENABLED(CONFIG_BT_CTLR);
+	bool supports_peripheral_feature_exchange = IS_ENABLED(CONFIG_BT_CTLR_PER_INIT_FEAT_XCHG);
+	bool is_central = IS_ENABLED(CONFIG_BT_CENTRAL) && conn->role == BT_HCI_ROLE_CENTRAL;
+
+	if (is_central) {
+		return true;
+	}
+
+	if (onboard_controller && supports_peripheral_feature_exchange) {
+		return true;
+	}
+
+	return BT_FEAT_LE_PER_INIT_FEAT_XCHG(bt_dev.le.features);
+}
+
+static void perform_auto_initiated_procedures(struct bt_conn *conn, void *unused)
+{
+	int err;
+
+	ARG_UNUSED(unused);
+
+	LOG_DBG("[%p] Running auto-initiated procedures", conn);
+
+	if (conn->state != BT_CONN_CONNECTED) {
+		/* It is possible that connection was disconnected directly from
+		 * connected callback so we must check state before doing
+		 * connection parameters update.
+		 */
+		return;
+	}
+
+	if (atomic_test_and_set_bit(conn->flags, BT_CONN_AUTO_INIT_PROCEDURES_DONE)) {
+		/* We have already run the auto-initiated procedures */
+		return;
+	}
+
+	if (!atomic_test_bit(conn->flags, BT_CONN_LE_FEATURES_EXCHANGED) &&
+	    can_initiate_feature_exchange(conn)) {
+		err = bt_hci_le_read_remote_features(conn);
+		if (err) {
+			LOG_ERR("Failed read remote features (%d)", err);
+		}
+		if (conn->state != BT_CONN_CONNECTED) {
+			return;
+		}
+	}
+
+	if (IS_ENABLED(CONFIG_BT_REMOTE_VERSION) &&
+	    !atomic_test_bit(conn->flags, BT_CONN_AUTO_VERSION_INFO)) {
+		err = bt_hci_read_remote_version(conn);
+		if (err) {
+			LOG_ERR("Failed read remote version (%d)", err);
+		}
+		if (conn->state != BT_CONN_CONNECTED) {
+			return;
+		}
+	}
+
+	if (IS_ENABLED(CONFIG_BT_AUTO_PHY_UPDATE) && BT_FEAT_LE_PHY_2M(bt_dev.le.features) &&
+	    !uses_symmetric_2mbit_phy(conn)) {
+		err = bt_le_set_phy(conn, 0U, BT_HCI_LE_PHY_PREFER_2M, BT_HCI_LE_PHY_PREFER_2M,
+				    BT_HCI_LE_PHY_CODED_ANY);
+		if (err) {
+			LOG_ERR("Failed LE Set PHY (%d)", err);
+		}
+		if (conn->state != BT_CONN_CONNECTED) {
+			return;
+		}
+	}
+
+	/* Data length should be automatically updated to the maximum by the
+	 * controller. Not updating it is a quirk and this is the workaround.
+	 */
+	if (IS_ENABLED(CONFIG_BT_AUTO_DATA_LEN_UPDATE) && BT_FEAT_LE_DLE(bt_dev.le.features) &&
+	    bt_drv_quirk_no_auto_dle()) {
+		uint16_t tx_octets, tx_time;
+
+		err = bt_hci_le_read_max_data_len(&tx_octets, &tx_time);
+		if (!err) {
+			err = bt_le_set_data_len(conn, tx_octets, tx_time);
+			if (err) {
+				LOG_ERR("Failed to set data len (%d)", err);
+			}
+		}
+	}
+
+	LOG_DBG("[%p] Successfully ran auto-initiated procedures", conn);
+}
+
+/* Executes procedures after a connection is established:
+ * - read remote features
+ * - read remote version
+ * - update PHY
+ * - update data length
+ */
+static void auto_initiated_procedures(struct k_work *unused)
+{
+	ARG_UNUSED(unused);
+
+	bt_conn_foreach(BT_CONN_TYPE_LE, perform_auto_initiated_procedures, NULL);
+}
+
+static K_WORK_DEFINE(procedures_on_connect, auto_initiated_procedures);
+
+static void schedule_auto_initiated_procedures(struct bt_conn *conn)
+{
+	LOG_DBG("[%p] Scheduling auto-init procedures", conn);
+	k_work_submit(&procedures_on_connect);
+}
+
 void bt_conn_connected(struct bt_conn *conn)
 {
+	schedule_auto_initiated_procedures(conn);
 	bt_l2cap_connected(conn);
 	notify_connected(conn);
 }
@@ -2455,8 +2621,10 @@ static void reset_pairing(struct bt_conn *conn)
 #if defined(CONFIG_BT_CLASSIC)
 	if (conn->type == BT_CONN_TYPE_BR) {
 		atomic_clear_bit(conn->flags, BT_CONN_BR_PAIRING);
+		atomic_clear_bit(conn->flags, BT_CONN_BR_PAIRED);
 		atomic_clear_bit(conn->flags, BT_CONN_BR_PAIRING_INITIATOR);
 		atomic_clear_bit(conn->flags, BT_CONN_BR_LEGACY_SECURE);
+		atomic_clear_bit(conn->flags, BT_CONN_BR_GENERAL_BONDING);
 	}
 #endif /* CONFIG_BT_CLASSIC */
 
@@ -3165,6 +3333,128 @@ int bt_conn_le_subrate_request(struct bt_conn *conn,
 }
 #endif /* CONFIG_BT_SUBRATING */
 
+#if defined(CONFIG_BT_CHANNEL_SOUNDING)
+void notify_remote_cs_capabilities(struct bt_conn *conn, struct bt_conn_le_cs_capabilities params)
+{
+	struct bt_conn_cb *callback;
+
+	SYS_SLIST_FOR_EACH_CONTAINER(&conn_cbs, callback, _node) {
+		if (callback->le_cs_remote_capabilities_available) {
+			callback->le_cs_remote_capabilities_available(conn, &params);
+		}
+	}
+
+	STRUCT_SECTION_FOREACH(bt_conn_cb, cb) {
+		if (cb->le_cs_remote_capabilities_available) {
+			cb->le_cs_remote_capabilities_available(conn, &params);
+		}
+	}
+}
+
+void notify_remote_cs_fae_table(struct bt_conn *conn, struct bt_conn_le_cs_fae_table params)
+{
+	struct bt_conn_cb *callback;
+
+	SYS_SLIST_FOR_EACH_CONTAINER(&conn_cbs, callback, _node) {
+		if (callback->le_cs_remote_fae_table_available) {
+			callback->le_cs_remote_fae_table_available(conn, &params);
+		}
+	}
+
+	STRUCT_SECTION_FOREACH(bt_conn_cb, cb) {
+		if (cb->le_cs_remote_fae_table_available) {
+			cb->le_cs_remote_fae_table_available(conn, &params);
+		}
+	}
+}
+
+void notify_cs_config_created(struct bt_conn *conn, struct bt_conn_le_cs_config *params)
+{
+	struct bt_conn_cb *callback;
+
+	SYS_SLIST_FOR_EACH_CONTAINER(&conn_cbs, callback, _node) {
+		if (callback->le_cs_config_created) {
+			callback->le_cs_config_created(conn, params);
+		}
+	}
+
+	STRUCT_SECTION_FOREACH(bt_conn_cb, cb) {
+		if (cb->le_cs_config_created) {
+			cb->le_cs_config_created(conn, params);
+		}
+	}
+}
+
+void notify_cs_config_removed(struct bt_conn *conn, uint8_t config_id)
+{
+	struct bt_conn_cb *callback;
+
+	SYS_SLIST_FOR_EACH_CONTAINER(&conn_cbs, callback, _node) {
+		if (callback->le_cs_config_removed) {
+			callback->le_cs_config_removed(conn, config_id);
+		}
+	}
+
+	STRUCT_SECTION_FOREACH(bt_conn_cb, cb) {
+		if (cb->le_cs_config_removed) {
+			cb->le_cs_config_removed(conn, config_id);
+		}
+	}
+}
+
+void notify_cs_security_enable_available(struct bt_conn *conn)
+{
+	struct bt_conn_cb *callback;
+
+	SYS_SLIST_FOR_EACH_CONTAINER(&conn_cbs, callback, _node) {
+		if (callback->le_cs_security_enabled) {
+			callback->le_cs_security_enabled(conn);
+		}
+	}
+
+	STRUCT_SECTION_FOREACH(bt_conn_cb, cb) {
+		if (cb->le_cs_security_enabled) {
+			cb->le_cs_security_enabled(conn);
+		}
+	}
+}
+
+void notify_cs_procedure_enable_available(struct bt_conn *conn,
+					  struct bt_conn_le_cs_procedure_enable_complete *params)
+{
+	struct bt_conn_cb *callback;
+
+	SYS_SLIST_FOR_EACH_CONTAINER(&conn_cbs, callback, _node) {
+		if (callback->le_cs_procedure_enabled) {
+			callback->le_cs_procedure_enabled(conn, params);
+		}
+	}
+
+	STRUCT_SECTION_FOREACH(bt_conn_cb, cb) {
+		if (cb->le_cs_procedure_enabled) {
+			cb->le_cs_procedure_enabled(conn, params);
+		}
+	}
+}
+
+void notify_cs_subevent_result(struct bt_conn *conn, struct bt_conn_le_cs_subevent_result *result)
+{
+	struct bt_conn_cb *callback;
+
+	SYS_SLIST_FOR_EACH_CONTAINER(&conn_cbs, callback, _node) {
+		if (callback->le_cs_subevent_data_available) {
+			callback->le_cs_subevent_data_available(conn, result);
+		}
+	}
+
+	STRUCT_SECTION_FOREACH(bt_conn_cb, cb) {
+		if (cb->le_cs_subevent_data_available) {
+			cb->le_cs_subevent_data_available(conn, result);
+		}
+	}
+}
+#endif /* CONFIG_BT_CHANNEL_SOUNDING */
+
 int bt_conn_le_param_update(struct bt_conn *conn,
 			    const struct bt_le_conn_param *param)
 {
@@ -3430,6 +3720,23 @@ int bt_conn_le_create(const bt_addr_le_t *peer, const struct bt_conn_le_create_p
 	struct bt_conn *conn;
 	int err;
 
+	CHECKIF(ret_conn == NULL) {
+		return -EINVAL;
+	}
+
+	CHECKIF(*ret_conn != NULL) {
+		/* This rule helps application developers prevent leaks of connection references. If
+		 * a bt_conn variable is not null, it presumably holds a reference and must not be
+		 * overwritten. To avoid this warning, initialize the variables to null, and set
+		 * them to null when moving the reference.
+		 */
+		LOG_WRN("*conn should be unreferenced and initialized to NULL");
+
+		if (IS_ENABLED(CONFIG_BT_CONN_CHECK_NULL_BEFORE_CREATE)) {
+			return -EINVAL;
+		}
+	}
+
 	err = conn_le_create_common_checks(peer, conn_param);
 	if (err) {
 		return err;
@@ -3488,6 +3795,23 @@ int bt_conn_le_create_synced(const struct bt_le_ext_adv *adv,
 {
 	struct bt_conn *conn;
 	int err;
+
+	CHECKIF(ret_conn == NULL) {
+		return -EINVAL;
+	}
+
+	CHECKIF(*ret_conn != NULL) {
+		/* This rule helps application developers prevent leaks of connection references. If
+		 * a bt_conn variable is not null, it presumably holds a reference and must not be
+		 * overwritten. To avoid this warning, initialize the variables to null, and set
+		 * them to null when moving the reference.
+		 */
+		LOG_WRN("*conn should be unreferenced and initialized to NULL");
+
+		if (IS_ENABLED(CONFIG_BT_CONN_CHECK_NULL_BEFORE_CREATE)) {
+			return -EINVAL;
+		}
+	}
 
 	err = conn_le_create_common_checks(synced_param->peer, conn_param);
 	if (err) {
@@ -3919,3 +4243,23 @@ void bt_hci_le_df_cte_req_failed(struct net_buf *buf)
 #endif /* CONFIG_BT_DF_CONNECTION_CTE_REQ */
 
 #endif /* CONFIG_BT_CONN */
+
+#if defined(CONFIG_BT_CONN_TX_NOTIFY_WQ)
+static int bt_conn_tx_workq_init(void)
+{
+	const struct k_work_queue_config cfg = {
+		.name = "BT CONN TX WQ",
+		.no_yield = false,
+		.essential = false,
+	};
+
+	k_work_queue_init(&conn_tx_workq);
+	k_work_queue_start(&conn_tx_workq, conn_tx_workq_thread_stack,
+			   K_THREAD_STACK_SIZEOF(conn_tx_workq_thread_stack),
+			   K_PRIO_COOP(CONFIG_BT_CONN_TX_NOTIFY_WQ_PRIO), &cfg);
+
+	return 0;
+}
+
+SYS_INIT(bt_conn_tx_workq_init, POST_KERNEL, CONFIG_BT_CONN_TX_NOTIFY_WQ_INIT_PRIORITY);
+#endif /* CONFIG_BT_CONN_TX_NOTIFY_WQ */

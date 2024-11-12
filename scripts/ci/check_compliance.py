@@ -387,6 +387,11 @@ class KconfigCheck(ComplianceTest):
         This is needed to complete Kconfig sanity tests.
 
         """
+        if self.no_modules:
+            with open(modules_file, 'w') as fp_module_file:
+                fp_module_file.write("# Empty\n")
+            return
+
         # Invoke the script directly using the Python executable since this is
         # not a module nor a pip-installed Python utility
         zephyr_module_path = os.path.join(ZEPHYR_BASE, "scripts",
@@ -413,18 +418,6 @@ class KconfigCheck(ComplianceTest):
                     modules_dir + '/' + module + '/Kconfig'
                 ))
             fp_module_file.write(content)
-
-        if self.no_modules:
-            module_define_content = ""
-            module_definition = re.compile('config ZEPHYR_.*_MODULE.*').search
-            with open(modules_file, 'r+') as fp_module_file:
-                for line in fp_module_file:
-                    if module_definition(line):
-                        module_define_content += line
-                        module_define_content += "\tbool\n"
-                fp_module_file.seek(0)
-                fp_module_file.write(module_define_content)
-                fp_module_file.truncate()
 
     def get_module_setting_root(self, root, settings_file):
         """
@@ -550,7 +543,7 @@ class KconfigCheck(ComplianceTest):
         kconfig_soc_file = os.path.join(kconfig_dir, 'soc', 'Kconfig.soc')
         kconfig_file = os.path.join(kconfig_dir, 'soc', 'Kconfig')
 
-        root_args = argparse.Namespace(**{'soc_roots': [Path(ZEPHYR_BASE)]})
+        root_args = argparse.Namespace(**{'soc_roots': soc_roots})
         v2_systems = list_hardware.find_v2_systems(root_args)
 
         soc_folders = {soc.folder for soc in v2_systems.get_socs()}
@@ -935,6 +928,7 @@ flagged.
         "BOOT_SWAP_USING_SCRATCH", # Used in sysbuild for MCUboot configuration
         "BOOT_ENCRYPTION_KEY_FILE", # Used in sysbuild
         "BOOT_ENCRYPT_IMAGE", # Used in sysbuild
+        "BOOT_MAX_IMG_SECTORS_AUTO", # Used in sysbuild
         "BINDESC_", # Used in documentation as a prefix
         "BOOT_UPGRADE_ONLY", # Used in example adjusting MCUboot config, but
                              # symbol is defined in MCUboot itself.
@@ -1494,6 +1488,49 @@ class YAMLLint(ComplianceTest):
                                       p.line, col=p.column, desc=p.desc)
 
 
+class SphinxLint(ComplianceTest):
+    """
+    SphinxLint
+    """
+
+    name = "SphinxLint"
+    doc = "Check Sphinx/reStructuredText files with sphinx-lint."
+    path_hint = "<git-top>"
+
+    # Checkers added/removed to sphinx-lint's default set
+    DISABLE_CHECKERS = ["horizontal-tab", "missing-space-before-default-role"]
+    ENABLE_CHECKERS = ["default-role"]
+
+    def run(self):
+        for file in get_files():
+            if not file.endswith(".rst"):
+                continue
+
+            try:
+                # sphinx-lint does not expose a public API so interaction is done via CLI
+                subprocess.run(
+                    f"sphinx-lint -d {','.join(self.DISABLE_CHECKERS)} -e {','.join(self.ENABLE_CHECKERS)} {file}",
+                    check=True,
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.STDOUT,
+                    shell=True,
+                    cwd=GIT_TOP,
+                )
+
+            except subprocess.CalledProcessError as ex:
+                for line in ex.output.decode("utf-8").splitlines():
+                    match = re.match(r"^(.*):(\d+): (.*)$", line)
+
+                    if match:
+                        self.fmtd_failure(
+                            "error",
+                            "SphinxLint",
+                            match.group(1),
+                            int(match.group(2)),
+                            desc=match.group(3),
+                        )
+
+
 class KeepSorted(ComplianceTest):
     """
     Check for blocks of code or config that should be kept sorted.
@@ -1568,6 +1605,33 @@ class KeepSorted(ComplianceTest):
         for file in get_files(filter="d"):
             with open(file, "r") as fp:
                 self.check_file(file, fp)
+
+
+class TextEncoding(ComplianceTest):
+    """
+    Check that any text file is encoded in ascii or utf-8.
+    """
+    name = "TextEncoding"
+    doc = "Check the encoding of text files."
+    path_hint = "<git-top>"
+
+    ALLOWED_CHARSETS = ["us-ascii", "utf-8"]
+
+    def run(self):
+        m = magic.Magic(mime=True, mime_encoding=True)
+
+        for file in get_files(filter="d"):
+            full_path = os.path.join(GIT_TOP, file)
+            mime_type = m.from_file(full_path)
+
+            if not mime_type.startswith("text/"):
+                continue
+
+            # format is "text/<type>; charset=<charset>"
+            if mime_type.rsplit('=')[-1] not in self.ALLOWED_CHARSETS:
+                desc = f"Text file with unsupported encoding: {file} has mime type {mime_type}"
+                self.fmtd_failure("error", "TextEncoding", file, desc=desc)
+
 
 def init_logs(cli_arg):
     # Initializes logging
@@ -1680,7 +1744,7 @@ def _main(args):
     logger.info(f'Running tests on commit range {COMMIT_RANGE}')
 
     if args.list:
-        for testcase in inheritors(ComplianceTest):
+        for testcase in sorted(inheritors(ComplianceTest), key=lambda x: x.name):
             print(testcase.name)
         return 0
 

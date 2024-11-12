@@ -204,6 +204,12 @@ enum ethernet_hw_caps {
 
 	/** TX-Injection supported */
 	ETHERNET_TXINJECTION_MODE	= BIT(20),
+
+	/** 2.5 Gbits link supported */
+	ETHERNET_LINK_2500BASE_T	= BIT(21),
+
+	/** 5 Gbits link supported */
+	ETHERNET_LINK_5000BASE_T	= BIT(22),
 };
 
 /** @cond INTERNAL_HIDDEN */
@@ -653,7 +659,7 @@ struct ethernet_context {
 	atomic_t flags;
 
 #if defined(CONFIG_NET_ETHERNET_BRIDGE)
-	struct eth_bridge_iface_context bridge;
+	struct net_if *bridge;
 #endif
 
 	/** Carrier ON/OFF handler worker. This is used to create

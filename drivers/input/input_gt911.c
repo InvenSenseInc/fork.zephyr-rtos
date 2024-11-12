@@ -127,6 +127,11 @@ static int gt911_process(const struct device *dev)
 		return 0;
 	}
 
+	/*
+	 * Note- since we program the max number of touch inputs during init,
+	 * the controller won't report more than the maximum number of touch
+	 * points we are configured to support
+	 */
 	points = status & TOUCH_POINTS_MSK;
 
 	/* need to clear the status */
@@ -138,7 +143,7 @@ static int gt911_process(const struct device *dev)
 	}
 
 	/* current points array */
-	for (i = 0; i <= points; i++) {
+	for (i = 0; i < points; i++) {
 		reg_addr = REG_POINT_ADDR(i);
 		r = gt911_i2c_write_read(dev, &reg_addr, sizeof(reg_addr), &point_reg[i],
 					 sizeof(point_reg[i]));
@@ -267,19 +272,19 @@ static int gt911_init(const struct device *dev)
 		}
 	}
 
-	if (config->alt_addr == 0x0) {
-		/*
-		 * We need to configure the int-pin to 0, in order to enter the
-		 * AddressMode0. Keeping the INT pin low during the reset sequence
-		 * should result in the device selecting an I2C address of 0x5D.
-		 * Note we skip this step if an alternate I2C address is set,
-		 * and fall through to probing for the actual address.
-		 */
-		r = gpio_pin_configure_dt(&config->int_gpio, GPIO_OUTPUT_INACTIVE);
-		if (r < 0) {
-			LOG_ERR("Could not configure int GPIO pin");
-			return r;
-		}
+	/*
+	 * We need to configure the int-pin to 0, in order to enter the
+	 * AddressMode0. Keeping the INT pin low during the reset sequence
+	 * should result in the device selecting an I2C address of 0x5D.
+	 * Note that if an alternate I2C address is set, we will probe
+	 * for the alternate address if 0x5D does not work. This is useful
+	 * for boards that do not route the INT pin, or only permit it
+	 * to be used as an input
+	 */
+	r = gpio_pin_configure_dt(&config->int_gpio, GPIO_OUTPUT_INACTIVE);
+	if (r < 0) {
+		LOG_ERR("Could not configure int GPIO pin");
+		return r;
 	}
 	/* Delay at least 10 ms after power on before we configure gt911 */
 	k_sleep(K_MSEC(20));

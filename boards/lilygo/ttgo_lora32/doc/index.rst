@@ -6,7 +6,7 @@ Lilygo TTGO LoRa32
 Overview
 ********
 
-The Lilygo TTGO LoRa32 is a development board for LoRa applications baesed on the ESP32-PICO-D4.
+The Lilygo TTGO LoRa32 is a development board for LoRa applications based on the ESP32-PICO-D4.
 
 It's available in two versions supporting two different frequency ranges and features the following integrated components:
 
@@ -125,7 +125,7 @@ To build the sample application using sysbuild use the command:
 
 .. zephyr-app-commands::
    :tool: west
-   :app: samples/hello_world
+   :zephyr-app: samples/hello_world
    :board: ttgo_lora32/esp32/procpu
    :goals: build
    :west-args: --sysbuild
@@ -178,8 +178,8 @@ Build and flash applications as usual (see :ref:`build_an_application` and
    :board: ttgo_lora32/esp32/procpu
    :goals: build
 
-The usual ``flash`` target will work with the ``ttgo_lora32`` board
-configuration. Here is an example for the :ref:`hello_world`
+The usual ``flash`` target will work with the ``ttgo_lora32`` board target.
+Here is an example for the :zephyr:code-sample:`hello_world`
 application.
 
 .. zephyr-app-commands::
@@ -214,7 +214,7 @@ To build the LoRa transmit sample application using sysbuild use the command:
 
 .. zephyr-app-commands::
    :tool: west
-   :app: samples/drivers/lora/send
+   :zephyr-app: samples/drivers/lora/send
    :board: ttgo_lora32/esp32/procpu
    :goals: build
    :west-args: --sysbuild
@@ -224,7 +224,7 @@ To build the LoRa receive sample application using sysbuild use the command:
 
 .. zephyr-app-commands::
    :tool: west
-   :app: samples/drivers/lora/receive
+   :zephyr-app: samples/drivers/lora/receive
    :board: ttgo_lora32/esp32/procpu
    :goals: build
    :west-args: --sysbuild

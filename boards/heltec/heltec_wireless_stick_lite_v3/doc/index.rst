@@ -1,19 +1,9 @@
-.. heltec_wireless_stick_lite_v3:
-
-HelTec Wireless Stick Lite (V3)
-###############################
+.. zephyr:board:: heltec_wireless_stick_lite_v3
 
 Overview
 ********
 
 HelTec Wireless Stick Lite (V3) is a development board with Wi-Fi, Bluetooth and LoRa support. It is designed and produced by HelTec Automation(TM). [1]_
-
-.. figure:: heltec_wireless_stick_lite_v3.webp
-   :width: 400px
-   :align: center
-   :alt: HelTec Wireless Stick Lite (V3)
-
-   HelTec Wireless Stick Lite (V3) (Credit: Chengdu HelTec Automation Technology Co., Ltd.)
 
 Hardware
 ********
@@ -196,7 +186,7 @@ To build the sample application using sysbuild use the command:
 
 .. zephyr-app-commands::
    :tool: west
-   :app: samples/hello_world
+   :zephyr-app: samples/hello_world
    :board: heltec_wireless_stick_lite_v3
    :goals: build
    :west-args: --sysbuild
@@ -250,7 +240,7 @@ Build and flash applications as usual (see :ref:`build_an_application` and
    :goals: build
 
 The usual ``flash`` target will work with the ``heltec_wireless_stick_lite_v3`` board
-configuration. Here is an example for the :ref:`hello_world`
+configuration. Here is an example for the :zephyr:code-sample:`hello_world`
 application.
 
 .. zephyr-app-commands::
@@ -277,13 +267,13 @@ Debugging
 
 As with much custom hardware, the ESP32S3 modules require patches to
 OpenOCD that are not upstreamed yet. Espressif maintains their own fork of
-the project. The custom OpenOCD can be obtained at `OpenOCD ESP32`_
+the project. The custom OpenOCD can be obtained at `OpenOCD ESP32`_.
 
 The Zephyr SDK uses a bundled version of OpenOCD by default. You can overwrite that behavior by adding the
 ``-DOPENOCD=<path/to/bin/openocd> -DOPENOCD_DEFAULT_PATH=<path/to/openocd/share/openocd/scripts>``
 parameter when building.
 
-Here is an example for building the :ref:`hello_world` application.
+Here is an example for building the :zephyr:code-sample:`hello_world` application.
 
 .. zephyr-app-commands::
    :zephyr-app: samples/hello_world
@@ -291,7 +281,7 @@ Here is an example for building the :ref:`hello_world` application.
    :goals: build flash
    :gen-args: -DOPENOCD=<path/to/bin/openocd> -DOPENOCD_DEFAULT_PATH=<path/to/openocd/share/openocd/scripts>
 
-You can debug an application in the usual way. Here is an example for the :ref:`hello_world` application.
+You can debug an application in the usual way. Here is an example for the :zephyr:code-sample:`hello_world` application.
 
 .. zephyr-app-commands::
    :zephyr-app: samples/hello_world

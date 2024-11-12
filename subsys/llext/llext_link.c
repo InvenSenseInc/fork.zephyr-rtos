@@ -9,6 +9,7 @@
 #include <zephyr/llext/elf.h>
 #include <zephyr/llext/loader.h>
 #include <zephyr/llext/llext.h>
+#include <zephyr/llext/llext_internal.h>
 #include <zephyr/kernel.h>
 #include <zephyr/cache.h>
 
@@ -44,10 +45,12 @@ static size_t llext_file_offset(struct llext_loader *ldr, size_t offset)
 {
 	unsigned int i;
 
-	for (i = 0; i < LLEXT_MEM_COUNT; i++)
+	for (i = 0; i < LLEXT_MEM_COUNT; i++) {
 		if (ldr->sects[i].sh_addr <= offset &&
-		    ldr->sects[i].sh_addr + ldr->sects[i].sh_size > offset)
+		    ldr->sects[i].sh_addr + ldr->sects[i].sh_size > offset) {
 			return offset - ldr->sects[i].sh_addr + ldr->sects[i].sh_offset;
+		}
+	}
 
 	return offset;
 }
@@ -132,8 +135,8 @@ static const void *llext_find_extension_sym(const char *sym_name, struct llext *
 	return se.addr;
 }
 
-static void llext_link_plt(struct llext_loader *ldr, struct llext *ext,
-			   elf_shdr_t *shdr, bool do_local, elf_shdr_t *tgt)
+static void llext_link_plt(struct llext_loader *ldr, struct llext *ext, elf_shdr_t *shdr,
+			   const struct llext_load_param *ldr_parm, elf_shdr_t *tgt)
 {
 	unsigned int sh_cnt = shdr->sh_size / shdr->sh_entsize;
 	/*
@@ -164,18 +167,18 @@ static void llext_link_plt(struct llext_loader *ldr, struct llext *ext,
 		}
 
 		/* Index in the symbol table */
-		unsigned int j = ELF32_R_SYM(rela.r_info);
+		unsigned int j = ELF_R_SYM(rela.r_info);
 
 		if (j >= sym_cnt) {
 			LOG_WRN("PLT: idx %u >= %u", j, sym_cnt);
 			continue;
 		}
 
-		elf_sym_t sym_tbl;
+		elf_sym_t sym;
 
 		ret = llext_seek(ldr, sym_shdr->sh_offset + j * sizeof(elf_sym_t));
 		if (!ret) {
-			ret = llext_read(ldr, &sym_tbl, sizeof(sym_tbl));
+			ret = llext_read(ldr, &sym, sizeof(sym));
 		}
 
 		if (ret < 0) {
@@ -184,16 +187,16 @@ static void llext_link_plt(struct llext_loader *ldr, struct llext *ext,
 			continue;
 		}
 
-		uint32_t stt = ELF_ST_TYPE(sym_tbl.st_info);
+		uint32_t stt = ELF_ST_TYPE(sym.st_info);
 
 		if (stt != STT_FUNC &&
 		    stt != STT_SECTION &&
 		    stt != STT_OBJECT &&
-		    (stt != STT_NOTYPE || sym_tbl.st_shndx != SHN_UNDEF)) {
+		    (stt != STT_NOTYPE || sym.st_shndx != SHN_UNDEF)) {
 			continue;
 		}
 
-		const char *name = llext_string(ldr, ext, LLEXT_MEM_STRTAB, sym_tbl.st_name);
+		const char *name = llext_string(ldr, ext, LLEXT_MEM_STRTAB, sym.st_name);
 
 		/*
 		 * Both r_offset and sh_addr are addresses for which the extension
@@ -216,14 +219,14 @@ static void llext_link_plt(struct llext_loader *ldr, struct llext *ext,
 				ldr->sects[LLEXT_MEM_TEXT].sh_offset;
 		}
 
-		uint32_t stb = ELF_ST_BIND(sym_tbl.st_info);
+		uint32_t stb = ELF_ST_BIND(sym.st_info);
 		const void *link_addr;
 
 		switch (stb) {
 		case STB_GLOBAL:
 			/* First try the global symbol table */
 			link_addr = llext_find_sym(NULL,
-				SYM_NAME_OR_SLID(name, sym_tbl.st_value));
+				SYM_NAME_OR_SLID(name, sym.st_value));
 
 			if (!link_addr) {
 				/* Next try internal tables */
@@ -249,8 +252,8 @@ static void llext_link_plt(struct llext_loader *ldr, struct llext *ext,
 			*(const void **)(text + got_offset) = link_addr;
 			break;
 		case STB_LOCAL:
-			if (do_local) {
-				arch_elf_relocate_local(ldr, ext, &rela, &sym_tbl, got_offset);
+			if (ldr_parm->relocate_local) {
+				arch_elf_relocate_local(ldr, ext, &rela, &sym, got_offset);
 			}
 		}
 
@@ -260,7 +263,7 @@ static void llext_link_plt(struct llext_loader *ldr, struct llext *ext,
 	}
 }
 
-int llext_link(struct llext_loader *ldr, struct llext *ext, bool do_local)
+int llext_link(struct llext_loader *ldr, struct llext *ext, const struct llext_load_param *ldr_parm)
 {
 	uintptr_t sect_base = 0;
 	elf_rela_t rel;
@@ -282,8 +285,7 @@ int llext_link(struct llext_loader *ldr, struct llext *ext, bool do_local)
 			}
 			break;
 		case SHT_RELA:
-			/* FIXME: currently implemented only on the Xtensa code path */
-			if (!IS_ENABLED(CONFIG_XTENSA)) {
+			if (IS_ENABLED(CONFIG_ARM)) {
 				LOG_ERR("Found unsupported SHT_RELA section %d", i);
 				return -ENOTSUP;
 			}
@@ -328,7 +330,7 @@ int llext_link(struct llext_loader *ldr, struct llext *ext, bool do_local)
 				tgt = ldr->sect_hdrs + shdr->sh_info;
 			}
 
-			llext_link_plt(ldr, ext, shdr, do_local, tgt);
+			llext_link_plt(ldr, ext, shdr, ldr_parm, tgt);
 			continue;
 		}
 

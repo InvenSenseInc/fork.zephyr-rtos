@@ -386,12 +386,61 @@ contains toolchains for each of Zephyr's supported architectures, which
 include a compiler, assembler, linker and other programs required to build
 Zephyr applications.
 
-It also contains additional host tools, such as custom QEMU and OpenOCD builds
+For Linux, it also contains additional host tools, such as custom QEMU and OpenOCD builds
 that are used to emulate, flash and debug Zephyr applications.
 
-.. include:: ../toolchains/zephyr_sdk.rst
-   :start-after: toolchain_zephyr_sdk_install_start
-   :end-before: toolchain_zephyr_sdk_install_end
+
+.. tabs::
+
+   .. group-tab:: Ubuntu
+
+      Install the Zephyr SDK using the ``west sdk install``.
+
+         .. code-block:: bash
+
+            cd ~/zephyrproject/zephyr
+            west sdk install
+
+      .. tip::
+
+          Using the command options, you can specify the SDK installation destination
+          and which architecture of toolchains to install.
+          See ``west sdk install --help`` for details.
+
+   .. group-tab:: macOS
+
+      Install the Zephyr SDK using the ``west sdk install``.
+
+         .. code-block:: bash
+
+            cd ~/zephyrproject/zephyr
+            west sdk install
+
+      .. tip::
+
+          Using the command options, you can specify the SDK installation destination
+          and which architecture of toolchains to install.
+          See ``west sdk install --help`` for details.
+
+   .. group-tab:: Windows
+
+      Install the Zephyr SDK using the ``west sdk install``.
+
+         .. code-block:: bat
+
+            cd %HOMEPATH%\zephyrproject\zephyr
+            west sdk install
+
+      .. tip::
+
+          Using the command options, you can specify the SDK installation destination
+          and which architecture of toolchains to install.
+          See ``west sdk install --help`` for details.
+
+.. note::
+
+    If you want to install Zephyr SDK without using the ``west sdk`` command,
+    please see :ref:`toolchain_zephyr_sdk_install`.
 
 .. _getting_started_run_sample:
 
@@ -402,7 +451,7 @@ Build the Blinky Sample
 
    :zephyr:code-sample:`blinky` is compatible with most, but not all, :ref:`boards`. If your board
    does not meet Blinky's :ref:`blinky-sample-requirements`, then
-   :ref:`hello_world` is a good alternative.
+   :zephyr:code-sample:`hello_world` is a good alternative.
 
    If you are unsure what name west uses for your board, ``west boards``
    can be used to obtain a list of all boards Zephyr supports.
@@ -461,9 +510,17 @@ Then flash the sample using :ref:`west flash <west-flashing>`:
 
    west flash
 
-You may need to install additional :ref:`host tools <flash-debug-host-tools>`
-required by your board. The ``west flash`` command will print an error if any
-required dependencies are missing.
+.. note::
+
+    You may need to install additional :ref:`host tools <flash-debug-host-tools>`
+    required by your board. The ``west flash`` command will print an error if any
+    required dependencies are missing.
+
+.. note::
+
+    When using Linux, you may need to configure udev rules the first time
+    of using a debug probe.
+    Please also see :ref:`setting-udev-rules`.
 
 If you're using blinky, the LED will start to blink as shown in this figure:
 
@@ -478,7 +535,7 @@ Next Steps
 
 Here are some next steps for exploring Zephyr:
 
-* Try other :ref:`samples-and-demos`
+* Try other :zephyr:code-sample-category:`samples`
 * Learn about :ref:`application` and the :ref:`west <west>` tool
 * Find out about west's :ref:`flashing and debugging <west-build-flash-debug>`
   features, or more about :ref:`flashing_and_debugging` in general

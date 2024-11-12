@@ -1,7 +1,4 @@
-.. _npcm400_evb:
-
-Nuvoton NPCM400_EVB
-####################
+.. zephyr:board:: npcm400_evb
 
 Overview
 ********
@@ -9,10 +6,6 @@ Overview
 The NPCM400_EVB kit is a development platform to evaluate the
 Nuvoton NPCM4 series microcontrollers. This board needs to be mated with
 part number NPCM400 Satellite Management Controller (SMC).
-
-.. image:: npcm400_evb.webp
-     :align: center
-     :alt: NPCM400 Evaluation Board
 
 Hardware
 ********
@@ -86,7 +79,7 @@ If the correct headers are installed, this board supports J-TAG.
 To flash with J-TAG, install the drivers for your programmer, for example:
 SEGGER J-link's drivers are at https://www.segger.com/downloads/jlink/
 
-Here is an example for the :ref:`hello_world` application.
+Here is an example for the :zephyr:code-sample:`hello_world` application.
 
 .. zephyr-app-commands::
     :zephyr-app: samples/hello_world

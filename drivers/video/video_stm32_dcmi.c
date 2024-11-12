@@ -7,10 +7,12 @@
 #define DT_DRV_COMPAT st_stm32_dcmi
 
 #include <errno.h>
+
 #include <zephyr/kernel.h>
+#include <zephyr/irq.h>
+#include <zephyr/logging/log.h>
 #include <zephyr/drivers/video.h>
 #include <zephyr/drivers/pinctrl.h>
-#include <zephyr/irq.h>
 #include <zephyr/drivers/clock_control/stm32_clock_control.h>
 #include <zephyr/drivers/clock_control.h>
 #include <zephyr/drivers/dma.h>
@@ -18,8 +20,7 @@
 
 #include <stm32_ll_dma.h>
 
-#include <zephyr/logging/log.h>
-LOG_MODULE_REGISTER(video_stm32_dcmi, CONFIG_STM32_DCMI_LOG_LEVEL);
+LOG_MODULE_REGISTER(video_stm32_dcmi, CONFIG_VIDEO_LOG_LEVEL);
 
 K_HEAP_DEFINE(video_stm32_buffer_pool, CONFIG_VIDEO_BUFFER_POOL_SZ_MAX);
 
@@ -52,22 +53,6 @@ struct video_stm32_dcmi_config {
 	const struct device *sensor_dev;
 	const struct stream dma;
 };
-
-static inline unsigned int video_pix_fmt_bpp(uint32_t pixelformat)
-{
-	switch (pixelformat) {
-	case VIDEO_PIX_FMT_BGGR8:
-	case VIDEO_PIX_FMT_GBRG8:
-	case VIDEO_PIX_FMT_GRBG8:
-	case VIDEO_PIX_FMT_RGGB8:
-		return 1;
-	case VIDEO_PIX_FMT_RGB565:
-	case VIDEO_PIX_FMT_YUYV:
-		return 2;
-	default:
-		return 0;
-	}
-}
 
 void HAL_DCMI_ErrorCallback(DCMI_HandleTypeDef *hdcmi)
 {
@@ -319,6 +304,7 @@ static int video_stm32_dcmi_enqueue(const struct device *dev,
 	}
 
 	vbuf->bytesused = buffer_size;
+	vbuf->line_offset = 0;
 
 	k_fifo_put(&data->fifo_in, vbuf);
 
@@ -354,6 +340,9 @@ static int video_stm32_dcmi_get_caps(const struct device *dev,
 	if (ep != VIDEO_EP_OUT && ep != VIDEO_EP_ALL) {
 		return -EINVAL;
 	}
+
+	/* DCMI produces full frames */
+	caps->min_line_count = caps->max_line_count = LINE_COUNT_HEIGHT;
 
 	/* Forward the message to the sensor device */
 	ret = video_get_caps(config->sensor_dev, ep, caps);

@@ -1,7 +1,4 @@
-.. _imx93_evk:
-
-NXP i.MX93 EVK
-##############
+.. zephyr:board:: imx93_evk
 
 Overview
 ********
@@ -65,6 +62,12 @@ hardware features:
 | UART      | on-chip    | serial port                         |
 +-----------+------------+-------------------------------------+
 | GPIO      | on-chip    | GPIO                                |
++-----------+------------+-------------------------------------+
+| I2C       | on-chip    | i2c                                 |
++-----------+------------+-------------------------------------+
+| SPI       | on-chip    | spi                                 |
++-----------+------------+-------------------------------------+
+| CAN       | on-chip    | can                                 |
 +-----------+------------+-------------------------------------+
 | TPM       | on-chip    | TPM Counter                         |
 +-----------+------------+-------------------------------------+
@@ -134,8 +137,41 @@ over dts config. For instance, if ``CONFIG_CAN`` is enabled, MUX A is selected
 even if ``mux="B";`` is configured in dts, and an warning would be reported in
 the log.
 
+User Button GPIO Option
+--------------------------
+
+The user buttons RFU_BTN1 and RFU_BTN2 is connected to i.MX 93 GPIO by default,
+but can be changed to connect to onboard GPIO expander PCAL6524 with on-board DIP
+switches. To do this, switch SW1006 to 0000, then switch SW1005 to 0101. An devicetree
+overlay is included to support this.
+
+Run following command to test user buttons on PCAL6524:
+
+.. zephyr-app-commands::
+   :zephyr-app: samples/basic/button
+   :host-os: unix
+   :board: imx93_evk/mimx9352/a55
+   :goals: build
+   :gen-args: -DEXTRA_DTC_OVERLAY_FILE=imx93_evk_mimx9352_exp_btn.overlay
+
+Run the app, press RFU_BTN1 and the red LED turns on accordingly.
+
+Note: The overlay only supports ``mimx9352/a55``, but can be extended to support
+``mimx9352/m33`` if I2C and PCAL6524 is enabled.
+
 Programming and Debugging (A55)
 *******************************
+
+U-Boot "cpu" command is used to load and kick Zephyr to Cortex-A secondary Core, Currently
+it is supported in : `Real-Time Edge U-Boot`_ (use the branch "uboot_vxxxx.xx-y.y.y,
+xxxx.xx is uboot version and y.y.y is Real-Time Edge Software version, for example
+"uboot_v2023.04-2.9.0" branch is U-Boot v2023.04 used in Real-Time Edge Software release
+v2.9.0), and pre-build images and user guide can be found at `Real-Time Edge Software`_.
+
+.. _Real-Time Edge U-Boot:
+   https://github.com/nxp-real-time-edge-sw/real-time-edge-uboot
+.. _Real-Time Edge Software:
+   https://www.nxp.com/rtedge
 
 Copy the compiled ``zephyr.bin`` to the first FAT partition of the SD card and
 plug the SD card into the board. Power it up and stop the u-boot execution at
@@ -145,14 +181,14 @@ Use U-Boot to load and kick zephyr.bin to Cortex-A55 Core1:
 
 .. code-block:: console
 
-    fatload mmc 1:1 0xd0000000 zephyr.bin; dcache flush; icache flush; dcache off; icache off; cpu 1 release 0xd0000000
+    fatload mmc 1:1 0xd0000000 zephyr.bin; dcache flush; icache flush; cpu 1 release 0xd0000000
 
 
 Or use the following command to kick zephyr.bin to Cortex-A55 Core0:
 
 .. code-block:: console
 
-    fatload mmc 1:1 0xd0000000 zephyr.bin; dcache flush; icache flush; dcache off; icache off; go 0xd0000000
+    fatload mmc 1:1 0xd0000000 zephyr.bin; dcache flush; icache flush; go 0xd0000000
 
 
 Use this configuration to run basic Zephyr applications and kernel tests,
@@ -174,6 +210,26 @@ display the following console output:
     thread_b: Hello World from cpu 0 on imx93_evk!
     thread_a: Hello World from cpu 0 on imx93_evk!
     thread_b: Hello World from cpu 0 on imx93_evk!
+
+System Reboot (A55)
+===================
+
+Currently i.MX93 only support cold reboot and doesn't support warm reboot.
+Use this configuratiuon to verify cold reboot with :zephyr:code-sample:`shell-module`
+sample:
+
+.. zephyr-app-commands::
+   :zephyr-app: samples/subsys/shell/shell_module
+   :host-os: unix
+   :board: imx93_evk/mimx9352/a55
+   :goals: build
+
+This will build an image with the shell sample app, boot it and execute
+kernel reboot command in shell command line:
+
+.. code-block:: console
+
+    uart:~$ kernel reboot cold
 
 Programming and Debugging (M33)
 *******************************

@@ -1,7 +1,4 @@
-.. _max32690_fthr:
-
-MAX32690FTHR
-############
+.. zephyr:board:: max32690fthr
 
 Overview
 ********
@@ -84,7 +81,9 @@ Below interfaces are supported by Zephyr on MAX32690FTHR.
 | I2C       | on-chip    | i2c                                 |
 +-----------+------------+-------------------------------------+
 | SPI       | on-chip    | spi                                 |
-+--------------------------------------------------------------+
++-----------+------------+-------------------------------------+
+| Flash     | on-chip    | flash                               |
++-----------+------------+-------------------------------------+
 
 Programming and Debugging
 *************************
@@ -98,7 +97,7 @@ Logic levels are fixed to VDDIO (1.8V).
 
 Once the debug probe is connected to your host computer, then you can run the
 ``west flash`` command to write a firmware image into flash. Here is an example
-for the :ref:`hello_world` application.
+for the :zephyr:code-sample:`hello_world` application.
 
 .. zephyr-app-commands::
    :zephyr-app: samples/hello_world
@@ -118,7 +117,7 @@ Debugging
 
 Once the debug probe is connected to your host computer, then you can run the
 ``west debug`` command to write a firmware image into flash and start a debug
-session. Here is an example for the :ref:`hello_world` application.
+session. Here is an example for the :zephyr:code-sample:`hello_world` application.
 
 .. zephyr-app-commands::
    :zephyr-app: samples/hello_world

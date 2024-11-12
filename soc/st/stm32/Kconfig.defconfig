@@ -9,6 +9,9 @@ if SOC_FAMILY_STM32
 
 rsource "*/Kconfig.defconfig"
 
+config CLOCK_CONTROL
+	default y
+
 config CORTEX_M_SYSTICK
 	default n if STM32_LPTIM_TIMER
 
@@ -53,10 +56,6 @@ choice STM32_LPTIM_CLOCK
 	default STM32_LPTIM_CLOCK_LSE if "$(dt_node_ph_array_prop_int,$(DT_STM32_LPTIM_PATH),clocks,1,bus)" = 2
 	default STM32_LPTIM_CLOCK_LSI if "$(dt_node_ph_array_prop_int,$(DT_STM32_LPTIM_PATH),clocks,1,bus)" = 3
 endchoice
-
-config CLOCK_CONTROL_STM32_CUBE
-	default y
-	depends on CLOCK_CONTROL
 
 config CLOCK_CONTROL_INIT_PRIORITY
 	default 1

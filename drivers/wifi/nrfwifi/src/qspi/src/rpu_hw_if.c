@@ -242,7 +242,8 @@ static int rpu_pwron(void)
 	/* Settling time for iovdd nRF7002 DK/EK - switch (TCK106AG): ~600us */
 	k_msleep(1);
 
-	if (IS_ENABLED(CONFIG_NRF_WIFI_COMBINED_BUCKEN_IOVDD_GPIO)) {
+	if ((bucken_spec.port == iovdd_ctrl_spec.port) &&
+	    (bucken_spec.pin == iovdd_ctrl_spec.pin)) {
 		/* When a single GPIO is used, we need a total wait time after bucken assertion
 		 * to be 6ms (1ms + 1ms + 4ms).
 		 */
@@ -282,10 +283,11 @@ int rpu_read(unsigned int addr, void *data, int len)
 		return -1;
 	}
 
-	if (hl_flag)
+	if (hl_flag) {
 		return qdev->hl_read(addr, data, len);
-	else
+	} else {
 		return qdev->read(addr, data, len);
+	}
 }
 
 int rpu_write(unsigned int addr, const void *data, int len)
@@ -403,6 +405,31 @@ int rpu_clks_on(void)
 	return 0;
 }
 
+#define RPU_EXP_SIG 0x42000020
+/* Read a known value from RPU memory to validate RPU communication */
+int rpu_validate_comms(void)
+{
+	uint32_t rpu_test;
+	int ret;
+
+	/* UCCP_SOC_FAB_MST_READ_IDLE - HW reset value */
+	ret = rpu_read(0x0005C, &rpu_test, 4);
+	if (ret) {
+		LOG_ERR("Error: RPU comms test: read failed\n");
+		return ret;
+	}
+
+	if (rpu_test != RPU_EXP_SIG) {
+		LOG_ERR("Error: RPU comms test: sig failed: expected 0x%x, got 0x%x\n",
+			RPU_EXP_SIG, rpu_test);
+		return -1;
+	}
+
+	LOG_DBG("RPU comms test passed\n");
+
+	return 0;
+}
+
 int rpu_init(void)
 {
 	int ret;
@@ -452,6 +479,11 @@ int rpu_enable(void)
 	}
 
 	ret = rpu_clks_on();
+	if (ret) {
+		goto rpu_pwroff;
+	}
+
+	ret = rpu_validate_comms();
 	if (ret) {
 		goto rpu_pwroff;
 	}

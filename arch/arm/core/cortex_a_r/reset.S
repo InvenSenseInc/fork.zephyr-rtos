@@ -1,6 +1,7 @@
 /*
  * Copyright (c) 2013-2014 Wind River Systems, Inc.
  * Copyright (c) 2019 Stephanos Ioannidis <root@stephanos.io>
+ * Copyright 2024 Arm Limited and/or its affiliates <open-source-office@arm.com>
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -30,8 +31,8 @@ GDATA(z_arm_sys_stack)
 GDATA(z_arm_fiq_stack)
 GDATA(z_arm_abort_stack)
 GDATA(z_arm_undef_stack)
-#if defined(CONFIG_PLATFORM_SPECIFIC_INIT)
-GTEXT(z_arm_platform_init)
+#if defined(CONFIG_SOC_RESET_HOOK)
+GTEXT(soc_reset_hook)
 #endif
 
 /**
@@ -305,9 +306,9 @@ _primary_core:
     msr CPSR_c, #(MODE_SYS | I_BIT | F_BIT)
     mov sp, r10
 
-#if defined(CONFIG_PLATFORM_SPECIFIC_INIT)
+#if defined(CONFIG_SOC_RESET_HOOK)
     /* Execute platform-specific initialisation if applicable */
-    bl z_arm_platform_init
+    bl soc_reset_hook
 #endif
 
 #if defined(CONFIG_WDOG_INIT)
@@ -318,5 +319,7 @@ _primary_core:
 #if defined(CONFIG_DISABLE_TCM_ECC)
     bl z_arm_tcm_disable_ecc
 #endif
+
+    bl z_arm_relocate_vector_table
 
     bx r4
