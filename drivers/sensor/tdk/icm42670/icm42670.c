@@ -1051,17 +1051,15 @@ static const struct sensor_driver_api icm42670_api_funcs = {
 
 /* Initializes the bus members for an instance on a SPI bus. */
 #define ICM42670_CONFIG_SPI(inst)                                                                  \
-	{                                                                                          \
-		.bus.spi = SPI_DT_SPEC_INST_GET(inst, ICM42670_SPI_CFG, 0),                        \
-		.bus_io = &icm42670_bus_io_spi, ICM42670_CONFIG_COMMON(inst)                       \
-	}
+	{.bus.spi = SPI_DT_SPEC_INST_GET(inst, ICM42670_SPI_CFG, 0),                               \
+	 .bus_io = &icm42670_bus_io_spi,                                                           \
+	 ICM42670_CONFIG_COMMON(inst)}
 
 /* Initializes the bus members for an instance on an I2C bus. */
 #define ICM42670_CONFIG_I2C(inst)                                                                  \
-	{                                                                                          \
-		.bus.i2c = I2C_DT_SPEC_INST_GET(inst), .bus_io = &icm42670_bus_io_i2c,             \
-		ICM42670_CONFIG_COMMON(inst)                                                       \
-	}
+	{.bus.i2c = I2C_DT_SPEC_INST_GET(inst),                                                    \
+	 .bus_io = &icm42670_bus_io_i2c,                                                           \
+	 ICM42670_CONFIG_COMMON(inst)}
 
 /*
  * Main instantiation macro, which selects the correct bus-specific
@@ -1076,7 +1074,6 @@ static const struct sensor_driver_api icm42670_api_funcs = {
 			COND_CODE_1(DT_INST_ON_BUS(inst, spi),	\
 			(ICM42670_CONFIG_SPI(inst)),	\
 			(ICM42670_CONFIG_I2C(inst)));             \
-                                                                                                   \
 	SENSOR_DEVICE_DT_INST_DEFINE(inst, icm42670_init, NULL, &icm42670_data_##inst,             \
 				     &icm42670_config_##inst, POST_KERNEL,                         \
 				     CONFIG_SENSOR_INIT_PRIORITY, &icm42670_api_funcs);
