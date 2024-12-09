@@ -33,6 +33,13 @@
 };
 
 /*
+ * Disable spi1 has it is connected to the same node than arduino_spi on Arduino Shield
+ */
+&spi1 {
+	status = "disabled";
+};
+
+/*
  * Increase native UART speed to report all IMU data at 100Hz.
  */
 &uart0 {

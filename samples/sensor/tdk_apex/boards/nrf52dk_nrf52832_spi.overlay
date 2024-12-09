@@ -31,3 +31,10 @@
 		apex = "pedometer";
 	};
 };
+
+/*
+ * Disable spi1 has it is connected to the same node than arduino_spi on Arduino Shield
+ */
+&spi1 {
+	status = "disabled";
+};
