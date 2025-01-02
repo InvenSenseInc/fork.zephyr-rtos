@@ -1075,11 +1075,13 @@ static DEVICE_API(sensor, icm42x70_driver_api) = {
 				    .accel_filt_bw = DT_INST_ENUM_IDX(inst, accel_filt_bw_hz),     \
 				    .accel_pwr_mode = DT_INST_ENUM_IDX(inst, power_mode),          \
 				    .apex = DT_INST_ENUM_IDX(inst, apex),                          \
-				    .accel_pwr_mode = DT_INST_ENUM_IDX(inst,power_mode),           \
+				    .accel_pwr_mode = DT_INST_ENUM_IDX(inst, power_mode),          \
 				    .apex = DT_INST_ENUM_IDX(inst, apex),                          \
-		 IF_ENABLED(CONFIG_USE_EMD_ICM42670,(.gyro_fs = DT_INST_ENUM_IDX(inst, gyro_fs),))        \
-		 IF_ENABLED(CONFIG_USE_EMD_ICM42670,(.gyro_hz = DT_INST_ENUM_IDX(inst, gyro_hz),))        \
-		 IF_ENABLED(CONFIG_USE_EMD_ICM42670, \
+		 IF_ENABLED(CONFIG_USE_EMD_ICM42670,                                       \
+				(.gyro_fs = DT_INST_ENUM_IDX(inst, gyro_fs),))                     \
+		 IF_ENABLED(CONFIG_USE_EMD_ICM42670,                                       \
+				(.gyro_hz = DT_INST_ENUM_IDX(inst, gyro_hz),))                     \
+		 IF_ENABLED(CONFIG_USE_EMD_ICM42670,                                       \
 				(.gyro_filt_bw = DT_INST_ENUM_IDX(inst, gyro_filt_bw_hz),))
 
 /* Initializes the bus members for an instance on a SPI bus. */
