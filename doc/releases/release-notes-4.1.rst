@@ -238,6 +238,12 @@ Drivers and Sensors
 
 * Sensors
 
+  * TDK
+
+    * Renamed ``icm42670`` to ``icm42x70`` to also support icm42370 3-axis accelerometer.
+      Public header for sensor custom attribute has been renamed:
+      include/zephyr/drivers/sensor/icm42670.h → include/zephyr/drivers/sensor/icm42x70.h
+
 * Serial
 
 * SPI
