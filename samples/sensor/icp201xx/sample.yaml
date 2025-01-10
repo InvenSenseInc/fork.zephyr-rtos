@@ -1,7 +1,7 @@
 sample:
-  name: Pressure polling sample
+  name: Pressure sensor interrupt
 tests:
-  sample.sensor.pressure_sensor:
+  sample.sensor.icp201xx:
     build_only: true
     tags: sensors
     filter: dt_alias_exists("pressure_sensor")
