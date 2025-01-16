@@ -99,6 +99,9 @@ LVGL
   :kconfig:option:`CONFIG_LV_Z_FLUSH_THREAD_PRIORITY` and its value is now interpreted as an
   absolute priority instead of a cooperative one.
 
+* The config option :kconfig:option:`CONFIG_LV_Z_VBD_CUSTOM_SECTION` is now called
+  :kconfig:option:`CONFIG_LV_Z_VDB_CUSTOM_SECTION`.
+
 Device Drivers and Devicetree
 *****************************
 
@@ -114,6 +117,14 @@ ADC
 ===
 
 * Renamed the ``compatible`` from ``nxp,kinetis-adc12`` to :dtcompatible:`nxp,adc12`.
+
+Counter
+=======
+
+* Renamed the devicetree property ``primary_source`` to ``primary-source``.
+* Renamed the devicetree property ``secondary_source`` to ``secondary-source``.
+* Renamed the devicetree property ``filter_count`` to ``filter-count``.
+* Renamed the devicetree property ``filter_period`` to ``filter-period``.
 
 Controller Area Network (CAN)
 =============================
@@ -143,6 +154,8 @@ Display
         ...
     };
 
+* Renamed the devicetree propertys ``pclk_pol`` and ``data_cmd-gpios``
+  to ``pclk-pol`` and ``data-cmd-gpios``.
 
 Enhanced Serial Peripheral Interface (eSPI)
 ===========================================
@@ -159,10 +172,25 @@ Entropy
 GNSS
 ====
 
+GPIO
+====
+
+* Renamed the device tree property ``pin_mask`` to ``pin-mask``.
+* Renamed the device tree property ``pinmux_mask`` to ``pinmux-mask``.
+* Renamed the device tree property ``vbatts_pins`` to ``vbatts-pins``.
+* Renamed the device tree property ``bit_per_gpio`` to ``bit-per-gpio``.
+* Renamed the device tree property ``off_val`` to ``off-val``.
+* Renamed the device tree property ``on_val`` to ``on-val``.
+
 I2C
 ===
 
 * Renamed the ``compatible`` from ``nxp,imx-lpi2c`` to :dtcompatible:`nxp,lpi2c`.
+
+I2S
+===
+
+* Renamed the device tree property from ``fifo_depth`` to ``fifo-depth``.
 
 Input
 =====
@@ -220,6 +248,12 @@ PWM
 
 * Renamed the ``compatible`` from ``nxp,kinetis-ftm-pwm`` to :dtcompatible:`nxp,ftm-pwm`.
 
+SDHC
+====
+
+* Renamed the device tree property from ``power_delay_ms`` to ``power-delay-ms```
+* Renamed the device tree property from ``max_current_330`` to ``max-current-330``
+
 Sensors
 =======
 
@@ -234,10 +268,17 @@ Stepper
   * Renamed the ``compatible`` from ``zephyr,gpio-steppers`` to :dtcompatible:`zephyr,gpio-stepper`.
   * Renamed the ``stepper_set_actual_position`` function to :c:func:`stepper_set_reference_position`.
   * Renamed the ``stepper_enable_constant_velocity_mode`` function to :c:func:`stepper_run`.
+    The function does not take a velocity parameter anymore. Set the desired speed using the
+    :c:func:`stepper_set_microstep_interval` function beforehand.
   * Renamed the ``stepper_move`` function to :c:func:`stepper_move_by`.
   * Renamed the ``stepper_set_target_position`` function to :c:func:`stepper_move_to`.
+  * Renamed the ``stepper_set_max_velocity`` function to :c:func:`stepper_set_microstep_interval`.
+    The function now takes the step interval in nanoseconds. This allows for a more precise control.
+  * Deprecating setting max velocity via :c:func:`stepper_run`.
   * The :kconfig:option:`STEPPER_ADI_TMC_RAMP_GEN` is now deprecated and is replaced with the new
     :kconfig:option:`STEPPER_ADI_TMC5041_RAMP_GEN` option.
+  * To control the velocity for :dtcompatible:`adi,tmc5041` stepper driver, use
+    :c:func:`tmc5041_stepper_set_max_velocity` or :c:func:`tmc5041_stepper_set_ramp`.
 
 SPI
 ===
@@ -258,6 +299,11 @@ Timer
 
 * Renamed the ``compatible`` from ``nxp,kinetis-ftm`` to :dtcompatible:`nxp,ftm` and relocate it
   under ``dts/bindings/timer``.
+
+USB
+===
+
+* Renamed the devicetree property names ``phy_handle`` to ``phy-handle``.
 
 Video
 =====
@@ -364,6 +410,11 @@ Networking
   rather than directly in the :c:struct:`http_client_ctx` to correctly handle concurrent requests
   on different HTTP/2 streams.
 
+* The HTTP server public API function signature for the :c:type:`http_resource_websocket_cb_t` has
+  changed, a :c:struct:`http_request_ctx` parameter has been added. The application may use this to
+  access the request headers of the HTTP upgrade request, which may be useful in deciding whether
+  to accept or reject a websocket connection.
+
 * The :kconfig:option:`CONFIG_NET_L2_OPENTHREAD` symbol no longer implies the
   :kconfig:option:`CONFIG_NVS` Kconfig option. Platforms using OpenThread must explicitly enable
   either the :kconfig:option:`CONFIG_NVS` or :kconfig:option:`CONFIG_ZMS` Kconfig option.
@@ -390,12 +441,16 @@ LoRa
   additional ``user_data`` parameter, which is a void pointer. This parameter can be used to reference
   any user-defined data structure. To maintain the current behavior, set this parameter to ``NULL``.
 
+Stream Flash
+============
+
+* The function :c:func:`stream_flash_init` no longer does auto-detection of device size
+  when ``size`` parameter is set to 0 and will return error in such case. User is now
+  required to explicitly provide device size. Issue :github:`71042` provides rationale
+  for the change.
+
 Architectures
 *************
-
-* Common
-
-  * ``_current`` is deprecated, used :c:func:`arch_current_thread` instead.
 
 * native/POSIX
 

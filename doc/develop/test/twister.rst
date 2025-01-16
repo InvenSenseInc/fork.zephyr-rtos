@@ -490,6 +490,40 @@ integration_platforms: <YML list of platforms/boards>
     platform_allow if the goal is to limit scope due to timing or
     resource constraints.
 
+integration_toolchains: <YML list of toolchain variants>
+    This option expands the scope to all the listed toolchains variants and
+    adds another vector of testing where desired. By default, test
+    configurations are generated based on the toolchain configured in the environment:
+
+    test scenario -> platforms1 -> toolchain1
+    test scenario -> platforms2 -> toolchain1
+
+
+    When a platform supports multiple toolchains that are available during the
+    twister run, it is possible to expand the test configurations to include
+    additional tests for each toolchain. For example, if a platform supports
+    toolchains ``toolchain1`` and ``toolchain2``, and the test scenario
+    includes:
+
+    .. code-block:: yaml
+
+      integration_toolchains:
+        - toolchain1
+        - toolchain2
+
+    the following configurations are generated:
+
+    test scenario -> platforms1 -> toolchain1
+    test scenario -> platforms1 -> toolchain2
+    test scenario -> platforms2 -> toolchain1
+    test scenario -> platforms2 -> toolchain2
+
+
+    .. note::
+
+      This functionality is evaluated always and is not limited to the
+      ``--integration`` option.
+
 platform_exclude: <list of platforms>
     Set of platforms that this test scenario should not run on.
 
@@ -526,6 +560,7 @@ harness: <string>
     - pytest
     - gtest
     - robot
+    - ctest
 
     Harnesses ``ztest``, ``gtest`` and ``console`` are based on parsing of the
     output and matching certain phrases. ``ztest`` and ``gtest`` harnesses look
@@ -690,6 +725,12 @@ harness_config: <harness configuration options>
         The scope for which ``dut`` and ``shell`` pytest fixtures are shared.
         If the scope is set to ``function``, DUT is launched for every test case
         in python script. For ``session`` scope, DUT is launched only once.
+
+    ctest_args: <list of arguments> (default empty)
+        Specify a list of additional arguments to pass to ``ctest`` e.g.:
+        ``ctest_args: [‘--repeat until-pass:5’]``. Note that
+        ``--ctest-args`` can be passed multiple times to pass several arguments
+        to the ctest.
 
     robot_testsuite: <robot file path> (default empty)
         Specify one or more paths to a file containing a Robot Framework test suite to be run.
