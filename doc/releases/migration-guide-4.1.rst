@@ -195,6 +195,11 @@ I2S
 Input
 =====
 
+LED
+===
+
+* Renamed the device tree property ``max_curr_opt`` to ``max-curr-opt``.`
+
 PWM
 ===
 
@@ -257,6 +262,20 @@ SDHC
 Sensors
 =======
 
+  * The :dtcompatible:`we,wsen-pdus` driver has been renamed to
+    :dtcompatible:`we,wsen-pdus-25131308XXXXX`.
+    The Device Tree can be configured as follows:
+
+    .. code-block:: devicetree
+
+      &i2c0 {
+        pdus:pdus-25131308XXXXX@78 {
+          compatible = "we,wsen-pdus-25131308XXXXX";
+          reg = < 0x78 >;
+          sensor-type = < 4 >;
+        };
+      };
+
 Serial
 ======
 
@@ -285,6 +304,8 @@ SPI
 
 * Renamed the ``compatible`` from ``nxp,imx-lpspi`` to :dtcompatible:`nxp,lpspi`.
 * Renamed the ``compatible`` from ``nxp,kinetis-dspi`` to :dtcompatible:`nxp,dspi`.
+* Renamed the ``compatible`` from ``silabs,gecko-spi-usart`` to :dtcompatible:`silabs,usart-spi`.
+* Renamed the ``compatible`` from ``silabs,gecko-spi-eusart`` to :dtcompatible:`silabs,eusart-spi`.
 
 Regulator
 =========

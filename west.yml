@@ -157,7 +157,7 @@ manifest:
       groups:
         - hal
     - name: hal_atmel
-      revision: d37df06556f7c03ff3a20422475077fafa0dc17c
+      revision: dde7a36d00bd5dafd1ffcd8d243dfbceeb20e856
       path: modules/hal/atmel
       groups:
         - hal
@@ -203,7 +203,7 @@ manifest:
       groups:
         - hal
     - name: hal_nxp
-      revision: c15dd51d7af27593e38b65b1443a350e9d2de64f
+      revision: a7dc61f89063c1008f24ee21575c68d0165de91b
       path: modules/hal/nxp
       groups:
         - hal
@@ -290,7 +290,7 @@ manifest:
       path: modules/fs/littlefs
       groups:
         - fs
-      revision: 009bcff0ed4853a53df8256039fa815bda6854dd
+      revision: 424a5e0d5ab273ab6833453288ccf64342c7a5cd
     - name: loramac-node
       revision: fb00b383072518c918e2258b0916c996f2d4eebe
       path: modules/lib/loramac-node
@@ -331,7 +331,7 @@ manifest:
       path: modules/lib/openthread
     - name: percepio
       path: modules/debug/percepio
-      revision: 0d44033c744978ca2505a06640b4f6964c5411e6
+      revision: 388c2937db94f76ecba90b3e24542b03b88f1837
       groups:
         - debug
     - name: picolibc
