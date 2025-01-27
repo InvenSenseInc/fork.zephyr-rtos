@@ -41,35 +41,15 @@ struct spi_mcux_config {
 	uint32_t transfer_delay;
 	const struct pinctrl_dev_config *pincfg;
 	lpspi_pin_config_t data_pin_config;
+	bool output_config;
 };
-
-#ifdef CONFIG_SPI_MCUX_LPSPI_DMA
-#include <zephyr/drivers/dma.h>
-
-struct spi_dma_stream {
-	const struct device *dma_dev;
-	uint32_t channel; /* stores the channel for dma */
-	struct dma_config dma_cfg;
-	struct dma_block_config dma_blk_cfg;
-};
-#endif /* CONFIG_SPI_MCUX_LPSPI_DMA */
 
 struct spi_mcux_data {
 	DEVICE_MMIO_NAMED_RAM(reg_base);
 	const struct device *dev;
-	lpspi_master_handle_t handle;
 	struct spi_context ctx;
+	void *driver_data;
 	size_t transfer_len;
-#ifdef CONFIG_SPI_RTIO
-	struct spi_rtio *rtio_ctx;
-#endif
-#ifdef CONFIG_SPI_MCUX_LPSPI_DMA
-	volatile uint32_t status_flags;
-	struct spi_dma_stream dma_rx;
-	struct spi_dma_stream dma_tx;
-	/* dummy value used for transferring NOP when tx buf is null */
-	uint32_t dummy_buffer;
-#endif
 };
 
 /* common configure function that verifies spi_cfg validity and set up configuration parameters */
@@ -90,16 +70,19 @@ int spi_mcux_release(const struct device *dev, const struct spi_config *spi_cfg)
 /* Argument to MCUX SDK IRQ handler */
 #define LPSPI_IRQ_HANDLE_ARG COND_CODE_1(CONFIG_NXP_LP_FLEXCOMM, (LPSPI_GetInstance(base)), (base))
 
-#if defined(CONFIG_NXP_LP_FLEXCOMM)
-#define SPI_MCUX_LPSPI_IRQ_FUNC(n)                                                                 \
+#define SPI_MCUX_LPSPI_IRQ_FUNC_LP_FLEXCOMM(n)                                                     \
 	nxp_lp_flexcomm_setirqhandler(DEVICE_DT_GET(DT_INST_PARENT(n)), DEVICE_DT_INST_GET(n),     \
 				      LP_FLEXCOMM_PERIPH_LPSPI, lpspi_isr);
-#else
-#define SPI_MCUX_LPSPI_IRQ_FUNC(n)                                                                 \
+
+#define SPI_MCUX_LPSPI_IRQ_FUNC_DISTINCT(n)                                                        \
 	IRQ_CONNECT(DT_INST_IRQN(n), DT_INST_IRQ(n, priority), lpspi_isr, DEVICE_DT_INST_GET(n),   \
 		    0);                                                                            \
 	irq_enable(DT_INST_IRQN(n));
-#endif
+
+#define SPI_MCUX_LPSPI_IRQ_FUNC(n) COND_CODE_1(DT_NODE_HAS_COMPAT(DT_INST_PARENT(n),		   \
+								  nxp_lp_flexcomm),		   \
+						(SPI_MCUX_LPSPI_IRQ_FUNC_LP_FLEXCOMM(n)),	   \
+						(SPI_MCUX_LPSPI_IRQ_FUNC_DISTINCT(n)))
 
 #define SPI_MCUX_LPSPI_CONFIG_INIT(n)                                                              \
 	static const struct spi_mcux_config spi_mcux_config_##n = {                                \
@@ -115,6 +98,7 @@ int spi_mcux_release(const struct device *dev, const struct spi_config *spi_cfg)
 					   DT_INST_PROP(n, transfer_delay)),                       \
 		.pincfg = PINCTRL_DT_INST_DEV_CONFIG_GET(n),                                       \
 		.data_pin_config = DT_INST_ENUM_IDX(n, data_pin_config),                           \
+		.output_config = DT_INST_PROP(n, tristate_output),                                 \
 	};
 
 #define SPI_NXP_LPSPI_COMMON_INIT(n)                                                               \

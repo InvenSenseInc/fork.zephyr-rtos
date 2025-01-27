@@ -480,6 +480,7 @@ test_i2c_tmp116: tmp116@47 {
 	compatible = "ti,tmp116";
 	reg = <0x47>;
 	odr = <TMP116_DT_ODR_125_MS>;
+	oversampling = <TMP116_DT_OVERSAMPLING_32>;
 };
 
 test_i2c_bq274xx: bq27xx@48 {
@@ -648,6 +649,13 @@ test_i2c_bh1750: bh1750@5e {
 test_i2c_akm09918c: akm09918c@5f {
 	compatible = "asahi-kasei,akm09918c";
 	reg = <0x5f>;
+};
+
+test_i2c_wsen_tids_2521020222501: wsen_tids_2521020222501@60 {
+	compatible = "we,wsen-tids-2521020222501";
+	reg = <0x60>;
+	interrupt-gpios = <&test_gpio 0 0>;
+	odr = <25>;
 };
 
 test_i2c_vl53l1x: vl53l1x@61 {
@@ -1155,6 +1163,12 @@ test_i2c_npm2100: npm2100@9f {
 	};
 };
 
+test_i2c_mlx90394: mlx90394@a0 {
+	compatible = "melexis,mlx90394";
+	status = "okay";
+	reg = <0xa0>;
+};
+
 test_i2c_scd40: scd40@a1 {
 	compatible = "sensirion,scd40";
 	reg = <0xa1>;
@@ -1213,7 +1227,14 @@ test_i2c_tmag3001: tmag3001@a8 {
 	status = "okay";
 	reg = <0xa8>;
 	int-gpios = <&test_gpio 15 1>;
-
 	operation-mode = <TMAG5273_DT_OPER_MODE_CONTINUOUS>;
 	angle-magnitude-axis = <TMAG5273_DT_ANGLE_MAG_XY>;
+};
+
+test_i2c_tmp435: tmp435@a9 {
+	compatible = "ti,tmp435";
+	reg = <0xa9>;
+	external-channel;
+	resistance-correction;
+	beta-compensation = <0x0f>;
 };

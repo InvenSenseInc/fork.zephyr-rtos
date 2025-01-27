@@ -157,6 +157,12 @@ Display
 * Renamed the devicetree propertys ``pclk_pol`` and ``data_cmd-gpios``
   to ``pclk-pol`` and ``data-cmd-gpios``.
 
+DAC
+===
+
+* Renamed the devicetree properties ``voltage_reference`` and ``power_down_mode``
+  to ``voltage-reference`` and ``power-down-mode``.
+
 Enhanced Serial Peripheral Interface (eSPI)
 ===========================================
 
@@ -168,6 +174,25 @@ Entropy
   platforms where the BT controller owns the HW random generator and the application
   processor needs to get random data before BT is fully enabled.
   (:github:`79931`)
+
+Ethernet
+========
+
+* Silabs gecko ethernet changes:
+
+  * Renamed the devicetree property ``location-phy_mdc`` to ``location-phy-mdc``.
+  * Renamed the devicetree property ``location-phy_mdio`` to ``location-phy-mdio``.
+  * Renamed the devicetree property ``location-rmii_refclk`` to ``location-phy-refclk``.
+  * Renamed the devicetree property ``location-rmii_crs_dv`` to ``location-phy-crs-dv``.
+  * Renamed the devicetree property ``location-rmii_txd0`` to ``location-phy-txd0``.
+  * Renamed the devicetree property ``location-rmii_txd1`` to ``location-phy-txd1``.
+  * Renamed the devicetree property ``location-rmii_tx_en`` to ``location-phy-tx-en``.
+  * Renamed the devicetree property ``location-rmii_rxd0`` to ``location-phy-rxd0``.
+  * Renamed the devicetree property ``location-rmii_rxd1`` to ``location-phy-rxd1``.
+  * Renamed the devicetree property ``location-rmii_rx_er`` to ``location-phy-rx-er``.
+  * Renamed the devicetree property ``location-phy_pwr_enable`` to ``location-phy-pwr-enable``.
+  * Renamed the devicetree property ``location-phy_reset`` to ``location-phy-reset``.
+  * Renamed the devicetree property ``location-phy_interrupt`` to ``location-phy-interrupt``.
 
 GNSS
 ====
@@ -276,10 +301,27 @@ Sensors
         };
       };
 
+  * The :dtcompatible:`we,wsen-tids` driver has been renamed to
+    :dtcompatible:`we,wsen-tids-2521020222501`.
+    The Device Tree can be configured as follows:
+
+    .. code-block:: devicetree
+
+      &i2c0 {
+        tids:tids-2521020222501@3F {
+          compatible = "we,wsen-tids-2521020222501";
+          reg = < 0x3F >;
+          odr = < 25 >;
+          interrupt-gpios = <&gpio1 1 GPIO_ACTIVE_LOW>;
+        };
+      };
+
 Serial
 ======
 
 * Renamed the ``compatible`` from ``nxp,kinetis-lpuart`` to :dtcompatible:`nxp,lpuart`.
+* Silabs Usart driver has been split for Series 2 :dtcompatible:`silabs,usart-uart`
+  and  Series 0/1 ``silabs,gecko-usart``
 
 Stepper
 =======
@@ -298,6 +340,16 @@ Stepper
     :kconfig:option:`STEPPER_ADI_TMC5041_RAMP_GEN` option.
   * To control the velocity for :dtcompatible:`adi,tmc5041` stepper driver, use
     :c:func:`tmc5041_stepper_set_max_velocity` or :c:func:`tmc5041_stepper_set_ramp`.
+  * Renamed the DeviceTree property ``en_spreadcycle`` to ``en-spreadcycle``.
+  * Renamed the DeviceTree property ``i_scale_analog`` to ``i-scale-analog``.
+  * Renamed the DeviceTree property ``index_optw`` to ``index-otpw``.
+  * Renamed the DeviceTree property ``ìndex_step`` to ``index-step``.
+  * Renamed the DeviceTree property ``internal_rsense`` to ``internal-rsense``.
+  * Renamed the DeviceTree property ``lock_gconf`` to ``lock-gconf``.
+  * Renamed the DeviceTree property ``mstep_reg_select`` to ``mstep-reg-select``.
+  * Renamed the DeviceTree property ``pdn_disable`` to ``pdn-disable``.
+  * Renamed the DeviceTree property ``poscmp_enable`` to ``poscmp-enable``.
+  * Renamed the DeviceTree property ``test_mode`` to ``test-mode``.
 
 SPI
 ===
@@ -336,6 +388,11 @@ Video
   The new ``video-controls.h`` source now contains description of each control ID to help
   disambiguating.
 
+* The ``video_pix_fmt_bpp()`` function was returning a byte count, this got replaced by
+  ``video_bits_per_pixel()`` which return a bit count. For instance, invocations such as
+  ``pitch = width * video_pix_fmt_bpp(pixfmt)`` needs to be replaced by an equivalent
+  ``pitch = width * video_bits_per_pixel(pixfmt) / BITS_PER_BYTE``.
+
 Watchdog
 ========
 
@@ -369,6 +426,11 @@ Bluetooth Mesh
   set as deprecated. Default option for platforms that do not support TF-M
   is :kconfig:option:`CONFIG_BT_MESH_USES_MBEDTLS_PSA`.
 
+* Mesh explicitly depends on the Secure Storage subsystem if storing into
+  non-volatile memory (:kconfig:option:`CONFIG_BT_SETTINGS`) is enabled and
+  Mbed TLS library (:kconfig:option:`CONFIG_BT_MESH_USES_MBEDTLS_PSA`) is used.
+  Applications should be built with :kconfig:option:`CONFIG_SECURE_STORAGE` enabled.
+
 Bluetooth Audio
 ===============
 
@@ -384,6 +446,12 @@ Bluetooth Audio
     * :kconfig:option:`CONFIG_BT_ISO_SYNC_RECEIVER`
     * :kconfig:option:`CONFIG_BT_PAC_SNK`
     * :kconfig:option:`CONFIG_BT_PAC_SRC`
+
+* PACS have been changed to support dynamic, runtime configuration. This means that PACS now has
+  to be registered with :c:func:`bt_pacs_register` before it can be used. In addition,
+  :c:func:`bt_pacs_register` also have to be called before :c:func:`bt_ascs_register` can be
+  be called. All Kconfig options still remain. Runtime configuration cannot override a disabled
+  Kconfig option. (:github:`83730`)
 
 Bluetooth Classic
 =================
@@ -407,6 +475,9 @@ Bluetooth Host
 * LE legacy pairing is no longer enabled by default since it's not secure. Leaving it enabled
   makes a device vulnerable for downgrade attacks. If an application still needs to use LE legacy
   pairing, it should disable :kconfig:option:`CONFIG_BT_SMP_SC_PAIR_ONLY` manually.
+
+* The prompt for :kconfig:option:`CONFIG_BT_ECC` has been removed, since it only offers an internal
+  API, meaning internal users should explicitly select it in their respective Kconfig options.
 
 Bluetooth Crypto
 ================
@@ -445,6 +516,12 @@ Other Subsystems
 
 Flash map
 =========
+
+Filesystem
+==========
+
+* The EXT2 Kconfig symbol ``CONFIG_MAX_FILES`` has been renamed to
+  :kconfig:option:`CONFIG_EXT2_MAX_FILES`.
 
 hawkBit
 =======
