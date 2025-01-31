@@ -6,7 +6,7 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 config TDK_APEX
-	bool "TDK APEX features"
+	bool
 
 menuconfig ICM42X70
 	bool "ICM42670-P/-S Six-Axis or ICM42370-P Three-Axis Motion Tracking Device"
