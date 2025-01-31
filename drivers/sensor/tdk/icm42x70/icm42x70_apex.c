@@ -81,24 +81,24 @@ int icm42x70_apex_fetch_from_dmp(const struct device *dev)
 	}
 	/* Test Tilt interrupt */
 	if (int_status3 & (INT_STATUS3_TILT_DET_INT_MASK)) {
-		data->apex_status = ICM42670_APEX_STATUS_MASK_TILT;
+		data->apex_status = ICM42X70_APEX_STATUS_MASK_TILT;
 	}
 	/* Test SMD interrupt */
 	if ((int_status2 & (INT_STATUS2_SMD_INT_MASK)) || (rc != 0)) {
-		data->apex_status = ICM42670_APEX_STATUS_MASK_SMD;
+		data->apex_status = ICM42X70_APEX_STATUS_MASK_SMD;
 	}
 	/* Test WOM interrupts */
 	if (int_status2 & (INT_STATUS2_WOM_X_INT_MASK | INT_STATUS2_WOM_Y_INT_MASK |
 			   INT_STATUS2_WOM_Z_INT_MASK)) {
 		data->apex_status = 0;
 		if (int_status2 & INT_STATUS2_WOM_X_INT_MASK) {
-			data->apex_status |= ICM42670_APEX_STATUS_MASK_WOM_X;
+			data->apex_status |= ICM42X70_APEX_STATUS_MASK_WOM_X;
 		}
 		if (int_status2 & INT_STATUS2_WOM_Y_INT_MASK) {
-			data->apex_status |= ICM42670_APEX_STATUS_MASK_WOM_Y;
+			data->apex_status |= ICM42X70_APEX_STATUS_MASK_WOM_Y;
 		}
 		if (int_status2 & INT_STATUS2_WOM_Z_INT_MASK) {
-			data->apex_status |= ICM42670_APEX_STATUS_MASK_WOM_Z;
+			data->apex_status |= ICM42X70_APEX_STATUS_MASK_WOM_Z;
 		}
 	}
 	return rc;

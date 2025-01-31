@@ -18,6 +18,7 @@
 
 #include "icm42x70.h"
 #include "icm42x70_trigger.h"
+#include "icm42670.h"
 
 #include <zephyr/logging/log.h>
 LOG_MODULE_REGISTER(ICM42X70, CONFIG_SENSOR_LOG_LEVEL);
@@ -116,7 +117,7 @@ static uint16_t convert_dt_enum_to_freq(uint8_t val)
 	return freq;
 }
 
-static uint32_t convert_freq_to_bitfield(uint32_t val, uint16_t *freq)
+uint32_t convert_freq_to_bitfield(uint32_t val, uint16_t *freq)
 {
 	uint32_t odr_bitfield = 0;
 
@@ -177,29 +178,7 @@ static uint32_t convert_acc_fs_to_bitfield(uint32_t val, uint8_t *fs)
 	return bitfield;
 }
 
-#if CONFIG_USE_EMD_ICM42670
-static uint32_t convert_gyr_fs_to_bitfield(uint32_t val, uint16_t *fs)
-{
-	uint32_t bitfield = 0;
-
-	if (val < 500 && val >= 250) {
-		bitfield = GYRO_CONFIG0_FS_SEL_250dps;
-		*fs = 250;
-	} else if (val < 1000 && val >= 500) {
-		bitfield = GYRO_CONFIG0_FS_SEL_500dps;
-		*fs = 500;
-	} else if (val < 2000 && val >= 1000) {
-		bitfield = GYRO_CONFIG0_FS_SEL_1000dps;
-		*fs = 1000;
-	} else if (val == 2000) {
-		bitfield = GYRO_CONFIG0_FS_SEL_2000dps;
-		*fs = 2000;
-	}
-	return bitfield;
-}
-#endif
-
-static uint32_t convert_ln_bw_to_bitfield(uint32_t val)
+uint32_t convert_ln_bw_to_bitfield(uint32_t val)
 {
 	uint32_t bitfield = 0xFF;
 
@@ -259,24 +238,6 @@ static uint8_t convert_bitfield_to_acc_fs(uint8_t bitfield)
 	}
 	return acc_fs;
 }
-
-#if CONFIG_USE_EMD_ICM42670
-static uint16_t convert_bitfield_to_gyr_fs(uint8_t bitfield)
-{
-	uint16_t gyr_fs = 0;
-
-	if (bitfield == GYRO_CONFIG0_FS_SEL_250dps) {
-		gyr_fs = 250;
-	} else if (bitfield == GYRO_CONFIG0_FS_SEL_500dps) {
-		gyr_fs = 500;
-	} else if (bitfield == GYRO_CONFIG0_FS_SEL_1000dps) {
-		gyr_fs = 1000;
-	} else if (bitfield == GYRO_CONFIG0_FS_SEL_2000dps) {
-		gyr_fs = 2000;
-	}
-	return gyr_fs;
-}
-#endif
 
 static int icm42x70_set_accel_power_mode(struct icm42x70_data *drv_data,
 					 const struct sensor_value *val)
@@ -380,66 +341,6 @@ static int icm42x70_accel_config(struct icm42x70_data *drv_data, enum sensor_att
 	}
 	return 0;
 }
-
-#if CONFIG_USE_EMD_ICM42670
-static int icm42x70_set_gyro_odr(struct icm42x70_data *drv_data, const struct sensor_value *val)
-{
-	if (val->val1 <= 1600 && val->val1 > 12) {
-		if (drv_data->gyro_hz == 0) {
-			inv_imu_set_gyro_frequency(
-				&drv_data->driver,
-				convert_freq_to_bitfield(val->val1, &drv_data->gyro_hz));
-			inv_imu_enable_gyro_low_noise_mode(&drv_data->driver);
-		} else {
-			inv_imu_set_gyro_frequency(
-				&drv_data->driver,
-				convert_freq_to_bitfield(val->val1, &drv_data->gyro_hz));
-		}
-	} else if (val->val1 == 0) {
-		inv_imu_disable_gyro(&drv_data->driver);
-		drv_data->gyro_hz = val->val1;
-	} else {
-		LOG_ERR("Incorrect sampling value");
-		return -EINVAL;
-	}
-	return 0;
-}
-
-static int icm42x70_set_gyro_fs(struct icm42x70_data *drv_data, const struct sensor_value *val)
-{
-	if (val->val1 > 2000 || val->val1 < 250) {
-		LOG_ERR("Incorrect fullscale value");
-		return -EINVAL;
-	}
-	inv_imu_set_gyro_fsr(&drv_data->driver,
-			     convert_gyr_fs_to_bitfield(val->val1, &drv_data->gyro_fs));
-	LOG_DBG("Set gyro fullscale to: %d dps", drv_data->gyro_fs);
-	return 0;
-}
-
-static int icm42x70_gyro_config(struct icm42x70_data *drv_data, enum sensor_attribute attr,
-				const struct sensor_value *val)
-{
-	if (attr == SENSOR_ATTR_SAMPLING_FREQUENCY) {
-		icm42x70_set_gyro_odr(drv_data, val);
-
-	} else if (attr == SENSOR_ATTR_FULL_SCALE) {
-		icm42x70_set_gyro_fs(drv_data, val);
-
-	} else if ((enum sensor_attribute_icm42x70)attr == SENSOR_ATTR_BW_FILTER_LPF) {
-		if (val->val1 > 180) {
-			LOG_ERR("Incorrect low pass filter bandwidth value");
-			return -EINVAL;
-		}
-		inv_imu_set_gyro_ln_bw(&drv_data->driver, convert_ln_bw_to_bitfield(val->val1));
-
-	} else {
-		LOG_ERR("Unsupported attribute");
-		return -EINVAL;
-	}
-	return 0;
-}
-#endif
 
 static int icm42x70_sensor_init(const struct device *dev)
 {
@@ -573,20 +474,6 @@ static void icm42x70_convert_accel(struct sensor_value *val, int16_t raw_val, ui
 	val->val2 = conv_val % 1000000;
 }
 
-#if CONFIG_USE_EMD_ICM42670
-static void icm42x70_convert_gyro(struct sensor_value *val, int16_t raw_val, uint16_t fs)
-{
-	int64_t conv_val;
-
-	/* 16 bit gyroscope. 2^15 bits represent the range in degrees/s */
-	/* see datasheet section 3.1 for details */
-	conv_val = ((int64_t)raw_val * fs * SENSOR_PI) / (INT16_MAX * 180U);
-
-	val->val1 = conv_val / 1000000;
-	val->val2 = conv_val % 1000000;
-}
-#endif
-
 static void icm42x70_convert_temp(struct sensor_value *val, int16_t raw_val)
 {
 	int64_t conv_val;
@@ -620,15 +507,15 @@ static int icm42x70_channel_get(const struct device *dev, enum sensor_channel ch
 		icm42x70_convert_accel(val, data->accel_z, data->accel_fs);
 #if CONFIG_USE_EMD_ICM42670
 	} else if (chan == SENSOR_CHAN_GYRO_XYZ) {
-		icm42x70_convert_gyro(&val[0], data->gyro_x, data->gyro_fs);
-		icm42x70_convert_gyro(&val[1], data->gyro_y, data->gyro_fs);
-		icm42x70_convert_gyro(&val[2], data->gyro_z, data->gyro_fs);
+		icm42670_convert_gyro(&val[0], data->gyro_x, data->gyro_fs);
+		icm42670_convert_gyro(&val[1], data->gyro_y, data->gyro_fs);
+		icm42670_convert_gyro(&val[2], data->gyro_z, data->gyro_fs);
 	} else if (chan == SENSOR_CHAN_GYRO_X) {
-		icm42x70_convert_gyro(val, data->gyro_x, data->gyro_fs);
+		icm42670_convert_gyro(val, data->gyro_x, data->gyro_fs);
 	} else if (chan == SENSOR_CHAN_GYRO_Y) {
-		icm42x70_convert_gyro(val, data->gyro_y, data->gyro_fs);
+		icm42670_convert_gyro(val, data->gyro_y, data->gyro_fs);
 	} else if (chan == SENSOR_CHAN_GYRO_Z) {
-		icm42x70_convert_gyro(val, data->gyro_z, data->gyro_fs);
+		icm42670_convert_gyro(val, data->gyro_z, data->gyro_fs);
 #endif
 	} else if (chan == SENSOR_CHAN_DIE_TEMP) {
 		icm42x70_convert_temp(val, data->temp);
@@ -764,26 +651,6 @@ static int icm42x70_sample_fetch_accel(const struct device *dev)
 	return 0;
 }
 
-#if CONFIG_USE_EMD_ICM42670
-static int icm42x70_sample_fetch_gyro(const struct device *dev)
-{
-	struct icm42x70_data *data = dev->data;
-	uint8_t buffer[GYRO_DATA_SIZE];
-
-	int res = inv_imu_read_reg(&data->driver, GYRO_DATA_X1, GYRO_DATA_SIZE, buffer);
-
-	if (res) {
-		return res;
-	}
-
-	data->gyro_x = (int16_t)sys_get_be16(&buffer[0]);
-	data->gyro_y = (int16_t)sys_get_be16(&buffer[2]);
-	data->gyro_z = (int16_t)sys_get_be16(&buffer[4]);
-
-	return 0;
-}
-#endif
-
 static int icm42x70_sample_fetch_temp(const struct device *dev)
 {
 	struct icm42x70_data *data = dev->data;
@@ -818,7 +685,7 @@ static int icm42x70_fetch_from_registers(const struct device *dev, enum sensor_c
 		case SENSOR_CHAN_ALL:
 			err |= icm42x70_sample_fetch_accel(dev);
 #if CONFIG_USE_EMD_ICM42670
-			err |= icm42x70_sample_fetch_gyro(dev);
+			err |= icm42670_sample_fetch_gyro(dev);
 #endif
 			err |= icm42x70_sample_fetch_temp(dev);
 			break;
@@ -833,7 +700,7 @@ static int icm42x70_fetch_from_registers(const struct device *dev, enum sensor_c
 		case SENSOR_CHAN_GYRO_X:
 		case SENSOR_CHAN_GYRO_Y:
 		case SENSOR_CHAN_GYRO_Z:
-			err |= icm42x70_sample_fetch_gyro(dev);
+			err |= icm42670_sample_fetch_gyro(dev);
 			break;
 #endif
 		case SENSOR_CHAN_DIE_TEMP:
@@ -917,7 +784,7 @@ static int icm42x70_attr_set(const struct device *dev, enum sensor_channel chan,
 		icm42x70_accel_config(drv_data, attr, val);
 #if CONFIG_USE_EMD_ICM42670
 	} else if (SENSOR_CHANNEL_IS_GYRO(chan)) {
-		icm42x70_gyro_config(drv_data, attr, val);
+		icm42670_gyro_config(drv_data, attr, val);
 #endif
 	} else {
 		LOG_ERR("Unsupported channel");

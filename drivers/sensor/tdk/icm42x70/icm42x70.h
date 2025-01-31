@@ -111,6 +111,9 @@ struct icm42x70_config {
 	uint8_t apex;
 };
 
+uint32_t convert_freq_to_bitfield(uint32_t val, uint16_t *freq);
+uint32_t convert_ln_bw_to_bitfield(uint32_t val);
+
 #ifdef CONFIG_TDK_APEX
 
 #define ICM42X70_APEX_STATUS_MASK_TILT  BIT(0)
