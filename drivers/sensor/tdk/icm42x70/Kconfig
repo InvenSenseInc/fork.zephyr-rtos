@@ -35,6 +35,7 @@ menuconfig ICM42X70
 		|| $(dt_node_str_prop_equals,$(dt_nodelabel_path,icm42370p),apex,wom)
 	select USE_EMD_ICM42670 if DT_HAS_INVENSENSE_ICM42670P_ENABLED || DT_HAS_INVENSENSE_ICM42670S_ENABLED
 	select USE_EMD_ICM42370 if DT_HAS_INVENSENSE_ICM42370P_ENABLED
+	select SENSOR_ASYNC_API
 	help
 	  Enable driver for ICM42x70 SPI-based or I2C-based Six-Axis or Three-Axis Motion Tracking device.
 

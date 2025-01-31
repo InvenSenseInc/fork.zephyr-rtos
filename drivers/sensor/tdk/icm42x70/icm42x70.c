@@ -866,12 +866,9 @@ static int icm42x70_sample_fetch(const struct device *dev, enum sensor_channel c
 	}
 #endif
 
-	if ((chan == SENSOR_CHAN_ALL) || (chan == SENSOR_CHAN_ACCEL_XYZ) ||
-	    (chan == SENSOR_CHAN_ACCEL_X) || (chan == SENSOR_CHAN_ACCEL_Y) ||
-	    (chan == SENSOR_CHAN_ACCEL_Z)
+	if ((chan == SENSOR_CHAN_ALL) || SENSOR_CHANNEL_IS_ACCEL(chan)
 #if CONFIG_USE_EMD_ICM42670
-	    || (chan == SENSOR_CHAN_GYRO_XYZ) || (chan == SENSOR_CHAN_GYRO_X) ||
-	    (chan == SENSOR_CHAN_GYRO_Y) || (chan == SENSOR_CHAN_GYRO_Z)
+	    || SENSOR_CHANNEL_IS_GYRO(chan)
 #endif
 	    || (chan == SENSOR_CHAN_DIE_TEMP)) {
 #ifdef CONFIG_ICM42X70_TRIGGER
@@ -916,12 +913,10 @@ static int icm42x70_attr_set(const struct device *dev, enum sensor_channel chan,
 			LOG_ERR("Not supported ATTR");
 			return -EINVAL;
 		}
-	} else if ((chan == SENSOR_CHAN_ACCEL_XYZ) || (chan == SENSOR_CHAN_ACCEL_X) ||
-		   (chan == SENSOR_CHAN_ACCEL_Y) || (chan == SENSOR_CHAN_ACCEL_Z)) {
+	} else if (SENSOR_CHANNEL_IS_ACCEL(chan)) {
 		icm42x70_accel_config(drv_data, attr, val);
 #if CONFIG_USE_EMD_ICM42670
-	} else if ((chan == SENSOR_CHAN_GYRO_XYZ) || (chan == SENSOR_CHAN_GYRO_X) ||
-		   (chan == SENSOR_CHAN_GYRO_Y) || (chan == SENSOR_CHAN_GYRO_Z)) {
+	} else if (SENSOR_CHANNEL_IS_GYRO(chan)) {
 		icm42x70_gyro_config(drv_data, attr, val);
 #endif
 	} else {
