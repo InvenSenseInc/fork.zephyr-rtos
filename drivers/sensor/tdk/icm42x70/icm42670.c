@@ -68,7 +68,7 @@ static int icm42670_set_gyro_fs(struct icm42x70_data *drv_data, const struct sen
 }
 
 int icm42670_gyro_config(struct icm42x70_data *drv_data, enum sensor_attribute attr,
-				const struct sensor_value *val)
+			 const struct sensor_value *val)
 {
 	if (attr == SENSOR_ATTR_SAMPLING_FREQUENCY) {
 		icm42670_set_gyro_odr(drv_data, val);
