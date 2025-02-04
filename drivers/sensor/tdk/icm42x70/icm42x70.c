@@ -397,27 +397,31 @@ static int icm42x70_turn_on_sensor(const struct device *dev)
 	}
 	LOG_DBG("Set accel full scale to: %d G", data->accel_fs);
 
-#if DT_HAS_COMPAT_STATUS_OKAY(invensense_icm42670p) ||                                             \
-	DT_HAS_COMPAT_STATUS_OKAY(invensense_icm42670s)
-	err = inv_imu_set_gyro_fsr(&data->driver,
-				   (cfg->gyro_fs << GYRO_CONFIG0_GYRO_UI_FS_SEL_POS));
-	data->gyro_fs =
-		convert_bitfield_to_gyr_fs((cfg->gyro_fs << GYRO_CONFIG0_GYRO_UI_FS_SEL_POS));
-	if ((err < 0) || (data->gyro_fs == 0)) {
-		LOG_ERR("Failed to configure gyro FSR");
-		return -EIO;
+#if CONFIG_USE_EMD_ICM42670
+	if ((data->imu_whoami == INV_ICM42670P_WHOAMI) ||
+	    (data->imu_whoami == INV_ICM42670S_WHOAMI)) {
+		err = inv_imu_set_gyro_fsr(&data->driver,
+					   (cfg->gyro_fs << GYRO_CONFIG0_GYRO_UI_FS_SEL_POS));
+		data->gyro_fs = convert_bitfield_to_gyr_fs(
+			(cfg->gyro_fs << GYRO_CONFIG0_GYRO_UI_FS_SEL_POS));
+		if ((err < 0) || (data->gyro_fs == 0)) {
+			LOG_ERR("Failed to configure gyro FSR");
+			return -EIO;
+		}
+		LOG_DBG("Set gyro full scale to: %d dps", data->gyro_fs);
 	}
-	LOG_DBG("Set gyro full scale to: %d dps", data->gyro_fs);
 #endif
 
 	err = inv_imu_set_accel_lp_avg(&data->driver,
 				       (cfg->accel_avg << ACCEL_CONFIG1_ACCEL_UI_AVG_POS));
 	err |= inv_imu_set_accel_ln_bw(&data->driver,
 				       (cfg->accel_filt_bw << ACCEL_CONFIG1_ACCEL_UI_FILT_BW_POS));
-#if DT_HAS_COMPAT_STATUS_OKAY(invensense_icm42670p) ||                                             \
-	DT_HAS_COMPAT_STATUS_OKAY(invensense_icm42670s)
-	err |= inv_imu_set_gyro_ln_bw(&data->driver,
-				      (cfg->gyro_filt_bw << GYRO_CONFIG1_GYRO_UI_FILT_BW_POS));
+#if CONFIG_USE_EMD_ICM42670
+	if ((data->imu_whoami == INV_ICM42670P_WHOAMI) ||
+	    (data->imu_whoami == INV_ICM42670S_WHOAMI)) {
+		err |= inv_imu_set_gyro_ln_bw(
+			&data->driver, (cfg->gyro_filt_bw << GYRO_CONFIG1_GYRO_UI_FILT_BW_POS));
+	}
 #endif
 	if (err < 0) {
 		LOG_ERR("Failed to configure filtering.");
@@ -437,12 +441,14 @@ static int icm42x70_turn_on_sensor(const struct device *dev)
 			LOG_ERR("Not supported power mode value");
 		}
 	}
-#if DT_HAS_COMPAT_STATUS_OKAY(invensense_icm42670p) ||                                             \
-	DT_HAS_COMPAT_STATUS_OKAY(invensense_icm42670s)
-	if (cfg->gyro_hz != 0) {
-		err |= inv_imu_set_gyro_frequency(&data->driver,
-						  cfg->gyro_hz + ICM42X70_CONVERT_ENUM_TO_ODR_POS);
-		err |= inv_imu_enable_gyro_low_noise_mode(&data->driver);
+#if CONFIG_USE_EMD_ICM42670
+	if ((data->imu_whoami == INV_ICM42670P_WHOAMI) ||
+	    (data->imu_whoami == INV_ICM42670S_WHOAMI)) {
+		if (cfg->gyro_hz != 0) {
+			err |= inv_imu_set_gyro_frequency(
+				&data->driver, cfg->gyro_hz + ICM42X70_CONVERT_ENUM_TO_ODR_POS);
+			err |= inv_imu_enable_gyro_low_noise_mode(&data->driver);
+		}
 	}
 #endif
 	if (err < 0) {
@@ -452,9 +458,11 @@ static int icm42x70_turn_on_sensor(const struct device *dev)
 
 	data->accel_pwr_mode = cfg->accel_pwr_mode;
 	data->accel_hz = convert_dt_enum_to_freq(cfg->accel_hz);
-#if DT_HAS_COMPAT_STATUS_OKAY(invensense_icm42670p) ||                                             \
-	DT_HAS_COMPAT_STATUS_OKAY(invensense_icm42670s)
-	data->gyro_hz = convert_dt_enum_to_freq(cfg->gyro_hz);
+#if CONFIG_USE_EMD_ICM42670
+	if ((data->imu_whoami == INV_ICM42670P_WHOAMI) ||
+	    (data->imu_whoami == INV_ICM42670S_WHOAMI)) {
+		data->gyro_hz = convert_dt_enum_to_freq(cfg->gyro_hz);
+	}
 #endif
 
 	/*
@@ -509,17 +517,20 @@ static int icm42x70_channel_get(const struct device *dev, enum sensor_channel ch
 		icm42x70_convert_accel(val, data->accel_y, data->accel_fs);
 	} else if (chan == SENSOR_CHAN_ACCEL_Z) {
 		icm42x70_convert_accel(val, data->accel_z, data->accel_fs);
-#if DT_HAS_COMPAT_STATUS_OKAY(invensense_icm42670p) ||                                             \
-	DT_HAS_COMPAT_STATUS_OKAY(invensense_icm42670s)
-	} else if (chan == SENSOR_CHAN_GYRO_XYZ) {
+#if CONFIG_USE_EMD_ICM42670
+	} else if ((chan == SENSOR_CHAN_GYRO_XYZ) && ((data->imu_whoami == INV_ICM42670P_WHOAMI) ||
+						      (data->imu_whoami == INV_ICM42670S_WHOAMI))) {
 		icm42670_convert_gyro(&val[0], data->gyro_x, data->gyro_fs);
 		icm42670_convert_gyro(&val[1], data->gyro_y, data->gyro_fs);
 		icm42670_convert_gyro(&val[2], data->gyro_z, data->gyro_fs);
-	} else if (chan == SENSOR_CHAN_GYRO_X) {
+	} else if ((chan == SENSOR_CHAN_GYRO_X) && ((data->imu_whoami == INV_ICM42670P_WHOAMI) ||
+						    (data->imu_whoami == INV_ICM42670S_WHOAMI))) {
 		icm42670_convert_gyro(val, data->gyro_x, data->gyro_fs);
-	} else if (chan == SENSOR_CHAN_GYRO_Y) {
+	} else if ((chan == SENSOR_CHAN_GYRO_Y) && ((data->imu_whoami == INV_ICM42670P_WHOAMI) ||
+						    (data->imu_whoami == INV_ICM42670S_WHOAMI))) {
 		icm42670_convert_gyro(val, data->gyro_y, data->gyro_fs);
-	} else if (chan == SENSOR_CHAN_GYRO_Z) {
+	} else if ((chan == SENSOR_CHAN_GYRO_Z) && ((data->imu_whoami == INV_ICM42670P_WHOAMI) ||
+						    (data->imu_whoami == INV_ICM42670S_WHOAMI))) {
 		icm42670_convert_gyro(val, data->gyro_z, data->gyro_fs);
 #endif
 	} else if (chan == SENSOR_CHAN_DIE_TEMP) {
@@ -610,12 +621,14 @@ static int icm42x70_fetch_from_fifo(const struct device *dev)
 				data->accel_y = event.accel[1];
 				data->accel_z = event.accel[2];
 			}
-#if DT_HAS_COMPAT_STATUS_OKAY(invensense_icm42670p) ||                                             \
-	DT_HAS_COMPAT_STATUS_OKAY(invensense_icm42670s)
-			if (event.sensor_mask & (1 << INV_SENSOR_GYRO)) {
-				data->gyro_x = event.gyro[0];
-				data->gyro_y = event.gyro[1];
-				data->gyro_z = event.gyro[2];
+#if CONFIG_USE_EMD_ICM42670
+			if ((data->imu_whoami == INV_ICM42670P_WHOAMI) ||
+			    (data->imu_whoami == INV_ICM42670S_WHOAMI)) {
+				if (event.sensor_mask & (1 << INV_SENSOR_GYRO)) {
+					data->gyro_x = event.gyro[0];
+					data->gyro_y = event.gyro[1];
+					data->gyro_z = event.gyro[2];
+				}
 			}
 #endif
 			if (event.sensor_mask & (1 << INV_SENSOR_TEMPERATURE)) {
@@ -690,9 +703,11 @@ static int icm42x70_fetch_from_registers(const struct device *dev, enum sensor_c
 		switch (chan) {
 		case SENSOR_CHAN_ALL:
 			err |= icm42x70_sample_fetch_accel(dev);
-#if DT_HAS_COMPAT_STATUS_OKAY(invensense_icm42670p) ||                                             \
-	DT_HAS_COMPAT_STATUS_OKAY(invensense_icm42670s)
-			err |= icm42670_sample_fetch_gyro(dev);
+#if CONFIG_USE_EMD_ICM42670
+			if ((data->imu_whoami == INV_ICM42670P_WHOAMI) ||
+			    (data->imu_whoami == INV_ICM42670S_WHOAMI)) {
+				err |= icm42670_sample_fetch_gyro(dev);
+			}
 #endif
 			err |= icm42x70_sample_fetch_temp(dev);
 			break;
@@ -702,13 +717,17 @@ static int icm42x70_fetch_from_registers(const struct device *dev, enum sensor_c
 		case SENSOR_CHAN_ACCEL_Z:
 			err |= icm42x70_sample_fetch_accel(dev);
 			break;
-#if DT_HAS_COMPAT_STATUS_OKAY(invensense_icm42670p) ||                                             \
-	DT_HAS_COMPAT_STATUS_OKAY(invensense_icm42670s)
+#if CONFIG_USE_EMD_ICM42670
 		case SENSOR_CHAN_GYRO_XYZ:
 		case SENSOR_CHAN_GYRO_X:
 		case SENSOR_CHAN_GYRO_Y:
 		case SENSOR_CHAN_GYRO_Z:
-			err |= icm42670_sample_fetch_gyro(dev);
+			if ((data->imu_whoami == INV_ICM42670P_WHOAMI) ||
+			    (data->imu_whoami == INV_ICM42670S_WHOAMI)) {
+				err |= icm42670_sample_fetch_gyro(dev);
+			} else {
+				res = -ENOTSUP;
+			}
 			break;
 #endif
 		case SENSOR_CHAN_DIE_TEMP:
@@ -731,6 +750,9 @@ static int icm42x70_fetch_from_registers(const struct device *dev, enum sensor_c
 
 static int icm42x70_sample_fetch(const struct device *dev, enum sensor_channel chan)
 {
+#if CONFIG_USE_EMD_ICM42670
+	struct icm42x70_data *data = dev->data;
+#endif
 	int status = -ENOTSUP;
 
 	icm42x70_lock(dev);
@@ -741,12 +763,12 @@ static int icm42x70_sample_fetch(const struct device *dev, enum sensor_channel c
 	}
 #endif
 
-	if ((chan == SENSOR_CHAN_ALL) || SENSOR_CHANNEL_IS_ACCEL(chan)
-#if DT_HAS_COMPAT_STATUS_OKAY(invensense_icm42670p) ||                                             \
-	DT_HAS_COMPAT_STATUS_OKAY(invensense_icm42670s)
-	    || SENSOR_CHANNEL_IS_GYRO(chan)
+	if ((chan == SENSOR_CHAN_ALL) || SENSOR_CHANNEL_IS_ACCEL(chan) ||
+#if CONFIG_USE_EMD_ICM42670
+	    (SENSOR_CHANNEL_IS_GYRO(chan) && ((data->imu_whoami == INV_ICM42670P_WHOAMI) ||
+					      (data->imu_whoami == INV_ICM42670S_WHOAMI))) ||
 #endif
-	    || (chan == SENSOR_CHAN_DIE_TEMP)) {
+	    (chan == SENSOR_CHAN_DIE_TEMP)) {
 #ifdef CONFIG_ICM42X70_TRIGGER
 		status = icm42x70_fetch_from_fifo(dev);
 #else
@@ -791,9 +813,10 @@ static int icm42x70_attr_set(const struct device *dev, enum sensor_channel chan,
 		}
 	} else if (SENSOR_CHANNEL_IS_ACCEL(chan)) {
 		icm42x70_accel_config(drv_data, attr, val);
-#if DT_HAS_COMPAT_STATUS_OKAY(invensense_icm42670p) ||                                             \
-	DT_HAS_COMPAT_STATUS_OKAY(invensense_icm42670s)
-	} else if (SENSOR_CHANNEL_IS_GYRO(chan)) {
+#if CONFIG_USE_EMD_ICM42670
+	} else if ((SENSOR_CHANNEL_IS_GYRO(chan)) &&
+		   ((drv_data->imu_whoami == INV_ICM42670P_WHOAMI) ||
+		    (drv_data->imu_whoami == INV_ICM42670S_WHOAMI))) {
 		icm42670_gyro_config(drv_data, attr, val);
 #endif
 	} else {
@@ -832,18 +855,22 @@ static int icm42x70_attr_get(const struct device *dev, enum sensor_channel chan,
 			res = -EINVAL;
 		}
 		break;
-#if DT_HAS_COMPAT_STATUS_OKAY(invensense_icm42670p) ||                                             \
-	DT_HAS_COMPAT_STATUS_OKAY(invensense_icm42670s)
+#if CONFIG_USE_EMD_ICM42670
 	case SENSOR_CHAN_GYRO_X:
 	case SENSOR_CHAN_GYRO_Y:
 	case SENSOR_CHAN_GYRO_Z:
 	case SENSOR_CHAN_GYRO_XYZ:
-		if (attr == SENSOR_ATTR_SAMPLING_FREQUENCY) {
-			val->val1 = data->gyro_hz;
-		} else if (attr == SENSOR_ATTR_FULL_SCALE) {
-			val->val1 = data->gyro_fs;
+		if ((data->imu_whoami == INV_ICM42670P_WHOAMI) ||
+		    (data->imu_whoami == INV_ICM42670S_WHOAMI)) {
+			if (attr == SENSOR_ATTR_SAMPLING_FREQUENCY) {
+				val->val1 = data->gyro_hz;
+			} else if (attr == SENSOR_ATTR_FULL_SCALE) {
+				val->val1 = data->gyro_fs;
+			} else {
+				LOG_ERR("Unsupported attribute");
+				res = -EINVAL;
+			}
 		} else {
-			LOG_ERR("Unsupported attribute");
 			res = -EINVAL;
 		}
 		break;
@@ -885,11 +912,13 @@ static int icm42x70_init(const struct device *dev)
 	data->accel_x = 0;
 	data->accel_y = 0;
 	data->accel_z = 0;
-#if DT_HAS_COMPAT_STATUS_OKAY(invensense_icm42670p) ||                                             \
-	DT_HAS_COMPAT_STATUS_OKAY(invensense_icm42670s)
-	data->gyro_x = 0;
-	data->gyro_y = 0;
-	data->gyro_z = 0;
+#if CONFIG_USE_EMD_ICM42670
+	if ((data->imu_whoami == INV_ICM42670P_WHOAMI) ||
+	    (data->imu_whoami == INV_ICM42670S_WHOAMI)) {
+		data->gyro_x = 0;
+		data->gyro_y = 0;
+		data->gyro_z = 0;
+	}
 #endif
 	data->temp = 0;
 

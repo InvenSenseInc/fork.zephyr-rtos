@@ -61,8 +61,7 @@ struct icm42x70_data {
 	uint16_t accel_hz;
 	uint8_t accel_fs;
 	uint8_t accel_pwr_mode;
-#if DT_HAS_COMPAT_STATUS_OKAY(invensense_icm42670p) ||                                             \
-	DT_HAS_COMPAT_STATUS_OKAY(invensense_icm42670s)
+#if CONFIG_USE_EMD_ICM42670
 	int32_t gyro_x;
 	int32_t gyro_y;
 	int32_t gyro_z;
@@ -103,8 +102,7 @@ struct icm42x70_config {
 	uint16_t accel_hz;
 	uint16_t accel_avg;
 	uint16_t accel_filt_bw;
-#if DT_HAS_COMPAT_STATUS_OKAY(invensense_icm42670p) ||                                             \
-	DT_HAS_COMPAT_STATUS_OKAY(invensense_icm42670s)
+#if CONFIG_USE_EMD_ICM42670
 	uint16_t gyro_fs;
 	uint16_t gyro_hz;
 	uint16_t gyro_filt_bw;
