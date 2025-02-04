@@ -3431,6 +3431,7 @@ ADI Platforms:
   collaborators:
     - ozersa
     - ttmut
+    - yasinustunerg
     - galak
     - microbuilder
   files:
@@ -3578,9 +3579,10 @@ Silabs Platforms:
   status: maintained
   maintainers:
     - jhedberg
+    - asmellby
   collaborators:
     - jerome-pouiller
-    - asmellby
+    - Martinhoff-maker
   files:
     - soc/silabs/
     - boards/silabs/
@@ -3718,6 +3720,7 @@ NXP Drivers:
     - decsny
     - manuargue
     - dbaluta
+    - Raymond0225
   files-regex:
     - ^drivers/.*nxp.*
     - ^drivers/.*mcux.*
@@ -4773,6 +4776,7 @@ West:
   collaborators:
     - ozersa
     - ttmut
+    - yasinustunerg
   files: []
   labels:
     - "platform: ADI"
@@ -4970,13 +4974,14 @@ West:
   status: maintained
   maintainers:
     - jhedberg
+    - asmellby
   collaborators:
     - jerome-pouiller
-    - asmellby
     - sateeshkotapati
     - yonsch
     - mnkp
     - rettichschnidi
+    - Martinhoff-maker
   files:
     - modules/hal_silabs/
   labels:

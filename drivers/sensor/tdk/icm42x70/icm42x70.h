@@ -97,6 +97,7 @@ struct icm42x70_data {
 struct icm42x70_config {
 	union icm42x70_bus bus;
 	const struct icm42x70_bus_io *bus_io;
+	uint32_t serif_type;
 	struct gpio_dt_spec gpio_int;
 	uint8_t accel_fs;
 	uint16_t accel_hz;
