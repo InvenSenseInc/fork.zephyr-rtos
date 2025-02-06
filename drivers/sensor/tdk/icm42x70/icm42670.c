@@ -58,6 +58,7 @@ static int icm42670_set_gyro_odr(struct icm42x70_data *drv_data, const struct se
 static int icm42670_set_gyro_fs(struct icm42x70_data *drv_data, const struct sensor_value *val)
 {
 	int32_t val_dps = sensor_rad_to_degrees(val);
+	
 	if (val_dps > 2000 || val_dps < 250) {
 		LOG_ERR("Incorrect fullscale value");
 		return -EINVAL;
