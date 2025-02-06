@@ -345,7 +345,7 @@ static int icm42x70_accel_config(struct icm42x70_data *drv_data, enum sensor_att
 static int icm42x70_sensor_init(const struct device *dev)
 {
 	struct icm42x70_data *data = dev->data;
-	const struct icm42670_config *config = dev->config;
+	const struct icm42x70_config *config = dev->config;
 	int err = 0;
 
 	/* Initialize serial interface and device */

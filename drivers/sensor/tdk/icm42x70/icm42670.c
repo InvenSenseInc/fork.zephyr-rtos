@@ -34,7 +34,7 @@ static uint32_t convert_gyr_fs_to_bitfield(uint32_t val, uint16_t *fs)
 
 static int icm42670_set_gyro_odr(struct icm42x70_data *drv_data, const struct sensor_value *val)
 {
-	if (val->val1 <= 1600 && val->val1 > 12) {
+	if (val->val1 <= 1600 && val->val1 >= 12) {
 		if (drv_data->gyro_hz == 0) {
 			inv_imu_set_gyro_frequency(
 				&drv_data->driver,
@@ -57,12 +57,13 @@ static int icm42670_set_gyro_odr(struct icm42x70_data *drv_data, const struct se
 
 static int icm42670_set_gyro_fs(struct icm42x70_data *drv_data, const struct sensor_value *val)
 {
-	if (val->val1 > 2000 || val->val1 < 250) {
+	int32_t val_dps = sensor_rad_to_degrees(val);
+	if (val_dps > 2000 || val_dps < 250) {
 		LOG_ERR("Incorrect fullscale value");
 		return -EINVAL;
 	}
 	inv_imu_set_gyro_fsr(&drv_data->driver,
-			     convert_gyr_fs_to_bitfield(val->val1, &drv_data->gyro_fs));
+			     convert_gyr_fs_to_bitfield(val_dps, &drv_data->gyro_fs));
 	LOG_DBG("Set gyro fullscale to: %d dps", drv_data->gyro_fs);
 	return 0;
 }
