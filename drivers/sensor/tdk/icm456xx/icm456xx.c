@@ -396,59 +396,35 @@ static int icm456xx_fetch_from_fifo(const struct device *dev)
 	struct icm456xx_data *data = dev->data;
 	int status = 0;
 	inv_imu_int_state_t int_state;
-	inv_imu_sensor_data_t d;
-	uint8_t input_mask = 0;
-
-
-	float                 accel_g[3];
-	float                 gyro_dps[3];
-
-	float                 temp_degc;
+	inv_imu_sensor_data_t sd;
+	inv_imu_fifo_data_t fd;
+	int accel_raw[3];
+	int gyro_raw[3];
+	int temp_raw;
 
 	status |= inv_imu_get_int_status(&data->driver, INV_IMU_INT1, &int_state);
 	if (int_state.INV_UI_DRDY) {
-		status |= inv_imu_get_register_data(&data->driver, &d);
-		accel_g[0]  = (float)(d.accel_data[0] * 8 /* gee */) / 32768;
-		accel_g[1]  = (float)(d.accel_data[1] * 8 /* gee */) / 32768;
-		accel_g[2]  = (float)(d.accel_data[2] * 8 /* gee */) / 32768;
-		gyro_dps[0] = (float)(d.gyro_data[0] * 2000 /* dps */) / 32768;
-		gyro_dps[1] = (float)(d.gyro_data[1] * 2000 /* dps */) / 32768;
-		gyro_dps[2] = (float)(d.gyro_data[2] * 2000 /* dps */) / 32768;
-		temp_degc   = (float)25 + ((float)d.temp_data / 128);
-
-		LOG_ERR("%f %f %f  / %f %f %f / %f", accel_g[0], accel_g[1], accel_g[2], gyro_dps[0], gyro_dps[1], gyro_dps[2], temp_degc);
-		data->accel_x = d.accel_data[0];
-		data->accel_y = d.accel_data[1];
-		data->accel_z = d.accel_data[2];
-
-		data->gyro_x = d.gyro_data[0];
-		data->gyro_y = d.gyro_data[1];
-		data->gyro_z = d.gyro_data[2];
-
-		data->temp = d.temp_data;
-
+		status |= inv_imu_get_register_data(&data->driver, &sd);
+		data->accel_x = sd.accel_data[0];
+		data->accel_y = sd.accel_data[1];
+		data->accel_z = sd.accel_data[2];
+		data->gyro_x = sd.gyro_data[0];
+		data->gyro_y = sd.gyro_data[1];
+		data->gyro_z = sd.gyro_data[2];
+		data->temp = sd.temp_data;
 	}
 
 	if (int_state.INV_FIFO_THS) {
-		inv_imu_fifo_data_t d;
-		int                 accel_raw[3]   = { 0 };
-		int                 gyro_raw[3]    = { 0 };
-		int                 temp_raw       = 0;
-		status |= inv_imu_get_fifo_frame(&data->driver, &d);
-
-		data->accel_x = d.byte_8.sensor_data[0];
-		data->accel_y = d.byte_8.sensor_data[1];
-		data->accel_z = d.byte_8.sensor_data[2];
-
-		data->gyro_x = d.byte_20.gyro_data[0];
-		data->gyro_y = d.byte_20.gyro_data[1];
-		data->gyro_x = d.byte_20.gyro_data[2];
-
-		data->temp = (int16_t)d.byte_8.temp_data;
-		LOG_ERR("accel %d %d %d  temp %d", data->accel_x, data->accel_y, data->accel_z, data->temp);
-
+		status |= inv_imu_get_fifo_frame(&data->driver, &fd);
+		data->accel_x = fd.byte_16.accel_data[0];
+		data->accel_y = fd.byte_16.accel_data[1];
+		data->accel_z = fd.byte_16.accel_data[2];
+		data->gyro_x = fd.byte_16.gyro_data[0];
+		data->gyro_y = fd.byte_16.gyro_data[1];
+		data->gyro_x = fd.byte_16.gyro_data[2];
+		data->temp = (int16_t)fd.byte_16.temp_data;
 	}
-	return 0;
+	return status;
 }
 #endif
 
@@ -492,9 +468,9 @@ int icm45686_sample_fetch_gyro(const struct device *dev)
 static int icm456xx_sample_fetch_temp(const struct device *dev)
 {
 	struct icm456xx_data *data = dev->data;
-	uint8_t buffer[ACCEL_DATA_SIZE];
+	uint8_t buffer[TEMP_DATA_SIZE];
 
-	int res = inv_imu_read_reg(&data->driver, GYRO_DATA_X1_UI, ACCEL_DATA_SIZE, buffer);
+	int res = inv_imu_read_reg(&data->driver, TEMP_DATA_X1_UI, ACCEL_DATA_SIZE, buffer);
 	
 	if (res) {
 		return res;
@@ -511,9 +487,6 @@ static int icm456xx_fetch_from_registers(const struct device *dev, enum sensor_c
 	int res = 0;
 	int err = 0;
 	inv_imu_int_state_t int_state;
-        inv_imu_sensor_data_t d;
-
-	LOG_DBG("Fetch from reg");
 
 	icm456xx_lock(dev);
 
@@ -582,9 +555,6 @@ static int icm456xx_sample_fetch(const struct device *dev, enum sensor_channel c
 		status = icm456xx_fetch_from_registers(dev, chan);
 #endif
 	}
-
-//	status |= inv_imu_read_reg(&data->driver, ACCEL_DATA_X1_UI, sizeof(reg_data), reg_data);
-//	LOG_ERR("data %X %X %X %X %X %X / %X %X %X %X %X %X ", reg_data[0], reg_data[1], reg_data[2], reg_data[3], reg_data[4], reg_data[5],  reg_data[6], reg_data[7], reg_data[8], reg_data[9], reg_data[10], reg_data[11]);
 
 	icm456xx_unlock(dev);
 	return status;

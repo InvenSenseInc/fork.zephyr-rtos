@@ -16,6 +16,7 @@
 #include <zephyr/kernel.h>
 
 #include "imu/inv_imu.h"
+#include "imu/inv_imu_driver.h"
 #ifdef CONFIG_TDK_APEX
 #include "imu/inv_imu_edmp.h"
 #endif
