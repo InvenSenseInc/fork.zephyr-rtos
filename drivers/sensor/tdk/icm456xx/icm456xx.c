@@ -18,7 +18,6 @@
 
 #include "icm456xx.h"
 #include "icm456xx_trigger.h"
-#include "icm45686.h"
 
 #include <zephyr/logging/log.h>
 LOG_MODULE_REGISTER(ICM456XX, CONFIG_SENSOR_LOG_LEVEL);
@@ -225,7 +224,7 @@ static int icm456xx_turn_on_sensor(const struct device *dev)
 {
 	struct icm456xx_data *data = dev->data;
 	const struct icm456xx_config *cfg = dev->config;
-	inv_imu_adv_fifo_config_t fifo_config;
+	inv_imu_fifo_config_t    fifo_config;
 	inv_imu_int_state_t            int_config;
 	int err = 0;
 
@@ -235,8 +234,19 @@ static int icm456xx_turn_on_sensor(const struct device *dev)
 	 * - Enable DRDY interrupt for raw data (raw data could also be retrieved from FIFO)
 	 */
 	memset(&int_config, INV_IMU_DISABLE, sizeof(int_config));
-	int_config.INV_UI_DRDY = INV_IMU_ENABLE;
+	//int_config.INV_UI_DRDY = INV_IMU_ENABLE;
+	int_config.INV_FIFO_THS = INV_IMU_ENABLE;
 	err |= inv_imu_set_config_int(&data->driver, INV_IMU_INT1, &int_config);
+
+
+	// FIFO Config
+	err |= inv_imu_get_fifo_config(&data->driver, &fifo_config);
+	fifo_config.gyro_en    = INV_IMU_ENABLE;
+	fifo_config.accel_en   = INV_IMU_ENABLE;
+	fifo_config.hires_en   = INV_IMU_DISABLE;
+	fifo_config.fifo_wm_th = 1;
+	fifo_config.fifo_mode  = FIFO_CONFIG0_FIFO_MODE_SNAPSHOT;
+	err |= inv_imu_set_fifo_config(&data->driver, &fifo_config);
 
 	LOG_ERR("fsr in turn on %d", cfg->accel_fs);
 	err = inv_imu_set_accel_fsr(&data->driver,ACCEL_CONFIG0_ACCEL_UI_FS_SEL_8_G);
@@ -249,7 +259,7 @@ static int icm456xx_turn_on_sensor(const struct device *dev)
 	LOG_ERR("Set accel full scale to: %d G", 0);
 
 	err = inv_imu_set_gyro_fsr(&data->driver,GYRO_CONFIG0_GYRO_UI_FS_SEL_2000_DPS);
-	data->gyro_fs = convert_enum_to_gyr_fs(cfg->gyro_fs);
+	//data->gyro_fs = convert_enum_to_gyr_fs(cfg->gyro_fs);
 	if ((err < 0)) {
 		LOG_ERR("Failed to configure gyro FSR");
 		return -EIO;
@@ -347,7 +357,6 @@ static int icm456xx_channel_get(const struct device *dev, enum sensor_channel ch
 	const struct icm456xx_config *cfg = dev->config;
 #endif
 
-	LOG_ERR("channel_get");
 	icm456xx_lock(dev);
 	if (chan == SENSOR_CHAN_ACCEL_XYZ) {
 		icm456xx_convert_accel(&val[0], data->accel_x, 8);
@@ -390,18 +399,13 @@ static int icm456xx_fetch_from_fifo(const struct device *dev)
 	inv_imu_sensor_data_t d;
 	uint8_t input_mask = 0;
 
-	uint16_t packet_size = FIFO_HEADER_SIZE + ACCEL_DATA_SIZE + GYRO_DATA_SIZE +
-			       TEMP_DATA_SIZE + FIFO_TS_FSYNC_SIZE;
-	uint16_t fifo_idx = 0;
 
 	float                 accel_g[3];
 	float                 gyro_dps[3];
 
 	float                 temp_degc;
 
-	LOG_ERR("fetch from fifo");
 	status |= inv_imu_get_int_status(&data->driver, INV_IMU_INT1, &int_state);
-
 	if (int_state.INV_UI_DRDY) {
 		status |= inv_imu_get_register_data(&data->driver, &d);
 		accel_g[0]  = (float)(d.accel_data[0] * 8 /* gee */) / 32768;
@@ -425,6 +429,25 @@ static int icm456xx_fetch_from_fifo(const struct device *dev)
 
 	}
 
+	if (int_state.INV_FIFO_THS) {
+		inv_imu_fifo_data_t d;
+		int                 accel_raw[3]   = { 0 };
+		int                 gyro_raw[3]    = { 0 };
+		int                 temp_raw       = 0;
+		status |= inv_imu_get_fifo_frame(&data->driver, &d);
+
+		data->accel_x = d.byte_8.sensor_data[0];
+		data->accel_y = d.byte_8.sensor_data[1];
+		data->accel_z = d.byte_8.sensor_data[2];
+
+		data->gyro_x = d.byte_20.gyro_data[0];
+		data->gyro_y = d.byte_20.gyro_data[1];
+		data->gyro_x = d.byte_20.gyro_data[2];
+
+		data->temp = (int16_t)d.byte_8.temp_data;
+		LOG_ERR("accel %d %d %d  temp %d", data->accel_x, data->accel_y, data->accel_z, data->temp);
+
+	}
 	return 0;
 }
 #endif
@@ -445,7 +468,6 @@ static int icm456xx_sample_fetch_accel(const struct device *dev)
 	data->accel_y = (int16_t)sys_get_be16(&buffer[2]);
 	data->accel_z = (int16_t)sys_get_be16(&buffer[4]);
 
-	LOG_ERR("fetch from accel");
 	return 0;
 }
 
@@ -543,7 +565,6 @@ static int icm456xx_sample_fetch(const struct device *dev, enum sensor_channel c
 	int status = 0;
 
 	uint8_t                  reg_data[ACCEL_DATA_SIZE + GYRO_DATA_SIZE + TEMP_DATA_SIZE];
-	LOG_ERR("sample fetch");
 
 	icm456xx_lock(dev);
 #ifdef CONFIG_TDK_APEX
@@ -566,7 +587,6 @@ static int icm456xx_sample_fetch(const struct device *dev, enum sensor_channel c
 //	LOG_ERR("data %X %X %X %X %X %X / %X %X %X %X %X %X ", reg_data[0], reg_data[1], reg_data[2], reg_data[3], reg_data[4], reg_data[5],  reg_data[6], reg_data[7], reg_data[8], reg_data[9], reg_data[10], reg_data[11]);
 
 	icm456xx_unlock(dev);
-	LOG_ERR("sample fetch done");
 	return status;
 }
 
@@ -579,7 +599,6 @@ static int icm456xx_attr_set(const struct device *dev, enum sensor_channel chan,
 
 	icm456xx_lock(dev);
 
-	LOG_ERR("attr_ set");
 	if ((enum sensor_channel_tdk_apex)chan == SENSOR_CHAN_APEX_MOTION) {
 		if (attr == SENSOR_ATTR_CONFIGURATION) {
 #ifdef CONFIG_TDK_APEX
@@ -606,7 +625,7 @@ static int icm456xx_attr_set(const struct device *dev, enum sensor_channel chan,
 		icm456xx_accel_config(drv_data, attr, val);
 #if CONFIG_USE_EMD_ICM45686
 	} else if (SENSOR_CHANNEL_IS_GYRO(chan)) {
-		icm45686_gyro_config(drv_data, attr, val);
+		//icm45686_gyro_config(drv_data, attr, val);
 #endif
 	} else {
 		LOG_ERR("Unsupported channel");
@@ -626,7 +645,6 @@ static int icm456xx_attr_get(const struct device *dev, enum sensor_channel chan,
 	const struct icm456xx_config *cfg = dev->config;
 	int res = 0;
 
-	LOG_ERR("attr_get");
 	__ASSERT_NO_MSG(val != NULL);
 
 	icm456xx_lock(dev);
