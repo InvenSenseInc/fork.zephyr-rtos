@@ -77,36 +77,42 @@ static uint16_t convert_dt_enum_to_freq(uint8_t val)
 		freq = 0;
 		break;
 	case 1:
-		freq = 1600;
+		freq = 6400;
 		break;
 	case 2:
-		freq = 800;
+		freq = 3200;
 		break;
 	case 3:
-		freq = 400;
+		freq = 1600;
 		break;
 	case 4:
-		freq = 200;
+		freq = 800;
 		break;
 	case 5:
-		freq = 100;
+		freq = 400;
 		break;
 	case 6:
-		freq = 50;
+		freq = 200;
 		break;
 	case 7:
-		freq = 25;
+		freq = 100;
 		break;
 	case 8:
-		freq = 12;
+		freq = 50;
 		break;
 	case 9:
-		freq = 6;
+		freq = 25;
 		break;
 	case 10:
-		freq = 3;
+		freq = 12;
 		break;
 	case 11:
+		freq = 6;
+		break;
+	case 12:
+		freq = 3;
+		break;
+	case 13:
 		freq = 1;
 		break;
 	default:
@@ -164,12 +170,24 @@ uint32_t convert_freq_to_enum(uint32_t val, uint16_t *freq)
         return odr_enum;
 }
 
-static uint32_t convert_acc_fs_to_bitfield(uint32_t val, uint8_t *fs)
+static uint32_t convert_acc_fs_to_enum(uint32_t val, uint8_t *fs)
 {
-	uint32_t bitfield = 0;
+	uint32_t fs_enum = 0;
 
-	//TODO Implementation
-	return bitfield;
+	if (val < 4 && val >= 2) {
+		fs_enum = ACCEL_CONFIG0_ACCEL_UI_FS_SEL_2_G;
+		*fs = 2;
+	} else if (val < 8 && val >= 4) {
+		fs_enum = ACCEL_CONFIG0_ACCEL_UI_FS_SEL_4_G;
+		*fs = 4;
+	} else if (val < 16 && val >= 8) {
+		fs_enum = ACCEL_CONFIG0_ACCEL_UI_FS_SEL_8_G;
+		*fs = 8;
+	} else if (val == 16) {
+		fs_enum = ACCEL_CONFIG0_ACCEL_UI_FS_SEL_16_G;
+		*fs = 16;
+	}
+	return fs_enum;
 }
 
 static uint32_t convert_gyr_fs_to_enum(uint32_t val, uint16_t *fs)
@@ -205,20 +223,61 @@ static uint32_t convert_gyr_fs_to_enum(uint32_t val, uint16_t *fs)
         return fs_sel;
 }
 
-uint32_t convert_ln_bw_to_bitfield(uint32_t val)
+uint32_t convert_ln_bw_to_enum(uint32_t val)
 {
-	uint32_t bitfield = 0xFF;
+	uint32_t bw_enum = 0xFF;
 
-	//TODO Implementation
-	return bitfield;
+	if (val < 8 && val >= 4) {
+		bw_enum = IPREG_SYS2_REG_131_ACCEL_UI_LPFBW_DIV_4; /* (= GIPREG_SYS2_REG_172_GYRO_UI_LPFBW_DIV_4) */
+	} else if (val < 16 && val >= 8) {
+		bw_enum = IPREG_SYS2_REG_131_ACCEL_UI_LPFBW_DIV_8; /* (= GIPREG_SYS2_REG_172_GYRO_UI_LPFBW_DIV_8) */
+	} else if (val < 32 && val >= 16) {
+		bw_enum = IPREG_SYS2_REG_131_ACCEL_UI_LPFBW_DIV_16; /* (= GIPREG_SYS2_REG_172_GYRO_UI_LPFBW_DIV_16) */
+	} else if (val < 64 && val >= 32) {
+		bw_enum = IPREG_SYS2_REG_131_ACCEL_UI_LPFBW_DIV_32; /* (= GIPREG_SYS2_REG_172_GYRO_UI_LPFBW_DIV_32) */
+	} else if (val < 128 && val >= 64) {
+		bw_enum = IPREG_SYS2_REG_131_ACCEL_UI_LPFBW_DIV_64; /* (= GIPREG_SYS2_REG_172_GYRO_UI_LPFBW_DIV_64) */
+	} else if (val == 128) {
+		bw_enum = IPREG_SYS2_REG_131_ACCEL_UI_LPFBW_DIV_128; /* (= GIPREG_SYS2_REG_172_GYRO_UI_LPFBW_DIV_128) */
+	} else if (val == 0) {
+		bw_enum = IPREG_SYS2_REG_131_ACCEL_UI_LPFBW_NO_FILTER;
+		/*(= GIPREG_SYS2_REG_172_GYRO_UI_LPFBW_NO_FILTER)*/
+	}
+	return bw_enum;
 }
 
-static uint32_t convert_lp_avg_to_bitfield(uint32_t val)
+static uint32_t convert_lp_avg_to_enum(uint32_t val)
 {
-	uint32_t bitfield = 0xFF;
+	uint32_t avg_enum = 0xFF;
 
-	// TODO Implementation
-	return bitfield;
+	if (val < 2 && val >= 1) {
+		avg_enum = IPREG_SYS2_REG_129_ACCEL_LP_AVG_1;
+	} else if (val < 4 && val >= 2) {
+		avg_enum = IPREG_SYS2_REG_129_ACCEL_LP_AVG_2;
+	} else if (val < 5 && val >= 4) {
+		avg_enum = IPREG_SYS2_REG_129_ACCEL_LP_AVG_4;
+	} else if (val < 7 && val >= 5) {
+		avg_enum = IPREG_SYS2_REG_129_ACCEL_LP_AVG_5;
+	} else if (val < 8 && val >= 7) {
+		avg_enum = IPREG_SYS2_REG_129_ACCEL_LP_AVG_7;
+	} else if (val < 10 && val >= 8) {
+		avg_enum = IPREG_SYS2_REG_129_ACCEL_LP_AVG_8;
+	} else if (val < 11 && val >= 10) {
+		avg_enum = IPREG_SYS2_REG_129_ACCEL_LP_AVG_10;
+	} else if (val < 16 && val >= 11) {
+		avg_enum = IPREG_SYS2_REG_129_ACCEL_LP_AVG_11;
+	} else if (val < 18 && val >= 16) {
+		avg_enum = IPREG_SYS2_REG_129_ACCEL_LP_AVG_16;
+	} else if (val < 20 && val >= 18) {
+		avg_enum = IPREG_SYS2_REG_129_ACCEL_LP_AVG_18;
+	} else if (val < 32 && val >= 20) {
+		avg_enum = IPREG_SYS2_REG_129_ACCEL_LP_AVG_20;
+	} else if (val < 64 && val >= 32) {
+		avg_enum = IPREG_SYS2_REG_129_ACCEL_LP_AVG_32;
+	} else if (val ==62) {
+		avg_enum = IPREG_SYS2_REG_129_ACCEL_LP_AVG_64;
+	}
+	return avg_enum;
 }
 
 static uint8_t convert_enum_to_acc_fs(uint8_t fs_enum)
@@ -323,6 +382,15 @@ static int icm456xx_set_accel_odr(struct icm456xx_data *drv_data, const struct s
 
 static int icm456xx_set_accel_fs(struct icm456xx_data *drv_data, const struct sensor_value *val)
 {
+	if (val->val1 > 16 || val->val1 < 2) {
+		LOG_ERR("Incorrect fullscale value");
+		return -EINVAL;
+	}
+	inv_imu_set_accel_fsr(&drv_data->driver,
+			convert_acc_fs_to_enum(val->val1, &drv_data->accel_fs));
+	LOG_DBG("Set accel full scale to: %d G", drv_data->accel_fs);
+	return 0;
+
 	return 0;
 }
 
@@ -374,14 +442,14 @@ static int icm456xx_accel_config(struct icm456xx_data *drv_data, enum sensor_att
 			LOG_ERR("Incorrect low pass filter bandwidth value");
 			return -EINVAL;
 		}
-		inv_imu_set_accel_ln_bw(&drv_data->driver, convert_ln_bw_to_bitfield(val->val1));
+		inv_imu_set_accel_ln_bw(&drv_data->driver, convert_ln_bw_to_enum(val->val1));
 
 	} else if ((enum sensor_attribute_icm456xx)attr == SENSOR_ATTR_AVERAGING) {
 		if (val->val1 > 64 || val->val1 < 2) {
 			LOG_ERR("Incorrect averaging filter value");
 			return -EINVAL;
 		}
-		inv_imu_set_accel_lp_avg(&drv_data->driver, convert_lp_avg_to_bitfield(val->val1));
+		inv_imu_set_accel_lp_avg(&drv_data->driver, convert_lp_avg_to_enum(val->val1));
 	} else {
 		LOG_ERR("Unsupported attribute");
 		return -EINVAL;
@@ -402,7 +470,7 @@ static int icm456xx_gyro_config(struct icm456xx_data *drv_data, enum sensor_attr
 			LOG_ERR("Incorrect low pass filter bandwidth value");
 			return -EINVAL;
 		}
-		inv_imu_set_gyro_ln_bw(&drv_data->driver, convert_ln_bw_to_bitfield(val->val1));
+		inv_imu_set_gyro_ln_bw(&drv_data->driver, convert_ln_bw_to_enum(val->val1));
 	} else {
 		LOG_ERR("Unsupported attribute");
 		return -EINVAL;
@@ -431,14 +499,11 @@ static int icm456xx_sensor_init(const struct device *dev)
 	}
 
 	err = inv_imu_get_who_am_i(&data->driver, &data->chip_id);
-	LOG_ERR("WHO %X, whoami %X", err, data->chip_id);
 	if (err < 0) {
 		LOG_ERR("ID read failed: %d", err);
 		return err;
 	}
 
-	LOG_ERR("IMU NAME %s A fs %d G fs %d A Hz %d, G Hz %d", 
-			data->imu_name, config->accel_fs, config->gyro_fs, config->accel_hz, config->gyro_hz);
 	if (data->chip_id != data->imu_whoami) {
 		LOG_ERR("invalid WHO_AM_I value, was 0x%x but expected 0x%x for %s", data->chip_id,
 			data->imu_whoami, data->imu_name);
@@ -477,49 +542,40 @@ static int icm456xx_turn_on_sensor(const struct device *dev)
 	err |= inv_imu_set_fifo_config(&data->driver, &fifo_config);
 #endif
 
-	LOG_ERR("fsr in turn on %d", cfg->accel_fs);
-	err = inv_imu_set_accel_fsr(&data->driver,ACCEL_CONFIG0_ACCEL_UI_FS_SEL_8_G);
-	LOG_ERR("fsr in turn on %d, err %d", cfg->accel_fs, err);
-
+	err = inv_imu_set_accel_fsr(&data->driver, cfg->accel_fs);
 	if (err < 0) {
 		LOG_ERR("Failed to configure accel FSR");
 		return -EIO;
 	}
-	LOG_ERR("Set accel full scale to: %d G", 0);
+	data->accel_fs = convert_enum_to_acc_fs(cfg->accel_fs);
 
-	err = inv_imu_set_gyro_fsr(&data->driver,GYRO_CONFIG0_GYRO_UI_FS_SEL_2000_DPS);
-	//data->gyro_fs = convert_enum_to_gyr_fs(cfg->gyro_fs);
+	err = inv_imu_set_gyro_fsr(&data->driver, cfg->gyro_fs);
 	if ((err < 0)) {
 		LOG_ERR("Failed to configure gyro FSR");
 		return -EIO;
 	}
-	LOG_ERR("Set gyro full scale to: %d dps", 0);
+	data->gyro_fs = convert_enum_to_gyr_fs(cfg->gyro_fs);
 
 	err |= inv_imu_set_accel_ln_bw(&data->driver, IPREG_SYS2_REG_131_ACCEL_UI_LPFBW_DIV_4);
 	err |= inv_imu_set_gyro_ln_bw(&data->driver, IPREG_SYS1_REG_172_GYRO_UI_LPFBW_DIV_4);
 
 	if (cfg->accel_hz != 0) {
-		LOG_ERR("accel freequency setup %d", cfg->accel_hz);
-
 		err |= inv_imu_set_accel_frequency(
-			&data->driver, ACCEL_CONFIG0_ACCEL_ODR_6_25_HZ);
+			&data->driver, cfg->accel_hz);
 		if ((cfg->accel_pwr_mode == ICM456XX_LOW_NOISE_MODE) &&
 		    (convert_dt_enum_to_freq(cfg->accel_hz) >= 12)) {
-			LOG_ERR("set low noise mode");
 			err |= inv_imu_set_accel_mode(&data->driver, PWR_MGMT0_ACCEL_MODE_LP);
 		} else if ((cfg->accel_pwr_mode == ICM456XX_LOW_POWER_MODE) &&
 			   (convert_dt_enum_to_freq(cfg->accel_hz) <= 400)) {
-			LOG_ERR("set low power mode");
 			err |= inv_imu_set_accel_mode(&data->driver, PWR_MGMT0_ACCEL_MODE_LP);
 		} else {
 			LOG_ERR("Not supported power mode value");
 		}
 	}
 
-
 	if (cfg->gyro_hz != 0) {
 		err |= inv_imu_set_gyro_frequency(
-				&data->driver, GYRO_CONFIG0_GYRO_ODR_6_25_HZ);
+				&data->driver, cfg->gyro_hz);
 		err |= inv_imu_set_gyro_mode(&data->driver, PWR_MGMT0_GYRO_MODE_LP);
 	}
 
@@ -538,7 +594,6 @@ static int icm456xx_turn_on_sensor(const struct device *dev)
 	 * Gyroscope sensor need at least 30ms startup time
 	 */
 	k_msleep(100);
-	LOG_ERR("turn on done err %d", err);
 	return 0;
 }
 
@@ -587,25 +642,25 @@ static int icm456xx_channel_get(const struct device *dev, enum sensor_channel ch
 
 	icm456xx_lock(dev);
 	if (chan == SENSOR_CHAN_ACCEL_XYZ) {
-		icm456xx_convert_accel(&val[0], data->accel_x, 8);
-		icm456xx_convert_accel(&val[1], data->accel_y, 8);
-		icm456xx_convert_accel(&val[2], data->accel_z, 8/*data->accel_fs*/);
+		icm456xx_convert_accel(&val[0], data->accel_x, data->accel_fs);
+		icm456xx_convert_accel(&val[1], data->accel_y, data->accel_fs);
+		icm456xx_convert_accel(&val[2], data->accel_z, data->accel_fs);
 	} else if (chan == SENSOR_CHAN_ACCEL_X) {
-		icm456xx_convert_accel(val, data->accel_x, 8);
+		icm456xx_convert_accel(val, data->accel_x, data->accel_fs);
 	} else if (chan == SENSOR_CHAN_ACCEL_Y) {
-		icm456xx_convert_accel(val, data->accel_y, 8);
+		icm456xx_convert_accel(val, data->accel_y, data->accel_fs);
 	} else if (chan == SENSOR_CHAN_ACCEL_Z) {
-		icm456xx_convert_accel(val, data->accel_z, 8);
+		icm456xx_convert_accel(val, data->accel_z, data->accel_fs);
 	} else if (chan == SENSOR_CHAN_GYRO_XYZ) {
-		icm456xx_convert_gyro(&val[0], data->gyro_x, 2000);
-		icm456xx_convert_gyro(&val[1], data->gyro_y, 2000);
-		icm456xx_convert_gyro(&val[2], data->gyro_z, 2000);
+		icm456xx_convert_gyro(&val[0], data->gyro_x, data->gyro_fs);
+		icm456xx_convert_gyro(&val[1], data->gyro_y, data->gyro_fs);
+		icm456xx_convert_gyro(&val[2], data->gyro_z, data->gyro_fs);
 	} else if (chan == SENSOR_CHAN_GYRO_X) {
-		icm456xx_convert_gyro(val, data->gyro_x, 2000);
+		icm456xx_convert_gyro(val, data->gyro_x, data->gyro_fs);
 	} else if (chan == SENSOR_CHAN_GYRO_Y) {
-		icm456xx_convert_gyro(val, data->gyro_y, 2000);
+		icm456xx_convert_gyro(val, data->gyro_y, data->gyro_fs);
 	} else if (chan == SENSOR_CHAN_GYRO_Z) {
-		icm456xx_convert_gyro(val, data->gyro_z, 2000);
+		icm456xx_convert_gyro(val, data->gyro_z, data->gyro_fs);
 	} else if (chan == SENSOR_CHAN_DIE_TEMP) {
 		icm456xx_convert_temp(val, data->temp);
 	} else {
@@ -957,16 +1012,16 @@ static DEVICE_API(sensor, icm456xx_driver_api) = {
 /* Initializes a common struct icm456xx_config */
 #define ICM456XX_CONFIG_COMMON(inst)                                                               \
 	IF_ENABLED(CONFIG_ICM456XX_TRIGGER,	\
-				(.gpio_int = GPIO_DT_SPEC_INST_GET_OR(inst, int_gpios, {0}),))     \
-				    .accel_fs = DT_INST_ENUM_IDX(inst, accel_fs),                  \
-				    .accel_hz = DT_INST_ENUM_IDX(inst, accel_hz),                  \
-				    .apex = DT_INST_ENUM_IDX(inst, apex),                          \
-		 IF_ENABLED(CONFIG_USE_EMD_ICM45686,                                       \
-				(.gyro_fs = DT_INST_ENUM_IDX(inst, gyro_fs),))                     \
-		 IF_ENABLED(CONFIG_USE_EMD_ICM45686,                                       \
-				(.gyro_hz = DT_INST_ENUM_IDX(inst, gyro_hz),))                     \
-		 IF_ENABLED(CONFIG_USE_EMD_ICM45686,                                       \
-				(.gyro_filt_bw = DT_INST_ENUM_IDX(inst, gyro_filt_bw_hz),))
+			(.gpio_int = GPIO_DT_SPEC_INST_GET_OR(inst, int_gpios, {0}),))     \
+			.accel_fs = DT_INST_ENUM_IDX(inst, accel_fs),	\
+			.accel_hz = DT_INST_ENUM_IDX(inst, accel_hz),	\
+			.accel_pwr_mode = DT_INST_ENUM_IDX(inst, power_mode),	\
+			.accel_avg = DT_INST_ENUM_IDX(inst, accel_avg),	\
+			.accel_filt_bw = DT_INST_ENUM_IDX(inst, accel_filt_bw_hz),	\
+			.apex = DT_INST_ENUM_IDX(inst, apex),                          \
+			.gyro_fs = DT_INST_ENUM_IDX(inst, gyro_fs),                     \
+			.gyro_hz = DT_INST_ENUM_IDX(inst, gyro_hz),                     \
+			.gyro_filt_bw = DT_INST_ENUM_IDX(inst, gyro_filt_bw_hz)
 
 /* Initializes the bus members for an instance on a SPI bus. */
 #define ICM456XX_CONFIG_SPI(inst)                                                                  \
