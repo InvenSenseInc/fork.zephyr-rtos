@@ -25,10 +25,6 @@ LOG_MODULE_REGISTER(ICM456XX, CONFIG_SENSOR_LOG_LEVEL);
 /* Convert DT enum to sensor ODR selection */
 #define ICM456XX_CONVERT_ENUM_TO_ODR_POS (4)
 
-/* Maximum bytes to read/write on ICM456XX serial interface */
-#define ICM456XX_SERIAL_INTERFACE_MAX_READ  (1024 * 32)
-#define ICM456XX_SERIAL_INTERFACE_MAX_WRITE (1024 * 32)
-
 static inline int icm456xx_reg_read(const struct device *dev, uint8_t reg, uint8_t *buf,
 		uint32_t size)
 {
@@ -512,7 +508,7 @@ static int icm456xx_sensor_init(const struct device *dev)
 	err |= inv_imu_soft_reset(&data->driver);
 
 	LOG_DBG("\"%s\" %s OK", dev->name, data->imu_name);
-	return 0;
+	return err;
 }
 
 static int icm456xx_turn_on_sensor(const struct device *dev)
@@ -636,9 +632,6 @@ static int icm456xx_channel_get(const struct device *dev, enum sensor_channel ch
 {
 	int res = 0;
 	struct icm456xx_data *data = dev->data;
-#ifdef CONFIG_TDK_APEX
-	const struct icm456xx_config *cfg = dev->config;
-#endif
 
 	icm456xx_lock(dev);
 	if (chan == SENSOR_CHAN_ACCEL_XYZ) {
@@ -679,21 +672,9 @@ static int icm456xx_fetch_from_fifo(const struct device *dev)
 	struct icm456xx_data *data = dev->data;
 	int status = 0;
 	inv_imu_int_state_t int_state;
-	inv_imu_sensor_data_t sd;
 	inv_imu_fifo_data_t fd;
 
 	status |= inv_imu_get_int_status(&data->driver, INV_IMU_INT1, &int_state);
-	if (int_state.INV_UI_DRDY) {
-		status |= inv_imu_get_register_data(&data->driver, &sd);
-		data->accel_x = sd.accel_data[0];
-		data->accel_y = sd.accel_data[1];
-		data->accel_z = sd.accel_data[2];
-		data->gyro_x = sd.gyro_data[0];
-		data->gyro_y = sd.gyro_data[1];
-		data->gyro_z = sd.gyro_data[2];
-		data->temp = sd.temp_data;
-	}
-
 	if (int_state.INV_FIFO_THS) {
 		status |= inv_imu_get_fifo_frame(&data->driver, &fd);
 		data->accel_x = fd.byte_16.accel_data[0];
@@ -750,7 +731,7 @@ static int icm456xx_sample_fetch_temp(const struct device *dev)
 	struct icm456xx_data *data = dev->data;
 	uint8_t buffer[TEMP_DATA_SIZE];
 
-	int res = inv_imu_read_reg(&data->driver, TEMP_DATA_X1_UI, ACCEL_DATA_SIZE, buffer);
+	int res = inv_imu_read_reg(&data->driver, TEMP_DATA1_UI, TEMP_DATA_SIZE, buffer);
 	
 	if (res) {
 		return res;
@@ -1027,7 +1008,7 @@ static DEVICE_API(sensor, icm456xx_driver_api) = {
 #define ICM456XX_CONFIG_SPI(inst)                                                                  \
 	{.bus.spi = SPI_DT_SPEC_INST_GET(inst, ICM456XX_SPI_CFG, 0),                               \
 	 .bus_io = &icm456xx_bus_io_spi,                                                           \
-	 .serif_type = UI_SPI3,                                                                    \
+	 .serif_type = UI_SPI4,                                                                    \
 	 ICM456XX_CONFIG_COMMON(inst)}
 
 /* Initializes the bus members for an instance on an I2C bus. */
@@ -1056,6 +1037,6 @@ static DEVICE_API(sensor, icm456xx_driver_api) = {
 
 #define DT_DRV_COMPAT invensense_icm45686
 #if DT_HAS_COMPAT_STATUS_OKAY(DT_DRV_COMPAT)
-DT_INST_FOREACH_STATUS_OKAY_VARGS(ICM456XX_DEFINE, /*INV_ICM45686_STRING_ID*/"ICM45686", 0xEE /*INV_IMU_WHOAMI*/);
+DT_INST_FOREACH_STATUS_OKAY_VARGS(ICM456XX_DEFINE, INV_IMU_STRING_ID, INV_IMU_WHOAMI);
 #endif
 #undef DT_DRV_COMPAT

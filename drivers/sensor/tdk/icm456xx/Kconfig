@@ -21,7 +21,7 @@ menuconfig ICM456XX
 	select USE_EMD_ICM45686
 	select SENSOR_ASYNC_API
 	help
-	  Enable driver for ICM42x70 SPI-based or I2C-based Six-Axis or Three-Axis Motion Tracking device.
+	  Enable driver for ICM456XX SPI-based or I2C-based Six-Axis or Three-Axis Motion Tracking device.
 
 if ICM456XX
 
