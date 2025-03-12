@@ -327,7 +327,6 @@ uint16_t convert_enum_to_gyr_fs(uint8_t fs_enum)
         return gyr_fs;
 }
 
-
 static int icm456xx_set_accel_power_mode(struct icm456xx_data *drv_data,
 					 const struct sensor_value *val)
 {
@@ -524,6 +523,11 @@ static int icm456xx_sensor_init(const struct device *dev)
 	}
 	err |= inv_imu_soft_reset(&data->driver);
 
+#ifdef CONFIG_TDK_APEX
+	/* Initialize APEX */
+	err |= inv_imu_edmp_init_apex(&data->driver);
+#endif
+
 	LOG_DBG("\"%s\" %s OK", dev->name, data->imu_name);
 	return err;
 }
@@ -532,7 +536,7 @@ static int icm456xx_turn_on_sensor(const struct device *dev)
 {
 	struct icm456xx_data *data = dev->data;
 	const struct icm456xx_config *cfg = dev->config;
-	inv_imu_fifo_config_t    fifo_config;
+	inv_imu_fifo_config_t	fifo_config;
 	inv_imu_int_state_t            int_config;
 	int err = 0;
 
@@ -544,7 +548,6 @@ static int icm456xx_turn_on_sensor(const struct device *dev)
 	err |= inv_imu_set_config_int(&data->driver, INV_IMU_INT1, &int_config);
 
 #ifdef CONFIG_ICM456XX_TRIGGER
-	// FIFO Config
 	err |= inv_imu_get_fifo_config(&data->driver, &fifo_config);
 	fifo_config.gyro_en    = INV_IMU_ENABLE;
 	fifo_config.accel_en   = INV_IMU_ENABLE;
@@ -600,7 +603,6 @@ static int icm456xx_turn_on_sensor(const struct device *dev)
 	data->accel_hz = convert_dt_enum_to_freq(cfg->accel_hz);
 	data->gyro_hz = convert_dt_enum_to_freq(cfg->gyro_hz);
 
-
 	/*
 	 * Accelerometer sensor need at least 10ms startup time
 	 * Gyroscope sensor need at least 30ms startup time
@@ -651,7 +653,6 @@ static int icm456xx_channel_get(const struct device *dev, enum sensor_channel ch
 #ifdef CONFIG_TDK_APEX
 	const struct icm456xx_config *cfg = dev->config;
 #endif
-
 	icm456xx_lock(dev);
 	if (chan == SENSOR_CHAN_ACCEL_XYZ) {
 		icm456xx_convert_accel(&val[0], data->accel_x, data->accel_fs);
