@@ -182,7 +182,13 @@ static uint32_t convert_acc_fs_to_enum(uint32_t val, uint8_t *fs)
 	} else if (val == 16) {
 		fs_enum = ACCEL_CONFIG0_ACCEL_UI_FS_SEL_16_G;
 		*fs = 16;
+#if INV_IMU_HIGH_FSR_SUPPORTED
+	} else if (val == 32) {
+		fs_enum = ACCEL_CONFIG0_ACCEL_UI_FS_SEL_32_G;
+		*fs = 32;
+#endif
 	}
+
 	return fs_enum;
 }
 
@@ -214,6 +220,11 @@ static uint32_t convert_gyr_fs_to_enum(uint32_t val, uint16_t *fs)
         } else if (val == 2000) {
                 fs_sel = GYRO_CONFIG0_GYRO_UI_FS_SEL_2000_DPS;
                 *fs = 2000;
+#if INV_IMU_HIGH_FSR_SUPPORTED
+        } else if (val == 4000) {
+                fs_sel = GYRO_CONFIG0_GYRO_UI_FS_SEL_4000_DPS;
+                *fs = 4000;
+#endif
         }
 
         return fs_sel;
@@ -378,15 +389,17 @@ static int icm456xx_set_accel_odr(struct icm456xx_data *drv_data, const struct s
 
 static int icm456xx_set_accel_fs(struct icm456xx_data *drv_data, const struct sensor_value *val)
 {
+#if INV_IMU_HIGH_FSR_SUPPORTED
+	if (val->val1 > 32 || val->val1 < 2) {
+#else
 	if (val->val1 > 16 || val->val1 < 2) {
+#endif
 		LOG_ERR("Incorrect fullscale value");
 		return -EINVAL;
 	}
 	inv_imu_set_accel_fsr(&drv_data->driver,
 			convert_acc_fs_to_enum(val->val1, &drv_data->accel_fs));
 	LOG_DBG("Set accel full scale to: %d G", drv_data->accel_fs);
-	return 0;
-
 	return 0;
 }
 
@@ -411,7 +424,11 @@ static int icm456xx_set_gyro_fs(struct icm456xx_data *drv_data, const struct sen
 {
 	int32_t val_dps = sensor_rad_to_degrees(val);
 
+#if INV_IMU_HIGH_FSR_SUPPORTED
+	if (val_dps > 4000 || val_dps < 15) {
+#else
 	if (val_dps > 2000 || val_dps < 15) {
+#endif
 		LOG_ERR("Incorrect fullscale value");
 		return -EINVAL;
 	}
@@ -522,7 +539,6 @@ static int icm456xx_turn_on_sensor(const struct device *dev)
 	memset(&int_config, INV_IMU_DISABLE, sizeof(int_config));
 #ifdef CONFIG_ICM456XX_TRIGGER
 	int_config.INV_FIFO_THS = INV_IMU_ENABLE;
-#else
 	int_config.INV_UI_DRDY = INV_IMU_ENABLE;
 #endif
 	err |= inv_imu_set_config_int(&data->driver, INV_IMU_INT1, &int_config);
@@ -632,6 +648,9 @@ static int icm456xx_channel_get(const struct device *dev, enum sensor_channel ch
 {
 	int res = 0;
 	struct icm456xx_data *data = dev->data;
+#ifdef CONFIG_TDK_APEX
+	const struct icm456xx_config *cfg = dev->config;
+#endif
 
 	icm456xx_lock(dev);
 	if (chan == SENSOR_CHAN_ACCEL_XYZ) {
@@ -656,6 +675,21 @@ static int icm456xx_channel_get(const struct device *dev, enum sensor_channel ch
 		icm456xx_convert_gyro(val, data->gyro_z, data->gyro_fs);
 	} else if (chan == SENSOR_CHAN_DIE_TEMP) {
 		icm456xx_convert_temp(val, data->temp);
+#ifdef CONFIG_TDK_APEX
+	} else if ((enum sensor_channel_tdk_apex)chan == SENSOR_CHAN_APEX_MOTION) {
+		if (cfg->apex == TDK_APEX_PEDOMETER) {
+			val[0].val1 = data->pedometer_cnt;
+			val[1].val1 = data->pedometer_activity;
+			icm456xx_apex_pedometer_cadence_convert(&val[2], data->pedometer_cadence,
+					data->dmp_odr_hz);
+		} else if (cfg->apex == TDK_APEX_WOM) {
+			val[0].val1 = (data->apex_status & ICM456XX_APEX_STATUS_MASK_WOM_X) ? 1 : 0;
+			val[1].val1 = (data->apex_status & ICM456XX_APEX_STATUS_MASK_WOM_Y) ? 1 : 0;
+			val[2].val1 = (data->apex_status & ICM456XX_APEX_STATUS_MASK_WOM_Z) ? 1 : 0;
+		} else if ((cfg->apex == TDK_APEX_TILT) || (cfg->apex == TDK_APEX_SMD)) {
+			val[0].val1 = data->apex_status;
+		}
+#endif
 	} else {
 		res = -ENOTSUP;
 	}
@@ -1037,6 +1071,6 @@ static DEVICE_API(sensor, icm456xx_driver_api) = {
 
 #define DT_DRV_COMPAT invensense_icm45686
 #if DT_HAS_COMPAT_STATUS_OKAY(DT_DRV_COMPAT)
-DT_INST_FOREACH_STATUS_OKAY_VARGS(ICM456XX_DEFINE, INV_IMU_STRING_ID, INV_IMU_WHOAMI);
+DT_INST_FOREACH_STATUS_OKAY_VARGS(ICM456XX_DEFINE, INV_ICM45686S_STRING_ID, INV_ICM45686S_WHOAMI);
 #endif
 #undef DT_DRV_COMPAT

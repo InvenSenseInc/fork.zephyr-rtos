@@ -11,7 +11,6 @@
 
 #include "icm456xx.h"
 
-#if CONFIG_I2C
 static int icm456xx_bus_check_i2c(const union icm456xx_bus *bus)
 {
 	return device_is_ready(bus->i2c.bus) ? 0 : -ENODEV;
@@ -34,4 +33,3 @@ const struct icm456xx_bus_io icm456xx_bus_io_i2c = {
 	.read = icm456xx_reg_read_i2c,
 	.write = icm456xx_reg_write_i2c,
 };
-#endif /* CONFIG_I2C */

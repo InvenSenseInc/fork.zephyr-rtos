@@ -15,7 +15,7 @@
 #include <zephyr/drivers/i2c.h>
 #include <zephyr/kernel.h>
 
-#include "imu/inv_imu.h"
+#include "icm456xx_h/imu/inv_imu.h"
 #include "imu/inv_imu_driver.h"
 #ifdef CONFIG_TDK_APEX
 #include "imu/inv_imu_edmp.h"

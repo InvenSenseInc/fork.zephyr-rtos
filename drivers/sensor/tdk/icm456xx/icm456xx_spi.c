@@ -12,8 +12,6 @@
 
 #include "icm456xx.h"
 
-#if CONFIG_SPI
-
 #include <zephyr/logging/log.h>
 LOG_MODULE_DECLARE(ICM456XX, CONFIG_SENSOR_LOG_LEVEL);
 
@@ -68,5 +66,3 @@ const struct icm456xx_bus_io icm456xx_bus_io_spi = {
 	.read = icm456xx_reg_read_spi,
 	.write = icm456xx_reg_write_spi,
 };
-
-#endif /* CONFIG_SPI */

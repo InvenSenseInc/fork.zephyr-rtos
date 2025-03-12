@@ -107,11 +107,6 @@ int icm456xx_trigger_init(const struct device *dev)
 	const struct icm456xx_config *cfg = dev->config;
 	int res = 0;
 
-	if (!cfg->gpio_int.port) {
-		LOG_ERR("trigger enabled but no interrupt gpio supplied");
-		return -ENODEV;
-	}
-
 	if (!gpio_is_ready_dt(&cfg->gpio_int)) {
 		LOG_ERR("gpio_int gpio not ready");
 		return -ENODEV;
