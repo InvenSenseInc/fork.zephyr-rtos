@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 TDK Invensense
+ * Copyright (c) 2025 TDK Invensense
  * Copyright (c) 2024 Espressif Systems (Shanghai) Co., Ltd.
  *
  * SPDX-License-Identifier: Apache-2.0

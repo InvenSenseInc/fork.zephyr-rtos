@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 TDK Invensense
+ * Copyright (c) 2025 TDK Invensense
  * Copyright (c) 2022 Esco Medical ApS
  * Copyright (c) 2020 TDK Invensense
  *

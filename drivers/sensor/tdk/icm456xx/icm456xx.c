@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 TDK Invensense
+ * Copyright (c) 2025 TDK Invensense
  * Copyright (c) 2022 Esco Medical ApS
  * Copyright (c) 2020 TDK Invensense
  *
@@ -21,9 +21,6 @@
 
 #include <zephyr/logging/log.h>
 LOG_MODULE_REGISTER(ICM456XX, CONFIG_SENSOR_LOG_LEVEL);
-
-/* Convert DT enum to sensor ODR selection */
-#define ICM456XX_CONVERT_ENUM_TO_ODR_POS (4)
 
 static inline int icm456xx_reg_read(const struct device *dev, uint8_t reg, uint8_t *buf,
 		uint32_t size)
@@ -299,6 +296,10 @@ static uint8_t convert_enum_to_acc_fs(uint8_t fs_enum)
                 acc_fs = 8;
         } else if (fs_enum == ACCEL_CONFIG0_ACCEL_UI_FS_SEL_16_G) {
                 acc_fs = 16;
+#if INV_IMU_HIGH_FSR_SUPPORTED
+        } else if (fs_enum == ACCEL_CONFIG0_ACCEL_UI_FS_SEL_16_G) {
+                acc_fs = 32;
+#endif
         }
         return acc_fs;
 }
@@ -323,6 +324,10 @@ uint16_t convert_enum_to_gyr_fs(uint8_t fs_enum)
                 gyr_fs = 1000;
         } else if (fs_enum == GYRO_CONFIG0_GYRO_UI_FS_SEL_2000_DPS) {
                 gyr_fs = 2000;
+#if INV_IMU_HIGH_FSR_SUPPORTED
+        } else if (fs_enum == GYRO_CONFIG0_GYRO_UI_FS_SEL_4000_DPS) {
+                gyr_fs = 4000;
+#endif
         }
         return gyr_fs;
 }
@@ -831,6 +836,7 @@ static int icm456xx_sample_fetch(const struct device *dev, enum sensor_channel c
 	int status = 0;
 
 	icm456xx_lock(dev);
+
 #ifdef CONFIG_TDK_APEX
 	if ((enum sensor_channel_tdk_apex)chan == SENSOR_CHAN_APEX_MOTION) {
 		status = icm456xx_apex_fetch_from_dmp(dev);
