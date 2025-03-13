@@ -890,10 +890,8 @@ static int icm456xx_attr_set(const struct device *dev, enum sensor_channel chan,
 		}
 	} else if (SENSOR_CHANNEL_IS_ACCEL(chan)) {
 		icm456xx_accel_config(drv_data, attr, val);
-#if CONFIG_USE_EMD_ICM45686
 	} else if (SENSOR_CHANNEL_IS_GYRO(chan)) {
 		icm456xx_gyro_config(drv_data, attr, val);
-#endif
 	} else {
 		LOG_ERR("Unsupported channel");
 		(void)drv_data;
