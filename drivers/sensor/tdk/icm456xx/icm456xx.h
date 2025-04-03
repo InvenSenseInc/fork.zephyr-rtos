@@ -119,6 +119,12 @@ uint32_t convert_ln_bw_to_bitfield(uint32_t val);
 #define ICM456XX_APEX_STATUS_MASK_WOM_Y BIT(3)
 #define ICM456XX_APEX_STATUS_MASK_WOM_Z BIT(4)
 
+/*
+ * WOM threshold value in mg.
+ * 1g/256 resolution (wom_th = mg * 256 / 1000)
+ */
+#define DEFAULT_WOM_THS_MG     52 >> 2 // 52 mg
+
 int icm456xx_apex_enable(inv_imu_device_t *s);
 int icm456xx_apex_fetch_from_dmp(const struct device *dev);
 void icm456xx_apex_pedometer_cadence_convert(struct sensor_value *val, uint8_t raw_val,

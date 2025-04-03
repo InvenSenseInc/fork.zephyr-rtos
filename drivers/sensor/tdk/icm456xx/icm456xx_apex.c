@@ -36,7 +36,6 @@ int icm456xx_apex_enable(inv_imu_device_t *s)
 	rc |= inv_imu_set_accel_lp_avg(s, IPREG_SYS2_REG_129_ACCEL_LP_AVG_1);
 
 	/* Ensure all DMP features are disabled before running init procedure */
-	/* Disable WOM required for Basic SMD */
 	rc |= inv_imu_edmp_disable_pedometer(s);
 	rc |= inv_imu_edmp_disable_tilt(s);
 	rc |= inv_imu_edmp_disable(s);
@@ -154,8 +153,13 @@ int icm456xx_apex_enable_tilt(inv_imu_device_t *s)
 int icm456xx_apex_enable_smd(inv_imu_device_t *s)
 {
 	int rc = 0;
-	rc |= inv_imu_edmp_enable_smd(s);
+	inv_imu_edmp_int_state_t       apex_int_config;
 
+	rc = inv_imu_edmp_get_config_int_apex(s, &apex_int_config);
+	apex_int_config.INV_SMD = INV_IMU_ENABLE;
+	/* Apply interrupt configuration */
+	rc |= inv_imu_edmp_set_config_int_apex(s, &apex_int_config);
+	rc |= inv_imu_edmp_enable_smd(s);
 	/* Enable EDMP if at least one feature is enabled */
 	rc |= inv_imu_edmp_enable(s);
 	return rc;
@@ -163,5 +167,11 @@ int icm456xx_apex_enable_smd(inv_imu_device_t *s)
 
 int icm456xx_apex_enable_wom(inv_imu_device_t *s)
 {
-	return 0;
+	int rc = 0;
+	rc |= inv_imu_adv_configure_wom(s, DEFAULT_WOM_THS_MG, DEFAULT_WOM_THS_MG,
+			DEFAULT_WOM_THS_MG, TMST_WOM_CONFIG_WOM_INT_MODE_ORED,
+			TMST_WOM_CONFIG_WOM_INT_DUR_1_SMPL);
+	rc |= inv_imu_adv_enable_wom(s);
+
+	return rc;
 }
