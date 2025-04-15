@@ -22,6 +22,7 @@
 #define TDK_APEX_TILT      (2)
 #define TDK_APEX_SMD       (3)
 #define TDK_APEX_WOM       (4)
+#define TDK_APEX_TAP	   (5)
 
 /**
  * @brief Extended sensor channel for TDK MEMS supportintg APEX features

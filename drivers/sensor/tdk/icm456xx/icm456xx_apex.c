@@ -38,6 +38,7 @@ int icm456xx_apex_enable(inv_imu_device_t *s)
 	/* Ensure all DMP features are disabled before running init procedure */
 	rc |= inv_imu_edmp_disable_pedometer(s);
 	rc |= inv_imu_edmp_disable_tilt(s);
+	rc |= inv_imu_edmp_disable_tap(s);
 	rc |= inv_imu_edmp_disable(s);
 
 	/* Request DMP to re-initialize APEX */
@@ -102,6 +103,16 @@ int icm456xx_apex_fetch_from_dmp(const struct device *dev)
 		/* Tilt */
 		if (apex_state.INV_TILT_DET) {
 			data->apex_status = ICM456XX_APEX_STATUS_MASK_TILT;
+		}
+
+		/* Tap & Double Tap */
+		if (apex_state.INV_TAP) {
+			inv_imu_edmp_tap_data_t tap_data;
+			inv_imu_edmp_get_tap_data(&data->driver, &tap_data);
+			if (tap_data.double_tap_timing == 0)
+				data->apex_status = ICM456XX_APEX_STATUS_MASK_TAP;
+			else
+				data->apex_status = ICM456XX_APEX_STATUS_MASK_DOUBLE_TAP;
 		}
 	}
 
@@ -173,5 +184,20 @@ int icm456xx_apex_enable_wom(inv_imu_device_t *s)
 			TMST_WOM_CONFIG_WOM_INT_DUR_1_SMPL);
 	rc |= inv_imu_adv_enable_wom(s);
 
+	return rc;
+}
+
+int icm456xx_apex_enable_tap(inv_imu_device_t *s)
+{
+	int rc = 0;
+	inv_imu_edmp_int_state_t       apex_int_config;
+
+	rc = inv_imu_edmp_get_config_int_apex(s, &apex_int_config);
+	apex_int_config.INV_TAP = INV_IMU_ENABLE;
+	/* Apply interrupt configuration */
+	rc |= inv_imu_edmp_set_config_int_apex(s, &apex_int_config);
+	rc |= inv_imu_edmp_enable_tap(s);
+	/* Enable EDMP if at least one feature is enabled */
+	rc |= inv_imu_edmp_enable(s);
 	return rc;
 }

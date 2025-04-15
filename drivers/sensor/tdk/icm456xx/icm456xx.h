@@ -118,6 +118,8 @@ uint32_t convert_ln_bw_to_bitfield(uint32_t val);
 #define ICM456XX_APEX_STATUS_MASK_WOM_X BIT(2)
 #define ICM456XX_APEX_STATUS_MASK_WOM_Y BIT(3)
 #define ICM456XX_APEX_STATUS_MASK_WOM_Z BIT(4)
+#define ICM456XX_APEX_STATUS_MASK_TAP	BIT(5)
+#define ICM456XX_APEX_STATUS_MASK_DOUBLE_TAP	BIT(6)
 
 /*
  * WOM threshold value in mg.
@@ -133,6 +135,7 @@ int icm456xx_apex_enable_pedometer(const struct device *dev, inv_imu_device_t *s
 int icm456xx_apex_enable_tilt(inv_imu_device_t *s);
 int icm456xx_apex_enable_smd(inv_imu_device_t *s);
 int icm456xx_apex_enable_wom(inv_imu_device_t *s);
+int icm456xx_apex_enable_tap(inv_imu_device_t *s);
 #endif
 
 #endif /* ZEPHYR_DRIVERS_SENSOR_ICM456XX_H_ */

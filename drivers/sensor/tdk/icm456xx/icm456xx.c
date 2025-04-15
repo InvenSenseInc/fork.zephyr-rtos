@@ -694,6 +694,8 @@ static int icm456xx_channel_get(const struct device *dev, enum sensor_channel ch
 			val[2].val1 = (data->apex_status & ICM456XX_APEX_STATUS_MASK_WOM_Z) ? 1 : 0;
 		} else if ((cfg->apex == TDK_APEX_TILT) || (cfg->apex == TDK_APEX_SMD)) {
 			val[0].val1 = data->apex_status;
+		} else if (cfg->apex == TDK_APEX_TAP) {
+			val[0].val1 = data->apex_status;
 		}
 #endif
 	} else {
@@ -879,7 +881,11 @@ static int icm456xx_attr_set(const struct device *dev, enum sensor_channel chan,
 				icm456xx_apex_enable(&drv_data->driver);
 				icm456xx_apex_enable_smd(&drv_data->driver);
 			} else if (val->val1 == TDK_APEX_WOM) {
+				icm456xx_apex_enable(&drv_data->driver);
 				icm456xx_apex_enable_wom(&drv_data->driver);
+			} else if (val->val1 == TDK_APEX_TAP) {
+				icm456xx_apex_enable(&drv_data->driver);
+				icm456xx_apex_enable_tap(&drv_data->driver);
 			} else {
 				LOG_ERR("Not supported ATTR value");
 			}
