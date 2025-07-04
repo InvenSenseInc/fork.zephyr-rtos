@@ -89,6 +89,8 @@ int main(void)
 		printf("WOM data sample.\n");
 	} else if (apex_mode.val1 == TDK_APEX_SMD) {
 		printf("SMD data sample.\n");
+	} else if (apex_mode.val1 == TDK_APEX_TAP) {
+		printf("TAP data sample.\n");
 	}
 	apex_mode.val2 = 0;
 	sensor_attr_set(dev, SENSOR_CHAN_APEX_MOTION, SENSOR_ATTR_CONFIGURATION, &apex_mode);
@@ -142,7 +144,15 @@ int main(void)
 
 				printf("[%s]: %s\n", now_str(),
 				       apex_smd.val1 ? "SMD" : "Unknown trig");
+			} else if (apex_mode.val1 == TDK_APEX_TAP) {
+				struct sensor_value apex_tap;
+
+				sensor_channel_get(dev, SENSOR_CHAN_APEX_MOTION, &apex_tap);
+
+				printf("[%s]: %s data %d %d\n", now_str(),
+				       apex_tap.val1 ? "TAP" : "Unknown trig", apex_tap.val1, apex_tap.val2);
 			}
+
 			irq_from_device = 0;
 		}
 	}
