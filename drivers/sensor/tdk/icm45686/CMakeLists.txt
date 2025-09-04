@@ -16,5 +16,4 @@ zephyr_library_sources_ifdef(CONFIG_ICM45686_TRIGGER
 zephyr_library_sources_ifdef(CONFIG_ICM45686_STREAM
 	icm45686_stream.c
 )
-zephyr_include_directories(${CMAKE_CURRENT_SOURCE_DIR}/../../../modules/hal/tdk/icm456xx)
 
