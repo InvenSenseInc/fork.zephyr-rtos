@@ -634,6 +634,8 @@ int icm45686_stream_init(const struct device *dev)
 	const struct icm45686_config *cfg = dev->config;
 	struct icm45686_data *data = dev->data;
 	uint8_t val = 0;
+	inv_imu_int_state_t int_config;
+	inv_imu_int_pin_config_t int_pin_config;
 	int err;
 
 	/** Needed to get back the device handle from the callback context */
@@ -669,18 +671,20 @@ int icm45686_stream_init(const struct device *dev)
 			LOG_ERR("Failed to configure interrupt");
 		}
 
-		err = icm45686_bus_write(dev, REG_INT1_CONFIG0, &val, 1);
+		err = inv_imu_set_config_int(&data->driver, INV_IMU_INT1, &int_config);
 		if (err) {
 			LOG_ERR("Failed to disable all INTs");
 		}
 
-		val = REG_INT1_CONFIG2_EN_OPEN_DRAIN(false) |
-		      REG_INT1_CONFIG2_EN_ACTIVE_HIGH(true);
+		int_pin_config.int_polarity = INTX_CONFIG2_INTX_POLARITY_HIGH;
+		int_pin_config.int_mode     = INTX_CONFIG2_INTX_MODE_PULSE;
+		int_pin_config.int_drive    = INTX_CONFIG2_INTX_DRIVE_OD;
+		err = inv_imu_set_pin_config_int(&data->driver, INV_IMU_INT1, &int_pin_config);
 
-		err = icm45686_bus_write(dev, REG_INT1_CONFIG2, &val, 1);
 		if (err) {
 			LOG_ERR("Failed to configure INT as push-pull: %d", err);
 		}
+
 #if DT_HAS_COMPAT_ON_BUS_STATUS_OKAY(invensense_icm45686, i3c)
 	/** I3C devices use IBI only if no GPIO INT pin is defined. */
 	} else if (data->rtio.type == ICM45686_BUS_I3C) {
