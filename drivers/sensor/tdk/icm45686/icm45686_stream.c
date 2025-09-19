@@ -192,7 +192,7 @@ static void icm45686_handle_event_actions(struct rtio *ctx,
 		buf->header.channels = 0x7F; /* Signal all channels are available */
 		buf->header.fifo_count = data->stream.data.fifo_count;
 
-		read_reg = REG_FIFO_DATA | REG_READ_BIT;
+		read_reg = FIFO_DATA | REG_READ_BIT;
 		rtio_sqe_prep_tiny_write(data_wr_sqe,
 					 data->rtio.iodev,
 					 RTIO_PRIO_HIGH,
@@ -230,7 +230,7 @@ static void icm45686_handle_event_actions(struct rtio *ctx,
 		}
 
 		uint8_t write_reg[] = {
-			REG_FIFO_CONFIG2,
+			FIFO_CONFIG2,
 			REG_FIFO_CONFIG2_FIFO_FLUSH(true) |
 			REG_FIFO_CONFIG2_FIFO_WM_GT_THS(true)
 		};
@@ -267,7 +267,7 @@ static void icm45686_handle_event_actions(struct rtio *ctx,
 			return;
 		}
 
-		uint8_t read_reg = REG_ACCEL_DATA_X1_UI | REG_READ_BIT;
+		uint8_t read_reg = ACCEL_DATA_X1_UI | REG_READ_BIT;
 
 		rtio_sqe_prep_tiny_write(write_sqe,
 					 data->rtio.iodev,
@@ -329,7 +329,7 @@ static void icm45686_event_handler(const struct device *dev)
 		LOG_WRN("Callback triggered with no streaming submission - Disabling interrupts");
 
 		struct rtio_sqe *write_sqe = rtio_sqe_acquire(data->rtio.ctx);
-		uint8_t wr_data[] = {REG_INT1_CONFIG0, 0x00};
+		uint8_t wr_data[] = {INT1_CONFIG0, 0x00};
 
 		rtio_sqe_prep_tiny_write(write_sqe,
 					 data->rtio.iodev,
@@ -384,7 +384,7 @@ static void icm45686_event_handler(const struct device *dev)
 	}
 
 	/** Directly read Status Register to determine what triggered the event */
-	val = REG_INT1_STATUS0 | REG_READ_BIT;
+	val = INT1_STATUS0 | REG_READ_BIT;
 	rtio_sqe_prep_tiny_write(write_sqe,
 				 data->rtio.iodev,
 				 RTIO_PRIO_HIGH,
@@ -410,7 +410,7 @@ static void icm45686_event_handler(const struct device *dev)
 	/** Preemptively read FIFO count so we can decide on the next callback
 	 * how much FIFO data we'd read (if needed).
 	 */
-	val = REG_FIFO_COUNT_0 | REG_READ_BIT;
+	val = FIFO_COUNT_0 | REG_READ_BIT;
 	rtio_sqe_prep_tiny_write(write_fifo_ct_sqe,
 				 data->rtio.iodev,
 				 RTIO_PRIO_HIGH,
@@ -531,7 +531,7 @@ void icm45686_stream_submit(const struct device *dev,
 		data->stream.settings = stream.settings;
 
 		/* Disable all interrupts before re-configuring */
-		err = icm45686_bus_write(dev, REG_INT1_CONFIG0, &val, 1);
+		err = icm45686_bus_write(dev, INT1_CONFIG0, &val, 1);
 		if (err) {
 			LOG_ERR("Failed to disable interrupts on INT1_CONFIG0: %d", err);
 			data->stream.iodev_sqe = NULL;
@@ -540,7 +540,7 @@ void icm45686_stream_submit(const struct device *dev,
 		}
 
 		/* Read flags to clear them */
-		err = icm45686_bus_read(dev, REG_INT1_STATUS0, &val, 1);
+		err = icm45686_bus_read(dev, INT1_STATUS0, &val, 1);
 		if (err) {
 			LOG_ERR("Failed to read INT1_STATUS0: %d", err);
 			data->stream.iodev_sqe = NULL;
@@ -552,7 +552,7 @@ void icm45686_stream_submit(const struct device *dev,
 		      REG_FIFO_CONFIG3_FIFO_ACCEL_EN(false) |
 		      REG_FIFO_CONFIG3_FIFO_GYRO_EN(false) |
 		      REG_FIFO_CONFIG3_FIFO_HIRES_EN(false);
-		err = icm45686_bus_write(dev, REG_FIFO_CONFIG3, &val, 1);
+		err = icm45686_bus_write(dev, FIFO_CONFIG3, &val, 1);
 		if (err) {
 			LOG_ERR("Failed to disable all FIFO settings: %d", err);
 			data->stream.iodev_sqe = NULL;
@@ -563,7 +563,7 @@ void icm45686_stream_submit(const struct device *dev,
 		val = REG_INT1_CONFIG0_STATUS_EN_DRDY(data->stream.settings.enabled.drdy) |
 		      REG_INT1_CONFIG0_STATUS_EN_FIFO_THS(data->stream.settings.enabled.fifo_ths) |
 		      REG_INT1_CONFIG0_STATUS_EN_FIFO_FULL(data->stream.settings.enabled.fifo_full);
-		err = icm45686_bus_write(dev, REG_INT1_CONFIG0, &val, 1);
+		err = icm45686_bus_write(dev, INT1_CONFIG0, &val, 1);
 		if (err) {
 			LOG_ERR("Failed to configure INT1_CONFIG0: %d", err);
 			data->stream.iodev_sqe = NULL;
@@ -573,7 +573,7 @@ void icm45686_stream_submit(const struct device *dev,
 
 		val = REG_FIFO_CONFIG0_FIFO_MODE(REG_FIFO_CONFIG0_FIFO_MODE_BYPASS) |
 		      REG_FIFO_CONFIG0_FIFO_DEPTH(REG_FIFO_CONFIG0_FIFO_DEPTH_2K);
-		err = icm45686_bus_write(dev, REG_FIFO_CONFIG0, &val, 1);
+		err = icm45686_bus_write(dev, FIFO_CONFIG0, &val, 1);
 		if (err) {
 			LOG_ERR("Failed to disable FIFO: %d", err);
 			data->stream.iodev_sqe = NULL;
@@ -588,7 +588,7 @@ void icm45686_stream_submit(const struct device *dev,
 
 			val = REG_FIFO_CONFIG2_FIFO_WM_GT_THS(true) |
 			      REG_FIFO_CONFIG2_FIFO_FLUSH(true);
-			err = icm45686_bus_write(dev, REG_FIFO_CONFIG2, &val, 1);
+			err = icm45686_bus_write(dev, FIFO_CONFIG2, &val, 1);
 			if (err) {
 				LOG_ERR("Failed to configure greater-than FIFO threshold: %d", err);
 				data->stream.iodev_sqe = NULL;
@@ -596,7 +596,7 @@ void icm45686_stream_submit(const struct device *dev,
 				return;
 			}
 
-			err = icm45686_bus_write(dev, REG_FIFO_CONFIG1_0, (uint8_t *)&fifo_ths, 2);
+			err = icm45686_bus_write(dev, FIFO_CONFIG1_0, (uint8_t *)&fifo_ths, 2);
 			if (err) {
 				LOG_ERR("Failed to configure FIFO watermark: %d", err);
 				data->stream.iodev_sqe = NULL;
@@ -606,7 +606,7 @@ void icm45686_stream_submit(const struct device *dev,
 
 			val = REG_FIFO_CONFIG0_FIFO_MODE(REG_FIFO_CONFIG0_FIFO_MODE_STREAM) |
 			      REG_FIFO_CONFIG0_FIFO_DEPTH(REG_FIFO_CONFIG0_FIFO_DEPTH_2K);
-			err = icm45686_bus_write(dev, REG_FIFO_CONFIG0, &val, 1);
+			err = icm45686_bus_write(dev, FIFO_CONFIG0, &val, 1);
 			if (err) {
 				LOG_ERR("Failed to disable FIFO: %d", err);
 				data->stream.iodev_sqe = NULL;
@@ -618,7 +618,7 @@ void icm45686_stream_submit(const struct device *dev,
 			      REG_FIFO_CONFIG3_FIFO_ACCEL_EN(true) |
 			      REG_FIFO_CONFIG3_FIFO_GYRO_EN(true) |
 			      REG_FIFO_CONFIG3_FIFO_HIRES_EN(true);
-			err = icm45686_bus_write(dev, REG_FIFO_CONFIG3, &val, 1);
+			err = icm45686_bus_write(dev, FIFO_CONFIG3, &val, 1);
 			if (err) {
 				LOG_ERR("Failed to enable FIFO: %d", err);
 				data->stream.iodev_sqe = NULL;
@@ -633,7 +633,6 @@ int icm45686_stream_init(const struct device *dev)
 {
 	const struct icm45686_config *cfg = dev->config;
 	struct icm45686_data *data = dev->data;
-	uint8_t val = 0;
 	inv_imu_int_state_t int_config;
 	inv_imu_int_pin_config_t int_pin_config;
 	int err;

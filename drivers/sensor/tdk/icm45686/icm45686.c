@@ -20,7 +20,6 @@
 #endif /* CONFIG_SENSOR_ASYNC_API */
 
 #include "icm45686.h"
-#include "icm45686_reg.h"
 #include "icm45686_bus.h"
 #include "icm45686_decoder.h"
 #include "icm45686_trigger.h"
@@ -199,7 +198,7 @@ static inline void icm45686_submit_one_shot(const struct device *dev,
 		return;
 	}
 
-	uint8_t val = REG_ACCEL_DATA_X1_UI | REG_READ_BIT;
+	uint8_t val = ACCEL_DATA_X1_UI | REG_READ_BIT;
 
 	rtio_sqe_prep_tiny_write(write_sqe,
 				 data->rtio.iodev,
@@ -263,7 +262,6 @@ static int icm45686_init(const struct device *dev)
 	struct icm45686_data *data = dev->data;
 	const struct icm45686_config *cfg = dev->config;
 	uint8_t read_val = 0;
-	uint8_t val;
 	int err;
 
 	/* Initialize serial interface and device */
