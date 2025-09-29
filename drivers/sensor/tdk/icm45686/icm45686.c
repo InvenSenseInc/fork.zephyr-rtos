@@ -297,7 +297,7 @@ static int icm45686_init(const struct device *dev)
 		}
 	}
 
-	if (data->rtio.type == UI_SPI3 || data->rtio.type == UI_SPI4) {
+	if (data->rtio.type == ICM45686_BUS_SPI) {
 		drive_config0_t drive_config0;
 		drive_config0.pads_spi_slew = DRIVE_CONFIG0_PADS_SPI_SLEW_TYP_10NS;
 		err = inv_imu_write_reg(&data->driver, DRIVE_CONFIG0, 1,(uint8_t *)&drive_config0);
