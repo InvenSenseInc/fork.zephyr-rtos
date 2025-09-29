@@ -115,7 +115,6 @@ int icm45686_trigger_init(const struct device *dev)
 	const struct icm45686_config *cfg = dev->config;
 	struct icm45686_data *data = dev->data;
 	inv_imu_int_pin_config_t int_pin_config;
-	uint8_t val = 0;
 	int err;
 
 	err = k_mutex_init(&data->triggers.lock);

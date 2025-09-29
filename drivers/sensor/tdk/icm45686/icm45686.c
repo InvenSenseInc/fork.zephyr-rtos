@@ -66,7 +66,7 @@ static int icm45686_sample_fetch(const struct device *dev,
 		return -ENOTSUP;
 	}
 
-	err = inv_imu_get_register_data(&data->driver, edata->payload.buf);
+	err = inv_imu_get_register_data(&data->driver, (inv_imu_sensor_data_t*)edata->payload.buf);
 
 	LOG_HEXDUMP_DBG(edata->payload.buf,
 			sizeof(edata->payload.buf),
@@ -265,11 +265,11 @@ static int icm45686_init(const struct device *dev)
 	int err;
 
 	/* Initialize serial interface and device */
-        data->driver.transport.context = (struct device *)dev;
+	data->driver.transport.context = (struct device *)dev;
 	data->driver.transport.read_reg = inv_io_hal_read_reg;
 	data->driver.transport.write_reg = inv_io_hal_write_reg;
-        data->driver.transport.serif_type = UI_SPI4;//TODO Change this HARDCODE!!!!
-        data->driver.transport.sleep_us = inv_sleep_us;
+	data->driver.transport.serif_type = data->rtio.type;
+	data->driver.transport.sleep_us = inv_sleep_us;
 
 
 #if CONFIG_SPI_RTIO
@@ -297,12 +297,12 @@ static int icm45686_init(const struct device *dev)
 		}
 	}
 
-        if (data->driver.transport.serif_type == UI_SPI3 || data->driver.transport.serif_type == UI_SPI4) {
-                drive_config0_t drive_config0;
-                drive_config0.pads_spi_slew = DRIVE_CONFIG0_PADS_SPI_SLEW_TYP_10NS;
-                err = inv_imu_write_reg(&data->driver, DRIVE_CONFIG0, 1,(uint8_t *)&drive_config0);
-                inv_sleep_us(2); /* Takes effect 1.5 us after the register is programmed */
-        }
+	if (data->rtio.type == UI_SPI3 || data->rtio.type == UI_SPI4) {
+		drive_config0_t drive_config0;
+		drive_config0.pads_spi_slew = DRIVE_CONFIG0_PADS_SPI_SLEW_TYP_10NS;
+		err = inv_imu_write_reg(&data->driver, DRIVE_CONFIG0, 1,(uint8_t *)&drive_config0);
+		inv_sleep_us(2); /* Takes effect 1.5 us after the register is programmed */
+	}
 
 	/* Confirm ID Value matches */
 	err = inv_imu_get_who_am_i(&data->driver, &read_val);
