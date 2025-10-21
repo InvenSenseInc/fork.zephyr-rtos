@@ -285,6 +285,13 @@ static int icm45686_init(const struct device *dev)
 	}
 #endif
 
+	if (data->rtio.type == ICM45686_BUS_SPI) {
+		drive_config0_t drive_config0;
+		drive_config0.pads_spi_slew = DRIVE_CONFIG0_PADS_SPI_SLEW_TYP_10NS;
+		err = inv_imu_write_reg(&data->driver, DRIVE_CONFIG0, 1,(uint8_t *)&drive_config0);
+		inv_sleep_us(2); /* Takes effect 1.5 us after the register is programmed */
+	}
+
 	/** Soft-reset sensor to restore config to defaults,
 	 * unless it's already handled by I3C initialization.
 	 */
@@ -295,13 +302,6 @@ static int icm45686_init(const struct device *dev)
 			LOG_ERR("Soft reset failed err %d", err);
 			return err;
 		}
-	}
-
-	if (data->rtio.type == ICM45686_BUS_SPI) {
-		drive_config0_t drive_config0;
-		drive_config0.pads_spi_slew = DRIVE_CONFIG0_PADS_SPI_SLEW_TYP_10NS;
-		err = inv_imu_write_reg(&data->driver, DRIVE_CONFIG0, 1,(uint8_t *)&drive_config0);
-		inv_sleep_us(2); /* Takes effect 1.5 us after the register is programmed */
 	}
 
 	/* Confirm ID Value matches */
@@ -318,8 +318,14 @@ static int icm45686_init(const struct device *dev)
 	}
 
 #ifdef CONFIG_TDK_APEX
-        /* Initialize APEX */
-        err = inv_imu_edmp_init_apex(&data->driver);
+	/* Initialize APEX */
+	err = inv_imu_edmp_disable(&data->driver);
+	if (err < 0) {
+		LOG_ERR("APEX Disable failed");
+		return err;
+	}
+
+	err = inv_imu_edmp_init_apex(&data->driver);
 	if (err < 0) {
 		LOG_ERR("APEX Initialization failed");
 		return err;
