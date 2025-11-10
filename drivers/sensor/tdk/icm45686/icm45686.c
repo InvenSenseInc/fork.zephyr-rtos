@@ -317,21 +317,6 @@ static int icm45686_init(const struct device *dev)
 		return -EIO;
 	}
 
-#ifdef CONFIG_TDK_APEX
-	/* Initialize APEX */
-	err = inv_imu_edmp_disable(&data->driver);
-	if (err < 0) {
-		LOG_ERR("APEX Disable failed");
-		return err;
-	}
-
-	err = inv_imu_edmp_init_apex(&data->driver);
-	if (err < 0) {
-		LOG_ERR("APEX Initialization failed");
-		return err;
-	}
-#endif
-
 	/* Sensor Configuration */
 	err = inv_imu_set_accel_mode(&data->driver, cfg->settings.accel.pwr_mode);
 	if (err < 0) {
@@ -403,6 +388,20 @@ static int icm45686_init(const struct device *dev)
 		}
 	}
 
+#ifdef CONFIG_TDK_APEX
+        /* Initialize APEX */
+        err = inv_imu_edmp_disable(&data->driver);
+	if (err < 0) {
+		LOG_ERR("APEX Disable failed");
+		return err;
+	}
+
+        err = inv_imu_edmp_init_apex(&data->driver);
+	if (err < 0) {
+		LOG_ERR("APEX Initialization failed");
+		return err;
+	}
+#endif
 	LOG_DBG("Init OK");
 
 	return 0;
