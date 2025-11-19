@@ -20,6 +20,7 @@
 #endif /* CONFIG_SENSOR_ASYNC_API */
 
 #include "icm45686.h"
+#include "icm45686_reg.h"
 #include "icm45686_bus.h"
 #include "icm45686_decoder.h"
 #include "icm45686_trigger.h"
@@ -30,12 +31,16 @@ LOG_MODULE_REGISTER(ICM45686, CONFIG_SENSOR_LOG_LEVEL);
 
 static inline int reg_write(const struct device *dev, uint8_t reg, uint8_t val, uint32_t size)
 {
-	return icm45686_bus_write(dev, reg, &val, size);
+	struct icm45686_data *data = dev->data;
+
+	return icm45686_reg_write_rtio(&data->bus, reg, &val, size);
 }
 
 static inline int reg_read(const struct device *dev, uint8_t reg, uint8_t *val, uint32_t size)
 {
-	return icm45686_bus_read(dev, reg, val, size);
+	struct icm45686_data *data = dev->data;
+
+	return icm45686_reg_read_rtio(&data->bus, reg | REG_READ_BIT, val, size);
 }
 
 static inline int inv_io_hal_read_reg(void *context, uint8_t reg, uint8_t *rbuffer,
@@ -56,12 +61,17 @@ void inv_sleep_us(uint32_t us)
 }
 
 static int icm45686_sample_fetch(const struct device *dev,
-				 enum sensor_channel chan)
+                                 enum sensor_channel chan)
 {
-	int err;
-	struct icm45686_data *data = dev->data;
-	struct icm45686_encoded_data *edata = &data->edata;
+        int err = -1;
+        struct icm45686_data *data = dev->data;
+        struct icm45686_encoded_data *edata = &data->edata;
 
+#ifdef CONFIG_TDK_APEX
+        if ((enum sensor_channel_tdk_apex)chan == SENSOR_CHAN_APEX_MOTION) {
+                err = icm45686_apex_fetch_from_dmp(dev);
+        }
+#endif
 	if (chan != SENSOR_CHAN_ALL) {
 		return -ENOTSUP;
 	}
@@ -72,8 +82,9 @@ static int icm45686_sample_fetch(const struct device *dev,
 			sizeof(edata->payload.buf),
 			"ICM45686 data");
 
-	return err;
+        return err;
 }
+
 
 static int icm45686_channel_get(const struct device *dev,
 				enum sensor_channel chan,
@@ -136,8 +147,11 @@ static int icm45686_channel_get(const struct device *dev,
 
 static void icm45686_complete_result(struct rtio *ctx,
 				     const struct rtio_sqe *sqe,
+				     int result,
 				     void *arg)
 {
+	ARG_UNUSED(result);
+
 	struct rtio_iodev_sqe *iodev_sqe = (struct rtio_iodev_sqe *)sqe->userdata;
 	struct rtio_cqe *cqe;
 	int err = 0;
@@ -171,6 +185,7 @@ static inline void icm45686_submit_one_shot(const struct device *dev,
 	uint32_t buf_len;
 	struct icm45686_encoded_data *edata;
 	struct icm45686_data *data = dev->data;
+	struct rtio_sqe *read_sqe;
 
 	err = rtio_sqe_rx_buf(iodev_sqe, min_buf_len, min_buf_len, &buf, &buf_len);
 	if (err != 0) {
@@ -178,7 +193,6 @@ static inline void icm45686_submit_one_shot(const struct device *dev,
 		rtio_iodev_sqe_err(iodev_sqe, err);
 		return;
 	}
-
 	edata = (struct icm45686_encoded_data *)buf;
 
 	err = icm45686_encode(dev, channels, num_channels, buf);
@@ -188,45 +202,28 @@ static inline void icm45686_submit_one_shot(const struct device *dev,
 		return;
 	}
 
-	struct rtio_sqe *write_sqe = rtio_sqe_acquire(data->rtio.ctx);
-	struct rtio_sqe *read_sqe = rtio_sqe_acquire(data->rtio.ctx);
-	struct rtio_sqe *complete_sqe = rtio_sqe_acquire(data->rtio.ctx);
-
-	if (!write_sqe || !read_sqe || !complete_sqe) {
-		LOG_ERR("Failed to acquire RTIO SQEs");
+	err = icm45686_prep_reg_read_rtio_async(&data->bus, ACCEL_DATA_X1_UI | REG_READ_BIT,
+						edata->payload.buf, sizeof(edata->payload.buf),
+						&read_sqe);
+	if (err < 0) {
+		LOG_ERR("Fail to prepare read: %d", err);
 		rtio_iodev_sqe_err(iodev_sqe, -ENOMEM);
 		return;
 	}
-
-	uint8_t val = ACCEL_DATA_X1_UI | REG_READ_BIT;
-
-	rtio_sqe_prep_tiny_write(write_sqe,
-				 data->rtio.iodev,
-				 RTIO_PRIO_HIGH,
-				 &val,
-				 1,
-				NULL);
-	write_sqe->flags |= RTIO_SQE_TRANSACTION;
-
-	rtio_sqe_prep_read(read_sqe,
-			   data->rtio.iodev,
-			   RTIO_PRIO_HIGH,
-			   edata->payload.buf,
-			   sizeof(edata->payload.buf),
-			   NULL);
-	if (data->rtio.type == ICM45686_BUS_I2C) {
-		read_sqe->iodev_flags |= RTIO_IODEV_I2C_STOP | RTIO_IODEV_I2C_RESTART;
-	} else if (data->rtio.type == ICM45686_BUS_I3C) {
-		read_sqe->iodev_flags |= RTIO_IODEV_I3C_STOP | RTIO_IODEV_I3C_RESTART;
-	}
 	read_sqe->flags |= RTIO_SQE_CHAINED;
 
-	rtio_sqe_prep_callback_no_cqe(complete_sqe,
-				      icm45686_complete_result,
-				      (void *)dev,
+	struct rtio_sqe *complete_sqe = rtio_sqe_acquire(data->bus.rtio.ctx);
+
+	if (!complete_sqe) {
+		LOG_ERR("Failed to acquire complete read-sqe");
+		rtio_sqe_drop_all(data->bus.rtio.ctx);
+		rtio_iodev_sqe_err(iodev_sqe, -ENOMEM);
+		return;
+	}
+	rtio_sqe_prep_callback_no_cqe(complete_sqe, icm45686_complete_result, (void *)dev,
 				      iodev_sqe);
 
-	rtio_submit(data->rtio.ctx, 0);
+	rtio_submit(data->bus.rtio.ctx, 0);
 }
 
 static void icm45686_submit(const struct device *dev, struct rtio_iodev_sqe *iodev_sqe)
@@ -268,24 +265,23 @@ static int icm45686_init(const struct device *dev)
 	data->driver.transport.context = (struct device *)dev;
 	data->driver.transport.read_reg = inv_io_hal_read_reg;
 	data->driver.transport.write_reg = inv_io_hal_write_reg;
-	data->driver.transport.serif_type = data->rtio.type;
+	data->driver.transport.serif_type = data->bus.rtio.type;
 	data->driver.transport.sleep_us = inv_sleep_us;
 
-
 #if CONFIG_SPI_RTIO
-	if ((data->rtio.type == ICM45686_BUS_SPI) && !spi_is_ready_iodev(data->rtio.iodev)) {
+	if (data->bus.rtio.type == ICM45686_BUS_SPI && !spi_is_ready_iodev(data->bus.rtio.iodev)) {
 		LOG_ERR("Bus is not ready");
 		return -ENODEV;
 	}
 #endif
 #if CONFIG_I2C_RTIO
-	if ((data->rtio.type == ICM45686_BUS_I2C) && !i2c_is_ready_iodev(data->rtio.iodev)) {
+	if (data->bus.type == ICM45686_BUS_I2C && !i2c_is_ready_iodev(data->bus.iodev)) {
 		LOG_ERR("Bus is not ready");
 		return -ENODEV;
 	}
 #endif
-
-	if (data->rtio.type == ICM45686_BUS_SPI) {
+	/* Set Slew-rate to 10-ns typical, to allow proper SPI readouts */
+	if (data->bus.rtio.type == ICM45686_BUS_SPI) {
 		drive_config0_t drive_config0;
 		drive_config0.pads_spi_slew = DRIVE_CONFIG0_PADS_SPI_SLEW_TYP_10NS;
 		err = inv_imu_write_reg(&data->driver, DRIVE_CONFIG0, 1,(uint8_t *)&drive_config0);
@@ -295,8 +291,7 @@ static int icm45686_init(const struct device *dev)
 	/** Soft-reset sensor to restore config to defaults,
 	 * unless it's already handled by I3C initialization.
 	 */
-
-	if (data->rtio.type != ICM45686_BUS_I3C) {
+	if (data->bus.rtio.type != ICM45686_BUS_I3C) {
 		err = inv_imu_soft_reset(&data->driver);
 		if (err < 0) {
 			LOG_ERR("Soft reset failed err %d", err);
@@ -313,7 +308,7 @@ static int icm45686_init(const struct device *dev)
 
 	if (read_val != WHO_AM_I_ICM45686) {
 		LOG_ERR("Unexpected WHO_AM_I value - expected: 0x%02x, actual: 0x%02x",
-			WHO_AM_I_ICM45686, read_val);
+				WHO_AM_I_ICM45686, read_val);
 		return -EIO;
 	}
 
@@ -342,7 +337,6 @@ static int icm45686_init(const struct device *dev)
 		return err;
 	}
 
-
 	err = inv_imu_set_gyro_frequency(&data->driver, cfg->settings.gyro.odr);
 	if (err < 0) {
 		LOG_ERR("Failed to set Gyro frequency: %d", err);
@@ -354,7 +348,6 @@ static int icm45686_init(const struct device *dev)
 		LOG_ERR("Failed to set Gyro fsr: %d", err);
 		return err;
 	}
-
 
 	/** Write Low-pass filter settings through indirect register access */
 	err = inv_imu_set_gyro_ln_bw(&data->driver, cfg->settings.gyro.lpf);
@@ -389,14 +382,14 @@ static int icm45686_init(const struct device *dev)
 	}
 
 #ifdef CONFIG_TDK_APEX
-        /* Initialize APEX */
-        err = inv_imu_edmp_disable(&data->driver);
+	/* Initialize APEX */
+	err = inv_imu_edmp_disable(&data->driver);
 	if (err < 0) {
 		LOG_ERR("APEX Disable failed");
 		return err;
 	}
 
-        err = inv_imu_edmp_init_apex(&data->driver);
+	err = inv_imu_edmp_init_apex(&data->driver);
 	if (err < 0) {
 		LOG_ERR("APEX Initialization failed");
 		return err;
@@ -419,7 +412,7 @@ static int icm45686_init(const struct device *dev)
 
 #define ICM45686_INIT(inst)									   \
 												   \
-	RTIO_DEFINE(icm45686_rtio_ctx_##inst, 8, 8);						   \
+	RTIO_DEFINE(icm45686_rtio_ctx_##inst, 32, 32);						   \
 												   \
 	COND_CODE_1(DT_INST_ON_BUS(inst, i3c),							   \
 		    (I3C_DT_IODEV_DEFINE(icm45686_bus_##inst,					   \
@@ -431,8 +424,7 @@ static int icm45686_init(const struct device *dev)
 	COND_CODE_1(DT_INST_ON_BUS(inst, spi),							   \
 		    (SPI_DT_IODEV_DEFINE(icm45686_bus_##inst,					   \
 					 DT_DRV_INST(inst),					   \
-					 SPI_OP_MODE_MASTER | SPI_WORD_SET(8) | SPI_TRANSFER_MSB,  \
-					 0U)),							   \
+					 SPI_OP_MODE_MASTER | SPI_WORD_SET(8) | SPI_TRANSFER_MSB)),\
 		    ());									   \
 												   \
 												   \
@@ -451,6 +443,7 @@ static int icm45686_init(const struct device *dev)
 				.lpf = DT_INST_PROP_OR(inst, gyro_lpf, 0),			   \
 			},									   \
 			.fifo_watermark = DT_INST_PROP_OR(inst, fifo_watermark, 0),		   \
+			.fifo_watermark_equals = DT_INST_PROP(inst, fifo_watermark_equals),	   \
 		},										   \
 		.int_gpio = GPIO_DT_SPEC_INST_GET_OR(inst, int_gpios, {0}),			   \
 	};											   \
@@ -459,7 +452,7 @@ static int icm45686_init(const struct device *dev)
 			.accel_fs = DT_INST_PROP(inst, accel_fs),				   \
 			.gyro_fs = DT_INST_PROP(inst, gyro_fs),					   \
 		},										   \
-		.rtio = {									   \
+		.bus.rtio = {									   \
 			.iodev = &icm45686_bus_##inst,						   \
 			.ctx = &icm45686_rtio_ctx_##inst,					   \
 			COND_CODE_1(DT_INST_ON_BUS(inst, i3c),					   \

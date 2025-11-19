@@ -12,6 +12,7 @@
 
 #include "icm45686.h"
 #include "icm45686_bus.h"
+#include "icm45686_reg.h"
 #include "icm45686_trigger.h"
 
 #include <zephyr/logging/log.h>
@@ -42,7 +43,7 @@ static void icm45686_thread_cb(const struct device *dev)
 	(void)k_mutex_lock(&data->triggers.lock, K_FOREVER);
 
 	if (data->triggers.entry.handler) {
-		data->triggers.entry.handler(dev, &data->triggers.entry.trigger);
+		data->triggers.entry.handler(dev, data->triggers.entry.trigger);
 	}
 
 	(void)k_mutex_unlock(&data->triggers.lock);
@@ -90,7 +91,7 @@ int icm45686_trigger_set(const struct device *dev,
 
 	switch (trig->type) {
 	case SENSOR_TRIG_DATA_READY:
-		data->triggers.entry.trigger = *trig;
+		data->triggers.entry.trigger = trig;
 		data->triggers.entry.handler = handler;
 
 		if (handler) {
@@ -176,15 +177,15 @@ int icm45686_trigger_init(const struct device *dev)
 	}
 
 	/*
-         * Configure interrupts pins
-         * - Polarity High
-         * - Pulse mode
-         * - Push-Pull drive
-         */
-        int_pin_config.int_polarity = INTX_CONFIG2_INTX_POLARITY_HIGH;
-        int_pin_config.int_mode     = INTX_CONFIG2_INTX_MODE_PULSE;
-        int_pin_config.int_drive    = INTX_CONFIG2_INTX_DRIVE_PP;
-        err = inv_imu_set_pin_config_int(&data->driver, INV_IMU_INT1, &int_pin_config);
+	 * Configure interrupts pins
+	 * - Polarity High
+	 * - Pulse mode
+	 * - Push-Pull drive
+	 */
+	int_pin_config.int_polarity = INTX_CONFIG2_INTX_POLARITY_HIGH;
+	int_pin_config.int_mode     = INTX_CONFIG2_INTX_MODE_PULSE;
+	int_pin_config.int_drive    = INTX_CONFIG2_INTX_DRIVE_PP;
+	err = inv_imu_set_pin_config_int(&data->driver, INV_IMU_INT1, &int_pin_config);
 
 	return err;
 }
