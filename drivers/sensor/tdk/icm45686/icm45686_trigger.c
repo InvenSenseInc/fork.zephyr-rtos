@@ -101,6 +101,10 @@ int icm45686_trigger_set(const struct device *dev,
 		}
 		err = inv_imu_set_config_int(&data->driver, INV_IMU_INT1, &int_config);
 		break;
+	case SENSOR_TRIG_MOTION:
+		data->triggers.entry.trigger = trig;
+		data->triggers.entry.handler = handler;
+		break;
 	default:
 		err = -ENOTSUP;
 		break;

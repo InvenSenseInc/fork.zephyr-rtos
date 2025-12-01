@@ -3,6 +3,7 @@
  *
  * SPDX-License-Identifier: Apache-2.0
  */
+#include "icm45686.h"
 #include "icm456xx_h/imu/inv_imu.h"
 #include "imu/inv_imu_driver.h"
 #include "imu/inv_imu_edmp.h"
@@ -68,7 +69,7 @@ int icm45686_apex_enable(inv_imu_device_t *s)
 
 int icm45686_apex_fetch_from_dmp(const struct device *dev)
 {
-	struct icm456xx_data *data = dev->data;
+	struct icm45686_data *data = dev->data;
 	int rc = 0;
 	inv_imu_int_state_t      int_state;
 	inv_imu_edmp_int_state_t apex_state = { 0 };
@@ -99,11 +100,11 @@ int icm45686_apex_fetch_from_dmp(const struct device *dev)
 
 		/* SMD */
 		if (apex_state.INV_SMD)
-			data->apex_status = ICM456XX_APEX_STATUS_MASK_SMD;
+			data->apex_status = ICM45686_APEX_STATUS_MASK_SMD;
 
 		/* Tilt */
 		if (apex_state.INV_TILT_DET) {
-			data->apex_status = ICM456XX_APEX_STATUS_MASK_TILT;
+			data->apex_status = ICM45686_APEX_STATUS_MASK_TILT;
 		}
 
 		/* Tap & Double Tap */
@@ -111,9 +112,9 @@ int icm45686_apex_fetch_from_dmp(const struct device *dev)
 			inv_imu_edmp_tap_data_t tap_data;
 			inv_imu_edmp_get_tap_data(&data->driver, &tap_data);
 			if (tap_data.double_tap_timing == 0)
-				data->apex_status = ICM456XX_APEX_STATUS_MASK_TAP;
+				data->apex_status = ICM45686_APEX_STATUS_MASK_TAP;
 			else
-				data->apex_status = ICM456XX_APEX_STATUS_MASK_DOUBLE_TAP;
+				data->apex_status = ICM45686_APEX_STATUS_MASK_DOUBLE_TAP;
 		}
 	}
 
@@ -133,8 +134,12 @@ void icm45686_apex_pedometer_cadence_convert(struct sensor_value *val, uint8_t r
 
 int icm45686_apex_enable_pedometer(const struct device *dev, inv_imu_device_t *s)
 {
+
+	struct icm45686_data *data = dev->data;
 	int rc = 0;
 	inv_imu_edmp_int_state_t       apex_int_config;
+
+        data->dmp_odr_hz = 50;
 
 	rc = inv_imu_edmp_get_config_int_apex(s, &apex_int_config);
 	apex_int_config.INV_STEP_CNT_OVFL = INV_IMU_ENABLE;
@@ -180,8 +185,10 @@ int icm45686_apex_enable_smd(inv_imu_device_t *s)
 int icm45686_apex_enable_wom(inv_imu_device_t *s)
 {
 	int rc = 0;
-	rc |= inv_imu_adv_configure_wom(s, DEFAULT_WOM_THS_MG, DEFAULT_WOM_THS_MG,
-			DEFAULT_WOM_THS_MG, TMST_WOM_CONFIG_WOM_INT_MODE_ORED,
+	
+	rc |= inv_imu_adv_configure_wom(s, DEFAULT_WOM_THS_MG,
+			DEFAULT_WOM_THS_MG, DEFAULT_WOM_THS_MG,
+			TMST_WOM_CONFIG_WOM_INT_MODE_ANDED,
 			TMST_WOM_CONFIG_WOM_INT_DUR_1_SMPL);
 	rc |= inv_imu_adv_enable_wom(s);
 

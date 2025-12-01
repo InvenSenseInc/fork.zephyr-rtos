@@ -26,38 +26,32 @@
 #include "icm45686_trigger.h"
 #include "icm45686_stream.h"
 
+#include <zephyr/drivers/sensor/tdk_apex.h>
+
 #include <zephyr/logging/log.h>
 LOG_MODULE_REGISTER(ICM45686, CONFIG_SENSOR_LOG_LEVEL);
 
-static inline int reg_write(const struct device *dev, uint8_t reg, uint8_t val, uint32_t size)
-{
-	struct icm45686_data *data = dev->data;
-
-	return icm45686_reg_write_rtio(&data->bus, reg, &val, size);
-}
-
-static inline int reg_read(const struct device *dev, uint8_t reg, uint8_t *val, uint32_t size)
-{
-	struct icm45686_data *data = dev->data;
-
-	return icm45686_reg_read_rtio(&data->bus, reg | REG_READ_BIT, val, size);
-}
-
 static inline int inv_io_hal_read_reg(void *context, uint8_t reg, uint8_t *rbuffer,
-                uint32_t rlen)
+		uint32_t rlen)
 {
-        return reg_read(context, reg, rbuffer, rlen);
+	const struct device *dev = context;
+	struct icm45686_data *data = dev->data;
+
+	return icm45686_reg_read_rtio(&data->bus, reg | REG_READ_BIT, rbuffer, rlen);
 }
 
 static inline int inv_io_hal_write_reg(void *context, uint8_t reg, const uint8_t *wbuffer,
-                uint32_t wlen)
+		uint32_t wlen)
 {
-        return reg_write(context, reg, *wbuffer, wlen);
+	const struct device *dev = context;
+	struct icm45686_data *data = dev->data;
+
+	return icm45686_reg_write_rtio(&data->bus, reg, wbuffer, wlen);
 }
 
 void inv_sleep_us(uint32_t us)
 {
-        k_sleep(K_USEC(us));
+	k_usleep(us);
 }
 
 static int icm45686_sample_fetch(const struct device *dev,
@@ -69,8 +63,9 @@ static int icm45686_sample_fetch(const struct device *dev,
 
 #ifdef CONFIG_TDK_APEX
         if ((enum sensor_channel_tdk_apex)chan == SENSOR_CHAN_APEX_MOTION) {
-                err = icm45686_apex_fetch_from_dmp(dev);
-        }
+		err = icm45686_apex_fetch_from_dmp(dev);
+		return err;
+	}
 #endif
 	if (chan != SENSOR_CHAN_ALL) {
 		return -ENOTSUP;
@@ -85,12 +80,76 @@ static int icm45686_sample_fetch(const struct device *dev,
         return err;
 }
 
+static int icm45686_attr_set(const struct device *dev, enum sensor_channel chan,
+		enum sensor_attribute attr, const struct sensor_value *val)
+{
+	struct icm45686_data *drv_data = dev->data;
+
+	__ASSERT_NO_MSG(val != NULL);
+
+	if ((enum sensor_channel_tdk_apex)chan == SENSOR_CHAN_APEX_MOTION) {
+		if (attr == SENSOR_ATTR_CONFIGURATION) {
+#ifdef CONFIG_TDK_APEX
+			if (val->val1 == TDK_APEX_PEDOMETER) {
+				icm45686_apex_enable(&drv_data->driver);
+				icm45686_apex_enable_pedometer(dev, &drv_data->driver);
+			} else if (val->val1 == TDK_APEX_TILT) {
+				icm45686_apex_enable(&drv_data->driver);
+				icm45686_apex_enable_tilt(&drv_data->driver);
+			} else if (val->val1 == TDK_APEX_SMD) {
+				icm45686_apex_enable(&drv_data->driver);
+				icm45686_apex_enable_smd(&drv_data->driver);
+			} else if (val->val1 == TDK_APEX_WOM) {
+				icm45686_apex_enable_wom(&drv_data->driver);
+			} else {
+				LOG_ERR("Not supported ATTR value");
+			}
+#endif
+		} else {
+			LOG_ERR("Not supported ATTR");
+			return -EINVAL;
+		}
+	} else {
+		LOG_ERR("Unsupported channel");
+		(void)drv_data;
+		return -EINVAL;
+	}
+
+	return 0;
+}
+
+static int icm45686_attr_get(const struct device *dev, enum sensor_channel chan,
+                             enum sensor_attribute attr, struct sensor_value *val)
+{
+	const struct icm45686_config *cfg = dev->config;
+	int res = 0;
+
+	__ASSERT_NO_MSG(val != NULL);
+
+	switch (chan) {
+	case SENSOR_CHAN_APEX_MOTION:
+		if (attr == SENSOR_ATTR_CONFIGURATION) {
+			val->val1 = cfg->apex;
+		}
+		break;
+	default:
+		LOG_ERR("Unsupported channel");
+		res = -EINVAL;
+		break;
+	}
+
+	return res;
+}
+
 
 static int icm45686_channel_get(const struct device *dev,
 				enum sensor_channel chan,
 				struct sensor_value *val)
 {
 	struct icm45686_data *data = dev->data;
+#ifdef CONFIG_TDK_APEX
+	const struct icm45686_config *cfg = dev->config;
+#endif
 
 	switch (chan) {
 	case SENSOR_CHAN_ACCEL_X:
@@ -136,6 +195,22 @@ static int icm45686_channel_get(const struct device *dev,
 		icm45686_gyro_rads(data->edata.header.gyro_fs, data->edata.payload.gyro.z, false,
 				   &val[2].val1, &val[2].val2);
 		break;
+#ifdef CONFIG_TDK_APEX
+	case SENSOR_CHAN_APEX_MOTION:
+                if (cfg->apex == TDK_APEX_PEDOMETER) {
+                        val[0].val1 = data->pedometer_cnt;
+                        val[1].val1 = data->pedometer_activity;
+                        icm45686_apex_pedometer_cadence_convert(&val[2], data->pedometer_cadence,
+                                                                data->dmp_odr_hz);
+                } else if (cfg->apex == TDK_APEX_WOM) {
+                        val[0].val1 = (data->apex_status & ICM45686_APEX_STATUS_MASK_WOM_X) ? 1 : 0;
+                        val[1].val1 = (data->apex_status & ICM45686_APEX_STATUS_MASK_WOM_Y) ? 1 : 0;
+                        val[2].val1 = (data->apex_status & ICM45686_APEX_STATUS_MASK_WOM_Z) ? 1 : 0;
+                } else if ((cfg->apex == TDK_APEX_TILT) || (cfg->apex == TDK_APEX_SMD)) {
+                        val[0].val1 = data->apex_status;
+                }
+#endif
+
 	default:
 		return -ENOTSUP;
 	}
@@ -245,6 +320,8 @@ static void icm45686_submit(const struct device *dev, struct rtio_iodev_sqe *iod
 static DEVICE_API(sensor, icm45686_driver_api) = {
 	.sample_fetch = icm45686_sample_fetch,
 	.channel_get = icm45686_channel_get,
+	.attr_set = icm45686_attr_set,
+	.attr_get = icm45686_attr_get,
 #if defined(CONFIG_ICM45686_TRIGGER)
 	.trigger_set = icm45686_trigger_set,
 #endif /* CONFIG_ICM45686_TRIGGER */
@@ -311,6 +388,7 @@ static int icm45686_init(const struct device *dev)
 				WHO_AM_I_ICM45686, read_val);
 		return -EIO;
 	}
+
 
 	/* Sensor Configuration */
 	err = inv_imu_set_accel_mode(&data->driver, cfg->settings.accel.pwr_mode);
@@ -389,6 +467,12 @@ static int icm45686_init(const struct device *dev)
 		return err;
 	}
 
+	k_sleep(K_MSEC(100));
+	inv_imu_int_state_t      int_config;
+	memset(&int_config, INV_IMU_DISABLE, sizeof(int_config));
+	int_config.INV_EDMP_EVENT = INV_IMU_ENABLE;
+	err = inv_imu_set_config_int(&data->driver, INV_IMU_INT1, &int_config);
+
 	err = inv_imu_edmp_init_apex(&data->driver);
 	if (err < 0) {
 		LOG_ERR("APEX Initialization failed");
@@ -446,6 +530,7 @@ static int icm45686_init(const struct device *dev)
 			.fifo_watermark_equals = DT_INST_PROP(inst, fifo_watermark_equals),	   \
 		},										   \
 		.int_gpio = GPIO_DT_SPEC_INST_GET_OR(inst, int_gpios, {0}),			   \
+		.apex = DT_INST_ENUM_IDX(inst, apex),						   \
 	};											   \
 	static struct icm45686_data icm45686_data_##inst = {					   \
 		.edata.header = {								   \
