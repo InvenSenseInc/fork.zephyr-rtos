@@ -87,9 +87,9 @@ static int icm45686_attr_set(const struct device *dev, enum sensor_channel chan,
 
 	__ASSERT_NO_MSG(val != NULL);
 
+#ifdef CONFIG_TDK_APEX
 	if ((enum sensor_channel_tdk_apex)chan == SENSOR_CHAN_APEX_MOTION) {
 		if (attr == SENSOR_ATTR_CONFIGURATION) {
-#ifdef CONFIG_TDK_APEX
 			if (val->val1 == TDK_APEX_PEDOMETER) {
 				icm45686_apex_enable(&drv_data->driver);
 				icm45686_apex_enable_pedometer(dev, &drv_data->driver);
@@ -104,7 +104,6 @@ static int icm45686_attr_set(const struct device *dev, enum sensor_channel chan,
 			} else {
 				LOG_ERR("Not supported ATTR value");
 			}
-#endif
 		} else {
 			LOG_ERR("Not supported ATTR");
 			return -EINVAL;
@@ -114,7 +113,7 @@ static int icm45686_attr_set(const struct device *dev, enum sensor_channel chan,
 		(void)drv_data;
 		return -EINVAL;
 	}
-
+#endif
 	return 0;
 }
 
