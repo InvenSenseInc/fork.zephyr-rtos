@@ -341,8 +341,13 @@ int uhc_mcux_hal_init_transfer_common(const struct device *dev, usb_host_transfe
 	mcux_xfer->callbackParam = (void *)dev;
 	mcux_xfer->setupPacket = (usb_setup_struct_t *)&xfer->setup_pkt[0];
 	if (xfer->buf != NULL) {
-		mcux_xfer->transferLength = xfer->buf->size;
-		mcux_xfer->transferBuffer = xfer->buf->__buf;
+		if (USB_EP_DIR_IS_OUT(xfer->ep)) {
+			mcux_xfer->transferLength = xfer->buf->len;
+			mcux_xfer->transferBuffer = xfer->buf->data;
+		} else {
+			mcux_xfer->transferLength = net_buf_tailroom(xfer->buf);
+			mcux_xfer->transferBuffer = net_buf_tail(xfer->buf);
+		}
 	} else {
 		mcux_xfer->transferBuffer = NULL;
 		mcux_xfer->transferLength = 0;
@@ -352,6 +357,8 @@ int uhc_mcux_hal_init_transfer_common(const struct device *dev, usb_host_transfe
 		mcux_xfer->direction = USB_REQTYPE_GET_DIR(mcux_xfer->setupPacket->bmRequestType)
 					       ? USB_IN
 					       : USB_OUT;
+	} else {
+		mcux_xfer->direction = USB_EP_DIR_IS_IN(xfer->ep) ? USB_IN : USB_OUT;
 	}
 
 	return 0;

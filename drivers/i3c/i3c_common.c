@@ -470,6 +470,7 @@ int i3c_sec_i2c_attach(const struct device *dev, uint8_t static_addr, uint8_t lv
 	return ret;
 }
 
+#ifdef CONFIG_I3C_USE_IBI
 static void i3c_sec_bus_reset(const struct device *dev)
 {
 	struct i3c_device_desc *i3c_desc;
@@ -483,7 +484,7 @@ static void i3c_sec_bus_reset(const struct device *dev)
 		i3c_detach_i2c_device(i3c_i2c_desc);
 	}
 }
-#ifdef CONFIG_I3C_USE_IBI
+
 /* call this from a workq after the interrupt from a controller */
 void i3c_sec_handoffed(struct k_work *work)
 {
@@ -938,10 +939,13 @@ int i3c_bus_setdasa(struct i3c_device_desc *desc, uint8_t dynamic_addr)
 	struct i3c_ccc_address dyn_addr;
 	int ret;
 
-	/* check if the addressed is free */
-	if (!i3c_addr_slots_is_free(&data->attached_dev.addr_slots, dynamic_addr)) {
-		LOG_ERR("%s: Address 0x%02x is already in use.", desc->bus->name, dynamic_addr);
-		return -EADDRNOTAVAIL;
+	/* check if the addressed is free, if the requested DA is different from the SA */
+	if (desc->static_addr != dynamic_addr) {
+		if (!i3c_addr_slots_is_free(&data->attached_dev.addr_slots, dynamic_addr)) {
+			LOG_ERR("%s: Address 0x%02x is already in use.", desc->bus->name,
+				dynamic_addr);
+			return -EADDRNOTAVAIL;
+		}
 	}
 
 	/*
@@ -978,10 +982,13 @@ int i3c_bus_setnewda(struct i3c_device_desc *desc, uint8_t dynamic_addr)
 	uint8_t old_da;
 	int ret;
 
-	/* check if the addressed is free */
-	if (!i3c_addr_slots_is_free(&data->attached_dev.addr_slots, dynamic_addr)) {
-		LOG_ERR("%s: Address 0x%02x is already in use.", desc->bus->name, dynamic_addr);
-		return -EADDRNOTAVAIL;
+	/* check if the addressed is free, also a 'clown' could set the same DA */
+	if (desc->dynamic_addr != dynamic_addr) {
+		if (!i3c_addr_slots_is_free(&data->attached_dev.addr_slots, dynamic_addr)) {
+			LOG_ERR("%s: Address 0x%02x is already in use.", desc->bus->name,
+				dynamic_addr);
+			return -EADDRNOTAVAIL;
+		}
 	}
 
 	/*
@@ -1344,6 +1351,32 @@ int i3c_bus_init(const struct device *dev, const struct i3c_dev_list *dev_list)
 	bool need_daa = true;
 	bool need_aasa = true;
 	struct i3c_ccc_events i3c_events;
+	struct i3c_config_controller ctrl_cfg;
+	uint32_t prev_od_high_ns;
+
+	/* Retrieve the active controller configuration */
+	ret = i3c_config_get_controller(dev, &ctrl_cfg);
+	if (ret != 0) {
+		LOG_ERR("%s: Failed to retrieve controller configuration", dev->name);
+		return ret;
+	}
+
+	/* Set OD high period for first broadcast message.
+	 * The Controller uses this timing to send the
+	 * first Broadcast Address, in order to disable the
+	 * I2C Spike Filter for applicable I3C Basic Target Devices.
+	 * Ref Section 4.3.2.2.2 and Table 49 of
+	 * MIPI ALLIANCE Specification for I3C Basic Version 1.2
+	 */
+	prev_od_high_ns = ctrl_cfg.scl_od_min.high_ns;
+	ctrl_cfg.scl_od_min.high_ns = MAX(I3C_OD_FIRST_BC_THIGH_MIN_NS,
+					ctrl_cfg.scl_od_min.high_ns);
+
+	ret = i3c_configure_controller(dev, &ctrl_cfg);
+	if (ret != 0) {
+		LOG_ERR("%s: Open Drain Slow speed set failed", dev->name);
+		return ret;
+	}
 
 #ifdef CONFIG_I3C_INIT_RSTACT
 	/*
@@ -1372,6 +1405,14 @@ int i3c_bus_init(const struct device *dev, const struct i3c_dev_list *dev_list)
 
 	if (i3c_bus_rstdaa_all(dev) != 0) {
 		LOG_DBG("Broadcast RSTDAA was NACK.");
+	}
+
+	/* Set previously stored OD high period back */
+	ctrl_cfg.scl_od_min.high_ns = prev_od_high_ns;
+	ret = i3c_configure_controller(dev, &ctrl_cfg);
+	if (ret != 0) {
+		LOG_ERR("%s: Open Drain Normal speed set failed", dev->name);
+		return ret;
 	}
 
 	/*

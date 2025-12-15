@@ -10,8 +10,8 @@
 #include <zephyr/spinlock.h>
 #include <zephyr/sys/barrier.h>
 #include <zephyr/sys/byteorder.h>
-#include <zephyr/virtio/virtio.h>
-#include <zephyr/virtio/virtqueue.h>
+#include <zephyr/drivers/virtio.h>
+#include <zephyr/drivers/virtio/virtqueue.h>
 #include "virtio_common.h"
 
 #define DT_DRV_COMPAT virtio_mmio
@@ -137,7 +137,7 @@ static void virtio_mmio_write_status_bit(const struct device *dev, int bit)
 static int virtio_mmio_write_driver_feature_bit_range_check(const struct device *dev, int bit,
 							    bool value)
 {
-	if (!IN_RANGE(bit, DEV_TYPE_FEAT_RANGE_0_BEGIN, DEV_TYPE_FEAT_RANGE_0_END) ||
+	if (!IN_RANGE(bit, DEV_TYPE_FEAT_RANGE_0_BEGIN, DEV_TYPE_FEAT_RANGE_0_END) &&
 	    !IN_RANGE(bit, DEV_TYPE_FEAT_RANGE_1_BEGIN, DEV_TYPE_FEAT_RANGE_1_END)) {
 		return -EINVAL;
 	}

@@ -4,6 +4,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
+#include <zephyr/cache.h>
 #include <zephyr/device.h>
 #include <zephyr/init.h>
 #include <zephyr/kernel.h>
@@ -14,9 +15,13 @@
 #include <zephyr/dt-bindings/power/imx943_power.h>
 #include <soc.h>
 
-/* SCMI power domain states */
-#define POWER_DOMAIN_STATE_ON  0x00000000
-#define POWER_DOMAIN_STATE_OFF 0x40000000
+void soc_early_init_hook(void)
+{
+#ifdef CONFIG_CACHE_MANAGEMENT
+	sys_cache_data_enable();
+	sys_cache_instr_enable();
+#endif
+}
 
 #if defined(CONFIG_ETH_NXP_IMX_NETC) && (DT_CHILD_NUM_STATUS_OKAY(DT_NODELABEL(netc)) != 0)
 /* The function is to reuse code for 250MHz NETC system clock and MACs clocks initialization */
@@ -51,18 +56,18 @@ static int soc_init(void)
 
 #if defined(CONFIG_ETH_NXP_IMX_NETC) && (DT_CHILD_NUM_STATUS_OKAY(DT_NODELABEL(netc)) != 0)
 	struct scmi_power_state_config pwr_cfg = {0};
-	uint32_t power_state = POWER_DOMAIN_STATE_OFF;
+	uint32_t power_state = SCMI_POWER_STATE_GENERIC_OFF;
 
 	/* Power up NETCMIX */
 	pwr_cfg.domain_id = IMX943_PD_NETC;
-	pwr_cfg.power_state = POWER_DOMAIN_STATE_ON;
+	pwr_cfg.power_state = SCMI_POWER_STATE_GENERIC_ON;
 
 	ret = scmi_power_state_set(&pwr_cfg);
 	if (ret) {
 		return ret;
 	}
 
-	while (power_state != POWER_DOMAIN_STATE_ON) {
+	while (power_state != SCMI_POWER_STATE_GENERIC_ON) {
 		ret = scmi_power_state_get(IMX943_PD_NETC, &power_state);
 		if (ret) {
 			return ret;

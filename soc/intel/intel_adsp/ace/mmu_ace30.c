@@ -24,6 +24,8 @@ extern char __cold_end[];
 extern char __imr_data_start[];
 extern char __imr_data_end[];
 extern char __coldrodata_start[];
+extern char _shared_heap_start[];
+extern char _shared_heap_end[];
 
 
 const struct xtensa_mmu_range xtensa_soc_mmu_ranges[] = {
@@ -127,7 +129,7 @@ const struct xtensa_mmu_range xtensa_soc_mmu_ranges[] = {
 	{
 		.start = (uint32_t)__cold_start,
 		.end   = (uint32_t)__cold_end,
-		.attrs = XTENSA_MMU_PERM_X,
+		.attrs = XTENSA_MMU_PERM_X | XTENSA_MMU_MAP_SHARED,
 		.name = "imr cold",
 	},
 	{
@@ -142,16 +144,16 @@ const struct xtensa_mmu_range xtensa_soc_mmu_ranges[] = {
 		.name = "imr data",
 	},
 	{
-		.start = (uint32_t)IMR_L3_HEAP_BASE,
-		.end   = (uint32_t)(IMR_L3_HEAP_BASE + IMR_L3_HEAP_SIZE),
-		.attrs = XTENSA_MMU_PERM_W | XTENSA_MMU_CACHED_WB,
-		.name = "imr L3 heap",
-	},
-	{
 		.start = (uint32_t)LP_SRAM_BASE,
 		.end   = (uint32_t)(LP_SRAM_BASE + LP_SRAM_SIZE),
 		.attrs = XTENSA_MMU_PERM_W | XTENSA_MMU_CACHED_WB,
 		.name = "lpsram",
+	},
+	{
+		.start = (uint32_t)_shared_heap_start,
+		.end   = (uint32_t)_shared_heap_end,
+		.attrs = XTENSA_MMU_PERM_W | XTENSA_MMU_CACHED_WB | XTENSA_MMU_MAP_SHARED,
+		.name = "shared heap",
 	},
 	{
 		.start = (uint32_t)(ADSP_L1CC_ADDR),

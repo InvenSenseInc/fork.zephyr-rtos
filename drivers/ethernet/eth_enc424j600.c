@@ -387,7 +387,7 @@ static int enc424j600_rx(const struct device *dev)
 
 	/* Get the frame from the buffer */
 	pkt = net_pkt_rx_alloc_with_buffer(context->iface, frm_len,
-					   AF_UNSPEC, 0,
+					   NET_AF_UNSPEC, 0,
 					   K_MSEC(config->timeout));
 	if (!pkt) {
 		LOG_ERR("Could not allocate rx buffer");
@@ -778,7 +778,7 @@ static struct enc424j600_runtime enc424j600_0_runtime = {
 };
 
 static const struct enc424j600_config enc424j600_0_config = {
-	.spi = SPI_DT_SPEC_INST_GET(0, SPI_WORD_SET(8), 0),
+	.spi = SPI_DT_SPEC_INST_GET(0, SPI_WORD_SET(8)),
 	.interrupt = GPIO_DT_SPEC_INST_GET(0, int_gpios),
 	.timeout = CONFIG_ETH_ENC424J600_TIMEOUT,
 };
