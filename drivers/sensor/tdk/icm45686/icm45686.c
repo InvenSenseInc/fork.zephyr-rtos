@@ -568,4 +568,18 @@ static int icm45686_init(const struct device *dev)
 				     CONFIG_SENSOR_INIT_PRIORITY,				   \
 				     &icm45686_driver_api);
 
+#undef DT_DRV_COMPAT
+#define DT_DRV_COMPAT invensense_icm45605
+DT_INST_FOREACH_STATUS_OKAY(ICM45686_INIT)
+
+#undef DT_DRV_COMPAT
+#define DT_DRV_COMPAT invensense_icm45605s
+DT_INST_FOREACH_STATUS_OKAY(ICM45686_INIT)
+
+#undef DT_DRV_COMPAT
+#define DT_DRV_COMPAT invensense_icm45686
+DT_INST_FOREACH_STATUS_OKAY(ICM45686_INIT)
+
+#undef DT_DRV_COMPAT
+#define DT_DRV_COMPAT invensense_icm45686s
 DT_INST_FOREACH_STATUS_OKAY(ICM45686_INIT)

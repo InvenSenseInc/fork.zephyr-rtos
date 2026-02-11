@@ -5,14 +5,38 @@
 menuconfig ICM45686
 	bool "ICM45686 High-precision 6-Axis Motion Tracking Device"
 	default y
-	depends on DT_HAS_INVENSENSE_ICM45686_ENABLED
-	select SPI if $(dt_compat_on_bus,$(DT_COMPAT_INVENSENSE_ICM45686),spi)
-	select SPI_RTIO if $(dt_compat_on_bus,$(DT_COMPAT_INVENSENSE_ICM45686),spi)
-	select I2C if $(dt_compat_on_bus,$(DT_COMPAT_INVENSENSE_ICM45686),i2c)
-	select I2C_RTIO if $(dt_compat_on_bus,$(DT_COMPAT_INVENSENSE_ICM45686),i2c)
-	select I3C if $(dt_compat_on_bus,$(DT_COMPAT_INVENSENSE_ICM45686),i3c)
-	select I3C_RTIO if $(dt_compat_on_bus,$(DT_COMPAT_INVENSENSE_ICM45686),i3c)
+	depends on DT_HAS_INVENSENSE_ICM45605_ENABLED || \
+		DT_HAS_INVENSENSE_ICM45605S_ENABLED || \
+		DT_HAS_INVENSENSE_ICM45686_ENABLED || \
+		DT_HAS_INVENSENSE_ICM45686S_ENABLED
+	select SPI if $(dt_compat_on_bus,$(DT_COMPAT_INVENSENSE_ICM45605),spi) \
+		|| $(dt_compat_on_bus,$(DT_COMPAT_INVENSENSE_ICM45605S),spi) \
+		|| $(dt_compat_on_bus,$(DT_COMPAT_INVENSENSE_ICM45686),spi) \
+		|| $(dt_compat_on_bus,$(DT_COMPAT_INVENSENSE_ICM45686S),spi)
+	select SPI_RTIO if $(dt_compat_on_bus,$(DT_COMPAT_INVENSENSE_ICM45605),spi) \
+		|| $(dt_compat_on_bus,$(DT_COMPAT_INVENSENSE_ICM45605S),spi) \
+		|| $(dt_compat_on_bus,$(DT_COMPAT_INVENSENSE_ICM45686),spi) \
+		|| $(dt_compat_on_bus,$(DT_COMPAT_INVENSENSE_ICM45686S),spi)
+	select I2C if $(dt_compat_on_bus,$(DT_COMPAT_INVENSENSE_ICM45605),i2c) \
+		|| $(dt_compat_on_bus,$(DT_COMPAT_INVENSENSE_ICM45605S),i2c) \
+		|| $(dt_compat_on_bus,$(DT_COMPAT_INVENSENSE_ICM45686),i2c) \
+		|| $(dt_compat_on_bus,$(DT_COMPAT_INVENSENSE_ICM45686S),i2c)
+	select I2C_RTIO if $(dt_compat_on_bus,$(DT_COMPAT_INVENSENSE_ICM45605),i2c) \
+		|| $(dt_compat_on_bus,$(DT_COMPAT_INVENSENSE_ICM45605S),i2c) \
+		|| $(dt_compat_on_bus,$(DT_COMPAT_INVENSENSE_ICM45686),i2c) \
+		|| $(dt_compat_on_bus,$(DT_COMPAT_INVENSENSE_ICM45686S),i2c)
+	select I3C if $(dt_compat_on_bus,$(DT_COMPAT_INVENSENSE_ICM45605),i3c) \
+		|| $(dt_compat_on_bus,$(DT_COMPAT_INVENSENSE_ICM45605S),i3c) \
+		|| $(dt_compat_on_bus,$(DT_COMPAT_INVENSENSE_ICM45686),i3c) \
+		|| $(dt_compat_on_bus,$(DT_COMPAT_INVENSENSE_ICM45686S),i3c)
+	select I3C_RTIO if $(dt_compat_on_bus,$(DT_COMPAT_INVENSENSE_ICM45605),i3c) \
+		|| $(dt_compat_on_bus,$(DT_COMPAT_INVENSENSE_ICM45605S),i3c) \
+		|| $(dt_compat_on_bus,$(DT_COMPAT_INVENSENSE_ICM45686),i3c) \
+		|| $(dt_compat_on_bus,$(DT_COMPAT_INVENSENSE_ICM45686S),i3c)
+	select USE_EMD_ICM45605 if DT_HAS_INVENSENSE_ICM45605_ENABLED
+	select USE_EMD_ICM45605S if DT_HAS_INVENSENSE_ICM45605S_ENABLED
 	select USE_EMD_ICM45686 if DT_HAS_INVENSENSE_ICM45686_ENABLED
+	select USE_EMD_ICM45686S if DT_HAS_INVENSENSE_ICM45686S_ENABLED
 	help
 	  Enable driver for ICM45686 High-precision 6-axis motion
 	  tracking device.
