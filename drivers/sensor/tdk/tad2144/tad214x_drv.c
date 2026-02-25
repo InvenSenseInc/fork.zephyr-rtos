@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025 TDK Invensense
+ * Copyright (c) 2026 TDK Invensense
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -20,7 +20,6 @@ LOG_MODULE_REGISTER(TAD214X, CONFIG_SENSOR_LOG_LEVEL);
 
 void tad214x_mutex_lock(const struct device *dev);
 void tad214x_mutex_unlock(const struct device *dev);
-int tad214x_trigger_init(const struct device *dev);
 
 void memswap16( void* ptr1, unsigned int bytes )
 {
@@ -53,7 +52,6 @@ unsigned char crc8_sae_j1850(const unsigned char *data, unsigned int length) {
     return crc ^ 0xFF;
 }
 
-
 void inv_tad214x_sleep_us(int us)
 {
 	k_sleep(K_USEC(us));
@@ -80,38 +78,44 @@ static int tad214x_sample_fetch(const struct device *dev, const enum sensor_chan
 	struct tad214x_data *data = (struct tad214x_data *)dev->data;
     const struct tad214x_config *cfg = dev->config;
     
-    uint16_t TMRData = 0;
-    int16_t TempData = 0;
-
 	tad214x_mutex_lock(dev);
 
 	if (cfg->if_mode == IF_ENC) {
-        data->angle = (((float)data->encoder_position*360.0)/16384.0 - 180.0)*100;
+        data->angle = data->encoder_position;
+
     }else{
-        TAD214x_GetData(&data->tad214x_device, &TMRData, &TempData);
-        data->angle = (fmod((TMRData*360.0)/65536.0 + 180.0,360.0) - 180)*100;
-        data->temperature = (25.0 + TempData* 0.00625)*100;
+        TAD214x_GetData(&data->tad214x_device, &data->angle, &data->temperature);
     }
 	tad214x_mutex_unlock(dev);
 	return 0;
 }
 
-static void tad214x_convert_angle(struct sensor_value *val, int32_t raw_val)
+static void tad214x_convert_encoder(struct sensor_value *val, uint16_t raw_val)
 {
-	val->val1 = raw_val;
-	val->val2 = 0;
+	raw_val = raw_val*36000/16384;
+	val->val1 = raw_val / 100;
+	val->val2 = (raw_val % 100) * 1000;
+}
+
+static void tad214x_convert_angle(struct sensor_value *val, uint16_t raw_val)
+{
+	raw_val = (raw_val*36000/65635+18000) % 36000;
+	val->val1 = raw_val / 100;
+	val->val2 = (raw_val % 100) * 1000;
 }
 
 static void tad214x_convert_temperature(struct sensor_value *val, int32_t raw_val)
 {
-	val->val1 = raw_val;
-	val->val2 = 0;
+	raw_val = (2500 + raw_val*10/16);
+	val->val1 = raw_val / 100;
+	val->val2 = (raw_val % 100) * 1000;
 }
 
 static int tad214x_channel_get(const struct device *dev, enum sensor_channel chan,
 				struct sensor_value *val)
 {
 	struct tad214x_data *data = (struct tad214x_data *)dev->data;
+	const struct tad214x_config *cfg = dev->config;
 
 	if (!(chan == SENSOR_CHAN_AMBIENT_TEMP || chan == SENSOR_CHAN_MAGN_XYZ)) {
 		return -ENOTSUP;
@@ -119,7 +123,9 @@ static int tad214x_channel_get(const struct device *dev, enum sensor_channel cha
 
 	tad214x_mutex_lock(dev);
 
-	if (chan == SENSOR_CHAN_MAGN_XYZ) {
+	if (cfg->if_mode == IF_ENC && chan == SENSOR_CHAN_MAGN_XYZ) {
+		tad214x_convert_encoder(val, data->angle);
+	} else if (chan == SENSOR_CHAN_MAGN_XYZ) {
 		tad214x_convert_angle(val, data->angle);
 	} else if (chan == SENSOR_CHAN_AMBIENT_TEMP) {
 		tad214x_convert_temperature(val, data->temperature);
@@ -159,7 +165,6 @@ static int tad214x_getODR(const struct device *dev)
     return (int)odr;
 }
 
-
 static int tad214x_setMode(const struct device *dev, TAD214X_PowerMode_t mode)
 {
     int rc = INV_ERROR_SUCCESS;
@@ -185,17 +190,18 @@ static int tad214x_sensor_init(const struct device *dev)
 {
 	struct tad214x_data *data = dev->data;
 	const struct tad214x_config *config = dev->config;
+    
 	int err = 0;
 
    	memset(&(data->tad214x_device), 0, sizeof(data->tad214x_device));
 
 	/* Initialize serial interface and device */
-	data->serif.context = (struct device *)dev;
-	data->serif.read_reg = inv_io_hal_read_reg;
-	data->serif.write_reg = inv_io_hal_write_reg;
-	data->serif.max_read = 8;
-	data->serif.max_write = 6;
-	err = TAD214x_Init(&data->tad214x_device, &data->serif);
+	serif.context = (struct device *)dev;
+	serif.read_reg = inv_io_hal_read_reg;
+	serif.write_reg = inv_io_hal_write_reg;
+	serif.max_read = 8;
+	serif.max_write = 6;
+	err = TAD214x_Init(&data->tad214x_device, &serif);
 	if (err < 0) {
 		LOG_ERR("Init failed: %d", err);
 		return err;
@@ -217,13 +223,10 @@ static int tad214x_init(const struct device *dev)
 {
 	struct tad214x_data *data = (struct tad214x_data *)dev->data;
 	struct tad214x_config *config = (struct tad214x_config *)dev->config;
-	struct tad214x_serif icp_serif;
 	int rc = 0;
-	uint8_t icp_version;
-    uint16_t temp =0, tdata = 0;
 
     if(config->if_mode != IF_ENC) {
-    	if (tad214x_bus_check(dev) < 0) {
+      	if (tad214x_bus_check(dev) < 0) {
     		LOG_ERR("bus check failed");
     		return -ENODEV;
     	}
@@ -379,9 +382,9 @@ static DEVICE_API(sensor, tad214x_api_funcs) = {.sample_fetch = tad214x_sample_f
 #define TAD214X_CONFIG_GPIO(inst)                                  \
 	{                                                              \
 		.if_mode = IF_ENC,                         \
-        .miso_gpio = GPIO_DT_SPEC_INST_GET(inst, miso_gpios), /* encB */ \
-        .mosi_gpio = GPIO_DT_SPEC_INST_GET(inst, mosi_gpios), /* encA */ \
-        .sck_gpio  = GPIO_DT_SPEC_INST_GET(inst, sck_gpios),  /* encZ */ \
+		.gpio_encb = GPIO_DT_SPEC_INST_GET(inst, encb_gpios),      \
+		.gpio_enca = GPIO_DT_SPEC_INST_GET(inst, enca_gpios),      \
+		.gpio_encz = GPIO_DT_SPEC_INST_GET(inst, encz_gpios),      \
 		TAD214X_CONFIG(inst)                                          \
 	}
 

@@ -1,6 +1,6 @@
 # TAD2144 TMR angle sensor device configuration options
 
-# Copyright (c) 2020 TDK Invensense
+# Copyright (c) 2026 TDK Invensense
 # SPDX-License-Identifier: Apache-2.0
 
 menuconfig TAD2144

@@ -25,25 +25,20 @@ properties:
     description: |
       Use for selecting the device address
 
-  miso-gpios:
+  encb-gpios:
     type: phandle-array
     required: false
     description: GPIO for encoder B signal (miso)
 
-  mosi-gpios:
+  enca-gpios:
     type: phandle-array
     required: false
     description: GPIO for encoder A signal (mosi)
 
-  sck-gpios:
+  encz-gpios:
     type: phandle-array
     required: false
     description: GPIO for encoder Z signal (sck)
-
-  cs-gpios:
-    type: phandle-array
-    description: |
-      Use for selecting the chip select
 
   op-mode:
     type: string

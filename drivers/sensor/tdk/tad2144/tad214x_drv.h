@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 TDK Invensense
+ * Copyright (c) 2026 TDK Invensense
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -37,19 +37,19 @@ struct tad214x_bus_io {
 	tad214x_reg_write_fn write;
 };
 
+static struct tad214x_serif serif;
 extern const struct tad214x_bus_io tad214x_bus_io_spi;
 extern const struct tad214x_bus_io tad214x_bus_io_i2c;
 
 struct tad214x_data {
-    struct tad214x_serif serif;
-    struct tad214x tad214x_device;
-	int32_t angle;
+	struct tad214x tad214x_device;
+	uint16_t angle;
 	int32_t temperature;
-    uint32_t encoder_position;
+	uint32_t encoder_position;
 #ifdef CONFIG_TAD2144_TRIGGER
-    const struct device *dev;
-    struct gpio_callback gpio_cb;
-    struct k_mutex mutex;
+	const struct device *dev;
+	struct gpio_callback gpio_cb;
+	struct k_mutex mutex;
 	sensor_trigger_handler_t drdy_handler;
 	const struct sensor_trigger *drdy_trigger;
 #endif
@@ -67,17 +67,18 @@ struct tad214x_config {
 	union tad214x_bus bus;
 	const struct tad214x_bus_io *bus_io;
 	struct gpio_dt_spec gpio_int;
-    struct gpio_dt_spec sa1_gpio;
-    struct gpio_dt_spec sa2_gpio;
-    tad214x_serif_type_t if_mode;
-    struct gpio_dt_spec cs_gpio;
-    struct gpio_dt_spec miso_gpio;
-    struct gpio_dt_spec mosi_gpio;
-    struct gpio_dt_spec sck_gpio;
+	struct gpio_dt_spec sa1_gpio;
+	struct gpio_dt_spec sa2_gpio;
+	tad214x_serif_type_t if_mode;
+	struct gpio_dt_spec gpio_enca;
+	struct gpio_dt_spec gpio_encb;
+	struct gpio_dt_spec gpio_encz;
 };
 
+#ifdef CONFIG_TAD2144_TRIGGER
 int tad214x_trigger_set(const struct device *dev, const struct sensor_trigger *trig,
 			 sensor_trigger_handler_t handler);
+#endif
 
 int tad214x_trigger_init(const struct device *dev);
 
