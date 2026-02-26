@@ -16,6 +16,8 @@
 #include "tad214x.h"
 #include "tad214xSerif.h"
 
+#define TAD214X_BUFFER_LEN 6
+
 union tad214x_bus {
 #if CONFIG_SPI
 	struct spi_dt_spec spi;
@@ -37,14 +39,13 @@ struct tad214x_bus_io {
 	tad214x_reg_write_fn write;
 };
 
-static struct tad214x_serif serif;
 extern const struct tad214x_bus_io tad214x_bus_io_spi;
 extern const struct tad214x_bus_io tad214x_bus_io_i2c;
 
 struct tad214x_data {
 	struct tad214x tad214x_device;
 	uint16_t angle;
-	int32_t temperature;
+	int16_t temperature;
 	uint32_t encoder_position;
 #ifdef CONFIG_TAD2144_TRIGGER
 	const struct device *dev;
@@ -84,6 +85,9 @@ int tad214x_trigger_init(const struct device *dev);
 
 void memswap16( void* ptr1, unsigned int bytes );
 unsigned char crc8_sae_j1850(const unsigned char *data, unsigned int length);
+
+void tad214x_mutex_lock(const struct device *dev);
+void tad214x_mutex_unlock(const struct device *dev);
 
 
 #endif

@@ -18,9 +18,6 @@
 
 LOG_MODULE_REGISTER(TAD214X, CONFIG_SENSOR_LOG_LEVEL);
 
-void tad214x_mutex_lock(const struct device *dev);
-void tad214x_mutex_unlock(const struct device *dev);
-
 void memswap16( void* ptr1, unsigned int bytes )
 {
   unsigned char* s1 = (unsigned char*)ptr1;
@@ -70,7 +67,7 @@ static int inv_io_hal_write_reg(void *ctx, uint8_t reg, const uint16_t *wbuffer,
 	struct device *dev = (struct device *)ctx;
 	const struct tad214x_config *cfg = (const struct tad214x_config *)dev->config;
 
-    return cfg->bus_io->write(&cfg->bus, reg, wbuffer, wlen);
+    return cfg->bus_io->write(&cfg->bus, reg, (uint16_t *)wbuffer, wlen);
 }
 
 static int tad214x_sample_fetch(const struct device *dev, const enum sensor_channel chan)
@@ -104,7 +101,7 @@ static void tad214x_convert_angle(struct sensor_value *val, uint16_t raw_val)
 	val->val2 = (raw_val % 100) * 1000;
 }
 
-static void tad214x_convert_temperature(struct sensor_value *val, int32_t raw_val)
+static void tad214x_convert_temperature(struct sensor_value *val, int16_t raw_val)
 {
 	raw_val = (2500 + raw_val*10/16);
 	val->val1 = raw_val / 100;
@@ -189,11 +186,11 @@ static int tad214x_getMode(const struct device *dev)
 static int tad214x_sensor_init(const struct device *dev)
 {
 	struct tad214x_data *data = dev->data;
-	const struct tad214x_config *config = dev->config;
-    
+	static struct tad214x_serif serif;
+	
 	int err = 0;
 
-   	memset(&(data->tad214x_device), 0, sizeof(data->tad214x_device));
+	memset(&(data->tad214x_device), 0, sizeof(data->tad214x_device));
 
 	/* Initialize serial interface and device */
 	serif.context = (struct device *)dev;
@@ -221,7 +218,6 @@ static int tad214x_sensor_init(const struct device *dev)
 
 static int tad214x_init(const struct device *dev)
 {
-	struct tad214x_data *data = (struct tad214x_data *)dev->data;
 	struct tad214x_config *config = (struct tad214x_config *)dev->config;
 	int rc = 0;
 
@@ -297,11 +293,13 @@ static int tad214x_attr_set(const struct device *dev, enum sensor_channel chan,
    struct tad214x_config *config = (struct tad214x_config *)dev->config;
 	__ASSERT_NO_MSG(val != NULL);
 
-    if(config->if_mode == IF_ENC)
+    if(config->if_mode == IF_ENC) {
         return -ENOMSG;
-
-    if (chan != SENSOR_CHAN_MAGN_XYZ)
+    }
+	
+    if (chan != SENSOR_CHAN_MAGN_XYZ) {
         return -ENOTSUP;
+    }
 
 	tad214x_mutex_lock(dev);
 	if (attr == SENSOR_ATTR_CONFIGURATION) {
@@ -363,7 +361,7 @@ static DEVICE_API(sensor, tad214x_api_funcs) = {.sample_fetch = tad214x_sample_f
 		.bus.i2c = I2C_DT_SPEC_INST_GET(inst),                 \
 		.bus_io = &tad214x_bus_io_i2c,                    \
         .sa1_gpio = GPIO_DT_SPEC_INST_GET(inst, sa1_gpios),     \
-        .sa2_gpio = GPIO_DT_SPEC_INST_GET(inst, sa2_gpios),     \		
+        .sa2_gpio = GPIO_DT_SPEC_INST_GET(inst, sa2_gpios),     \
 		TAD214X_CONFIG(inst)                                  \
 	}
 

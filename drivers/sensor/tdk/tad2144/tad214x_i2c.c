@@ -24,10 +24,15 @@ static int tad214x_read_reg_i2c(const union tad214x_bus *bus, uint8_t reg, uint1
 				 uint32_t size)
 {
 	uint8_t write_buf[2];
-	uint8_t read_buf[8];
+	uint8_t read_buf[TAD214X_BUFFER_LEN];
 	struct i2c_msg msg[2];
 	int rc = 0;
 
+	if(size*2+1 > TAD214X_BUFFER_LEN) {
+		LOG_ERR("tad214x_read_reg_i2c size error : %d", size);
+		return -EINVAL;
+	}
+	
 	write_buf[0] = reg;
 	write_buf[1] = crc8_sae_j1850(&reg, 1);
 
@@ -57,9 +62,13 @@ static int tad214x_write_reg_i2c(const union tad214x_bus *bus, uint8_t reg, uint
 				  uint32_t size)
 {
 	struct i2c_msg msg[2];
-	uint8_t write_buf[8];
-    
+	uint8_t write_buf[TAD214X_BUFFER_LEN+1];
 	int rc = 0;
+
+	if(size*2+1 > TAD214X_BUFFER_LEN) {
+		LOG_ERR("tad214x_read_reg_i2c size error : %d", size);
+		return -EINVAL;
+	}
     
 	write_buf[0] = reg;
 	memcpy(&write_buf[1],(uint8_t *)buf, size*2);

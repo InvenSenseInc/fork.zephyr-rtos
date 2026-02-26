@@ -41,7 +41,6 @@ static void tad214x_thread_cb(const struct device *dev)
 {
 	struct tad214x_data *drv_data = dev->data;
 	const struct tad214x_config *cfg = dev->config;
-	uint8_t i_status;
 
 	tad214x_mutex_lock(dev);
 	if (cfg->if_mode == IF_ENC) {

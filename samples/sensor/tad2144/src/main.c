@@ -97,10 +97,10 @@ static void handle_tad2144_drdy(const struct device *dev, const struct sensor_tr
                         &tmr_temperature);
         }
 
-        angle = (float)tmr_angle.val1 + ((float)tmr_angle.val2/100000.0);
-        temperature = (float)tmr_temperature.val1 + ((float)tmr_temperature.val2/100000.0);
+        angle = (float)tmr_angle.val1 + ((float)tmr_angle.val2/100000.0f);
+        temperature = (float)tmr_temperature.val1 + ((float)tmr_temperature.val2/100000.0f);
 
-        printf("Angle : %.2f, Temp: %.2f C\n", angle, temperature);
+        printf("Angle : %.2f, Temp: %.2f C\n", (double)angle, (double)temperature);
 
 		if (rc < 0) {
 			printf("sample fetch failed: %d\n", rc);
@@ -124,8 +124,8 @@ static int get_angle_encoder(const struct device *dev)
 	}
 
 	if (rc == 0) {
-        angle = (float)tmr_angle.val1 + ((float)tmr_angle.val2/100000.0);
-		printf("Angle : %.2f\n", angle);
+        angle = (float)tmr_angle.val1 + ((float)tmr_angle.val2/100000.0f);
+		printf("Angle : %.2f\n", (double)angle);
 	} else {
 		printf("sample fetch/get failed: %d\n", rc);
 	}
@@ -137,7 +137,6 @@ static int get_angle_encoder(const struct device *dev)
 int main(void)
 {
 	const struct device *dev = get_tad2144_device();
-    struct sensor_value angle;
 
 	if (dev == NULL) {
 		return 0;

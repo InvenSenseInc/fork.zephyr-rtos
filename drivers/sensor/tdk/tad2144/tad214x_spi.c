@@ -28,9 +28,14 @@ static int tad214x_read_reg_spi(const union tad214x_bus *bus, uint8_t reg, uint1
 {
 	if (reg != 0) {
 		uint8_t cmd_buf[3];
-		uint8_t buf[8];
+		uint8_t buf[TAD214X_BUFFER_LEN];
 		int rc = 0;
 		uint8_t crc_val;
+
+		if(rlen*2 > TAD214X_BUFFER_LEN) {
+			LOG_ERR("tad214x_read_reg_i2c size error : %d", rlen);
+			return -EINVAL;
+		}
 
 		cmd_buf[0] = TAD214X_SERIF_SPI_REG_READ_CMD;
 		cmd_buf[1] = reg;
@@ -67,8 +72,13 @@ static int tad214x_write_reg_spi(const union tad214x_bus *bus, uint8_t reg, uint
 				  uint32_t wlen)
 {
 	if (reg != 0) {
-		uint8_t buf[8];
+		uint8_t buf[TAD214X_BUFFER_LEN+2];
 		int rc = 0;
+
+		if(wlen*2+1 > TAD214X_BUFFER_LEN) {
+			LOG_ERR("tad214x_read_reg_i2c size error : %d", wlen);
+			return -EINVAL;
+		}
         
 		memset(buf, 0x00, sizeof(buf));
        
