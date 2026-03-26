@@ -59,7 +59,7 @@ static int set_sampling_freq(const struct device *dev, TAD214X_ODR_t freq)
 	struct sensor_value config;
     config.val1 = freq;
 
-	ret = sensor_attr_set(dev, SENSOR_CHAN_MAGN_XYZ, SENSOR_ATTR_SAMPLING_FREQUENCY, &config);
+	ret = sensor_attr_set(dev, SENSOR_CHAN_ROTATION, SENSOR_ATTR_SAMPLING_FREQUENCY, &config);
 
 	if (ret != 0) {
 		printf("%s : failed to set sampling frequency or in encoder mode\n", dev->name);
@@ -74,7 +74,7 @@ static int set_sampling_mode(const struct device *dev, TAD214X_PowerMode_t mode)
 	struct sensor_value config;
     config.val1 = mode;
 
-	ret = sensor_attr_set(dev, SENSOR_CHAN_MAGN_XYZ, SENSOR_ATTR_CONFIGURATION, &config);
+	ret = sensor_attr_set(dev, SENSOR_CHAN_ROTATION, SENSOR_ATTR_CONFIGURATION, &config);
 
 	if (ret != 0) {
 		printf("%s : failed to set sampling mode or in encoder mode\n", dev->name);
@@ -91,7 +91,7 @@ static void handle_tad2144_drdy(const struct device *dev, const struct sensor_tr
         float angle = 0.0, temperature = 0.0;
 
         if (rc == 0) {
-            rc = sensor_channel_get(dev, SENSOR_CHAN_MAGN_XYZ,
+            rc = sensor_channel_get(dev, SENSOR_CHAN_ROTATION,
                         &tmr_angle);
             rc = sensor_channel_get(dev, SENSOR_CHAN_AMBIENT_TEMP,
                         &tmr_temperature);
@@ -119,7 +119,7 @@ static int get_angle_encoder(const struct device *dev)
 	int rc = sensor_sample_fetch(dev);
 
 	if (rc == 0) {
-		rc = sensor_channel_get(dev, SENSOR_CHAN_MAGN_XYZ,
+		rc = sensor_channel_get(dev, SENSOR_CHAN_ROTATION,
 					&tmr_angle);
 	}
 
@@ -142,8 +142,8 @@ int main(void)
 		return 0;
 	}
 
-    set_sampling_freq(dev, TAD214X_ODR_100);
-    set_sampling_mode(dev, TAD214X_MODE_LPM);
+	set_sampling_freq(dev, TAD214X_ODR_100);
+	set_sampling_mode(dev, TAD214X_MODE_CONT);
 
 	data_trigger = (struct sensor_trigger){
 		.type = SENSOR_TRIG_DATA_READY,

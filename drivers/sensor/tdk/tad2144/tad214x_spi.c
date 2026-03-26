@@ -45,7 +45,7 @@ static int tad214x_read_reg_spi(const union tad214x_bus *bus, uint8_t reg, uint1
 		const struct spi_buf_set tx = {.buffers = &tx_buf, .count = 1};      
 
 		struct spi_buf rx_buf[] = {
-                                    {.buf = NULL, .len = 3},
+                                    {.buf = NULL, .len = tx_buf.len},
                                     {.buf = buf, .len = rlen*2},
                                     {.buf = &crc_val, .len = 1},
                                   };
@@ -91,7 +91,7 @@ static int tad214x_write_reg_spi(const union tad214x_bus *bus, uint8_t reg, uint
 		const struct spi_buf tx_buf = {.buf = &buf[0], .len = wlen*2+3};
 		const struct spi_buf_set tx = {.buffers = &tx_buf, .count = 1};
 		rc = spi_write_dt(&bus->spi, &tx);
-		k_busy_wait(100); 
+		k_busy_wait(100); //processing waiting time
 		return rc;
 	}
     

@@ -23,72 +23,51 @@ static int tad214x_bus_check_i2c(const union tad214x_bus *bus)
 static int tad214x_read_reg_i2c(const union tad214x_bus *bus, uint8_t reg, uint16_t *buf,
 				 uint32_t size)
 {
-	uint8_t write_buf[2];
+	uint8_t write_buf[TAD214X_BUFFER_LEN];
 	uint8_t read_buf[TAD214X_BUFFER_LEN];
-	struct i2c_msg msg[2];
-	int rc = 0;
 
-	if(size*2+1 > TAD214X_BUFFER_LEN) {
-		LOG_ERR("tad214x_read_reg_i2c size error : %d", size);
+	if(size * 2 + 1 > TAD214X_BUFFER_LEN) {
+		LOG_ERR("Size error: %d", size);
 		return -EINVAL;
 	}
-	
+
 	write_buf[0] = reg;
 	write_buf[1] = crc8_sae_j1850(&reg, 1);
 
-	msg[0].buf = (uint8_t *)write_buf;
-	msg[0].len = sizeof(write_buf);
-	msg[0].flags = I2C_MSG_WRITE;
+	i2c_write(bus->i2c.bus, write_buf, 2, bus->i2c.addr);
+	i2c_read(bus->i2c.bus, read_buf, size * 2 + 1, bus->i2c.addr);
 
-	msg[1].buf = (uint8_t *)read_buf;
-	msg[1].len = size*2+1;
-	msg[1].flags = I2C_MSG_RESTART | I2C_MSG_READ | I2C_MSG_STOP;
-
-	rc = i2c_transfer(bus->i2c.bus, msg, 2, bus->i2c.addr);
-
-	if (crc8_sae_j1850(&read_buf[0], size * 2) != read_buf[size*2]) {
-		LOG_ERR("tad214x_read_reg_i2c rc: %d, crc: %x %x", 
-			rc, crc8_sae_j1850(&read_buf[0], size * 2), read_buf[size*2]);
+	if (crc8_sae_j1850(read_buf, size * 2) != read_buf[size * 2]) {
+		LOG_ERR("CRC Mismatch! Calc: %x, Recv: %x", 
+			crc8_sae_j1850(read_buf, size * 2), read_buf[size * 2]);
 		return -EBADMSG;
 	}
 
-	memswap16(&read_buf[0], size*2);
-	memcpy((uint8_t *) buf, read_buf, size*2);
+	memswap16(read_buf, size * 2);
+	memcpy((uint8_t *)buf, read_buf, size * 2);
 
-	return rc;
+	return 0;
 }
 
 static int tad214x_write_reg_i2c(const union tad214x_bus *bus, uint8_t reg, uint16_t *buf,
 				  uint32_t size)
 {
-	struct i2c_msg msg[2];
-	uint8_t write_buf[TAD214X_BUFFER_LEN+1];
-	int rc = 0;
+	struct i2c_msg msg;
+	uint8_t write_buf[TAD214X_BUFFER_LEN];
 
-	if(size*2+1 > TAD214X_BUFFER_LEN) {
-		LOG_ERR("tad214x_read_reg_i2c size error : %d", size);
-		return -EINVAL;
-	}
-    
 	write_buf[0] = reg;
-	memcpy(&write_buf[1],(uint8_t *)buf, size*2);
+	memcpy(&write_buf[1], (uint8_t *)buf, size * 2);
 
-	memswap16(&write_buf[1], size*2);
-	write_buf[size*2+1] = crc8_sae_j1850(write_buf, size*2+1);
+	memswap16(&write_buf[1], size * 2);
+	write_buf[size * 2 + 1] = crc8_sae_j1850(write_buf, size * 2 + 1);
     
-	msg[0].buf = &write_buf[0];
-	msg[0].len = 1U;
-	msg[0].flags = I2C_MSG_WRITE;
+	msg.buf = write_buf;
+	msg.len = 1U + (size * 2) + 1U;
+	msg.flags = I2C_MSG_WRITE | I2C_MSG_STOP;
 
-	msg[1].buf = &write_buf[1];
-	msg[1].len = size*2+1;
-	msg[1].flags = I2C_MSG_WRITE | I2C_MSG_STOP;
-
-	rc = i2c_transfer(bus->i2c.bus, msg, 2, bus->i2c.addr);
-
-	return rc;
+	i2c_transfer(bus->i2c.bus, &msg, 1, bus->i2c.addr);
+	return 0;
 }
-
 
 const struct tad214x_bus_io tad214x_bus_io_i2c = {
 	.check = tad214x_bus_check_i2c,

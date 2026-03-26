@@ -114,15 +114,15 @@ static int tad214x_channel_get(const struct device *dev, enum sensor_channel cha
 	struct tad214x_data *data = (struct tad214x_data *)dev->data;
 	const struct tad214x_config *cfg = dev->config;
 
-	if (!(chan == SENSOR_CHAN_AMBIENT_TEMP || chan == SENSOR_CHAN_MAGN_XYZ)) {
+	if (!(chan == SENSOR_CHAN_AMBIENT_TEMP || chan == SENSOR_CHAN_ROTATION)) {
 		return -ENOTSUP;
 	}
 
 	tad214x_mutex_lock(dev);
 
-	if (cfg->if_mode == IF_ENC && chan == SENSOR_CHAN_MAGN_XYZ) {
+	if (cfg->if_mode == IF_ENC && chan == SENSOR_CHAN_ROTATION) {
 		tad214x_convert_encoder(val, data->angle);
-	} else if (chan == SENSOR_CHAN_MAGN_XYZ) {
+	} else if (chan == SENSOR_CHAN_ROTATION) {
 		tad214x_convert_angle(val, data->angle);
 	} else if (chan == SENSOR_CHAN_AMBIENT_TEMP) {
 		tad214x_convert_temperature(val, data->temperature);
@@ -221,29 +221,24 @@ static int tad214x_init(const struct device *dev)
 	struct tad214x_config *config = (struct tad214x_config *)dev->config;
 	int rc = 0;
 
-    if(config->if_mode != IF_ENC) {
-      	if (tad214x_bus_check(dev) < 0) {
-    		LOG_ERR("bus check failed");
-    		return -ENODEV;
-    	}
+	if(config->if_mode != IF_ENC) {
+		if (tad214x_bus_check(dev) < 0) {
+			LOG_ERR("bus check failed");
+			return -ENODEV;
+		}
 
-        if(config->if_mode == IF_I2C) {
-            gpio_pin_configure_dt(&config->sa1_gpio, GPIO_OUTPUT_ACTIVE);
-            gpio_pin_configure_dt(&config->sa2_gpio, GPIO_OUTPUT_ACTIVE);
-        }
+		inv_tad214x_sleep_us(30000);
 
-        inv_tad214x_sleep_us(30000);
+		rc = tad214x_sensor_init(dev);
 
-        rc = tad214x_sensor_init(dev);
+		if (rc != INV_ERROR_SUCCESS) {
+			LOG_ERR("Init error");
+			return rc;
+		}
 
-    	if (rc != INV_ERROR_SUCCESS) {
-    		LOG_ERR("Init error");
-    		return rc;
-    	}
+		inv_tad214x_sleep_us(30000);
+	}
 
-        inv_tad214x_sleep_us(30000);
-    }
-  
 	if (IS_ENABLED(CONFIG_TAD2144_TRIGGER)) {
 		rc = tad214x_trigger_init(dev);
 		if (rc < 0) {
@@ -297,7 +292,7 @@ static int tad214x_attr_set(const struct device *dev, enum sensor_channel chan,
         return -ENOMSG;
     }
 	
-    if (chan != SENSOR_CHAN_MAGN_XYZ) {
+    if (chan != SENSOR_CHAN_ROTATION) {
         return -ENOTSUP;
     }
 
@@ -360,8 +355,6 @@ static DEVICE_API(sensor, tad214x_api_funcs) = {.sample_fetch = tad214x_sample_f
 		.if_mode = IF_I2C,                        \
 		.bus.i2c = I2C_DT_SPEC_INST_GET(inst),                 \
 		.bus_io = &tad214x_bus_io_i2c,                    \
-        .sa1_gpio = GPIO_DT_SPEC_INST_GET(inst, sa1_gpios),     \
-        .sa2_gpio = GPIO_DT_SPEC_INST_GET(inst, sa2_gpios),     \
 		TAD214X_CONFIG(inst)                                  \
 	}
 
