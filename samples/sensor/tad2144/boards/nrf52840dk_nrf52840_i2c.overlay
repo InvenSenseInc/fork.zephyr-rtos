@@ -6,7 +6,9 @@
 
 &gpio1 {
     status = "okay";
-
+    
+    /* Configure I2C address LSB 
+       as described in TAD specification */
     sa1_high_hog: sa1-high-hog {
         gpio-hog;
         gpios = <10 GPIO_ACTIVE_HIGH>;
