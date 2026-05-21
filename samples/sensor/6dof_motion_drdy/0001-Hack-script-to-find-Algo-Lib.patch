@@ -1,0 +1,35 @@
+From dbbeddf1004993d8a19f80f25faddf999380e7bc Mon Sep 17 00:00:00 2001
+From: Sebastien Riccardi <sebastien.riccardi@tdk.com>
+Date: Thu, 21 May 2026 18:32:14 +0200
+Subject: [PATCH] Hack script to find Algo Lib
+
+---
+ scripts/build/gen_relocate_app.py | 5 +++--
+ 1 file changed, 3 insertions(+), 2 deletions(-)
+
+diff --git a/scripts/build/gen_relocate_app.py b/scripts/build/gen_relocate_app.py
+index d768e298d3d..f6aefa0dc38 100755
+--- a/scripts/build/gen_relocate_app.py
++++ b/scripts/build/gen_relocate_app.py
+@@ -559,7 +559,7 @@ def parse_args():
+ 
+ 
+ def gen_all_obj_files(searchpath):
+-    return list(Path(searchpath).rglob('*.o')) + list(Path(searchpath).rglob('*.obj'))
++    return list(Path(searchpath).rglob('*.o')) + list(Path(searchpath).rglob('*.obj')) + list(Path("C:/Data/fork.zephyr-rtos/samples/sensor/6dof_motion_drdy/gaf/release/lib/").rglob('*.obj'))
+ 
+ 
+ # return the absolute path for the object file.
+@@ -607,7 +607,8 @@ def create_dict_wrt_mem():
+     input_rel_dict = args.input_rel_dict.read().splitlines()
+     if not input_rel_dict:
+         sys.exit("Disable CONFIG_CODE_DATA_RELOCATION if no file needs relocation")
+-
++    input_rel_dict[3]="EXTFLASH_TEXT:NOCOPY:C:/Data/fork.zephyr-rtos/samples/sensor/6dof_motion_drdy/gaf/release/lib/libInvnAlgoGAFOpen.a,"
++    input_rel_dict[4]="RAM_DATA:COPY:C:/Data/fork.zephyr-rtos/samples/sensor/6dof_motion_drdy/gaf/release/lib/libInvnAlgoGAFOpen.a,"
+     for line in input_rel_dict:
+         if ':' not in line:
+             continue
+-- 
+2.43.0.windows.1
+

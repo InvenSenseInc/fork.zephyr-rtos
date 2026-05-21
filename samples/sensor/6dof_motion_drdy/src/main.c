@@ -10,7 +10,11 @@
 #include <zephyr/drivers/sensor.h>
 #include <stdio.h>
 
+#include "invn_algo.h"
+
 static struct sensor_trigger data_trigger;
+
+uint64_t sample_time=0;
 
 /* Flag set from IMU device irq handler */
 static volatile int irq_from_device;
@@ -66,6 +70,7 @@ static void handle_6dof_motion_drdy(const struct device *dev, const struct senso
 			return;
 		} else if (rc == 0) {
 			irq_from_device = 1;
+			sample_time = (k_uptime_ticks()*1000000)/CONFIG_SYS_CLOCK_TICKS_PER_SEC;			
 		}
 	}
 }
@@ -76,7 +81,14 @@ int main(void)
 	struct sensor_value accel[3];
 	struct sensor_value gyro[3];
 	struct sensor_value temperature;
+	
+    int16_t acc_raw[3];
+    int16_t gyr_raw[3];
+    int16_t mag_raw[3];
+    uint8_t accurracy[3];
+    float quat[4];
 
+	struct sensor_value sample_rate;
 	if (dev == NULL) {
 		return 0;
 	}
@@ -89,6 +101,10 @@ int main(void)
 		printf("Cannot configure data trigger!!!\n");
 		return 0;
 	}
+	sample_rate.val1 = 25;
+    sensor_attr_set(dev, SENSOR_CHAN_ACCEL_XYZ, SENSOR_ATTR_SAMPLING_FREQUENCY, &sample_rate);
+    sensor_attr_set(dev, SENSOR_CHAN_GYRO_XYZ, SENSOR_ATTR_SAMPLING_FREQUENCY, &sample_rate);
+	invn_algo_init(10);
 
 	k_sleep(K_MSEC(1000));
 
@@ -99,14 +115,26 @@ int main(void)
 			sensor_channel_get(dev, SENSOR_CHAN_GYRO_XYZ, gyro);
 			sensor_channel_get(dev, SENSOR_CHAN_DIE_TEMP, &temperature);
 
-			printf("[%s]: temp %.2f Cel "
+			irq_from_device = 0;
+            acc_raw[0] = -(int16_t) ((sensor_value_to_double(&accel[0])*32768/8)/9.80665);
+            acc_raw[1] = -(int16_t) ((sensor_value_to_double(&accel[2])*32768/8)/9.80665);
+            acc_raw[2] = -(int16_t) ((sensor_value_to_double(&accel[1])*32768/8)/9.80665);
+            gyr_raw[0] = -(int16_t) ((sensor_value_to_double(&gyro[0])*32768*180/2000)/3.14159);
+            gyr_raw[1] = -(int16_t) ((sensor_value_to_double(&gyro[2])*32768*180/2000)/3.14159);
+            gyr_raw[2] = -(int16_t) ((sensor_value_to_double(&gyro[1])*32768*180/2000)/3.14159);
+            mag_raw[0] = (int16_t) 0;//(mag_temp_data.x*32768/2000);
+            mag_raw[1] = -(int16_t) 0;//(mag_temp_data.z*32768/2000);
+            mag_raw[2] = (int16_t) 0;//(mag_temp_data.y*32768/2000);
+            invn_algo_process((int64_t) sample_time, acc_raw, gyr_raw, mag_raw, quat, accurracy);
+			printf("%lld: temp %.2f Cel "
 			       "  accel %f %f %f m/s/s "
-			       "  gyro  %f %f %f rad/s\n",
-			       now_str(), sensor_value_to_double(&temperature),
+			       "  gyro  %f %f %f rad/s\n"
+			       "  quat  %f %f %f %f\n",
+			       sample_time, sensor_value_to_double(&temperature),
 			       sensor_value_to_double(&accel[0]), sensor_value_to_double(&accel[1]),
 			       sensor_value_to_double(&accel[2]), sensor_value_to_double(&gyro[0]),
-			       sensor_value_to_double(&gyro[1]), sensor_value_to_double(&gyro[2]));
-			irq_from_device = 0;
+			       sensor_value_to_double(&gyro[1]), sensor_value_to_double(&gyro[2]),
+			       (double) quat[0], (double) quat[1],(double) quat[2],(double) quat[3]);
 		}
 	}
 	return 0;

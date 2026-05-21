@@ -37,8 +37,15 @@ Make sure the aliases are in devicetree, then build and run with:
 
 .. zephyr-app-commands::
    :zephyr-app: samples/sensor/6dof_motion_drdy
-   :board: nrf52dk/nrf52832
+   :board: nrf5340dk/nrf5340/cpuapp
    :goals: build flash
+
+Must apply a patch to relocate Algo lib to QSPI Flash:
+cd zephyrproject\zephyrproject\zephyr
+git apply 0001-Hack-script-to-find-Algo-Lib.patch
+
+west build -p always -b nrf5340dk/nrf5340/cpuapp  C:\Data\fork.zephyr-rtos\samples\sensor\6dof_motion_drdy -DDTC_OVERLAY_FILE=boards/nrf53dk_nrf53840_i2c.overlay
+west flash
 
 Sample Output
 =============
