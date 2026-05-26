@@ -8,6 +8,8 @@
 #include <zephyr/device.h>
 #include <zephyr/devicetree.h>
 #include <zephyr/drivers/sensor.h>
+#include <zephyr/drivers/gpio.h>
+
 #include <stdio.h>
 
 #include "invn_algo.h"
@@ -18,6 +20,10 @@ uint64_t sample_time=0;
 
 /* Flag set from IMU device irq handler */
 static volatile int irq_from_device;
+
+static const struct gpio_dt_spec arduino_header_D0 =
+	GPIO_DT_SPEC_GET(DT_ALIAS(testled0), gpios);
+
 
 /*
  * Get a device structure from a devicetree node from alias
@@ -87,6 +93,20 @@ int main(void)
     int16_t mag_raw[3];
     uint8_t accurracy[3];
     float quat[4];
+	
+	int err;
+
+	err = gpio_pin_configure_dt(&arduino_header_D0, GPIO_OUTPUT_INACTIVE);
+	//gpio_pin_configure()
+	if (err != 0) {
+		printf("Configuring GPIO pin failed: %d\n", err);
+		return 0;
+	}
+	
+	err = gpio_pin_set_dt(&arduino_header_D0, 0);
+	if (err != 0) {
+		printf("Setting GPIO pin level failed: %d\n", err);
+	}
 
 	struct sensor_value sample_rate;
 	if (dev == NULL) {
@@ -125,7 +145,9 @@ int main(void)
             mag_raw[0] = (int16_t) 0;//(mag_temp_data.x*32768/2000);
             mag_raw[1] = -(int16_t) 0;//(mag_temp_data.z*32768/2000);
             mag_raw[2] = (int16_t) 0;//(mag_temp_data.y*32768/2000);
+            gpio_pin_set_dt(&arduino_header_D0, 1);
             invn_algo_process((int64_t) sample_time, acc_raw, gyr_raw, mag_raw, quat, accurracy);
+            gpio_pin_set_dt(&arduino_header_D0, 0);
 			printf("%lld: temp %.2f Cel "
 			       "  accel %f %f %f m/s/s "
 			       "  gyro  %f %f %f rad/s\n"
