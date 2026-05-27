@@ -44,6 +44,7 @@ Must apply a patch to relocate Algo lib to QSPI Flash:
 cd zephyrproject\zephyrproject\zephyr
 git apply 0001-Hack-script-to-find-Algo-Lib.patch
 
+C:\Users\sriccardi\zephyrproject\zephyrproject>".venv/Scripts/Activate.bat"
 west build -p always -b nrf5340dk/nrf5340/cpuapp  C:\Data\fork.zephyr-rtos\samples\sensor\6dof_motion_drdy -DDTC_OVERLAY_FILE=boards/nrf53dk_nrf53840_i2c.overlay
 west flash
 
