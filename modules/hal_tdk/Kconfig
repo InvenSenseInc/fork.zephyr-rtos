@@ -48,4 +48,18 @@ config USE_EMD_TAD2144
 	imply TDK_HAL
 	depends on ZEPHYR_HAL_TDK_MODULE
 	depends on DT_HAS_INVENSENSE_TAD2144_ENABLED
+
+config USE_EMD_ICM56622
+	bool "ICM56622 High Performance 6-Axis MotionTracking IMU"
+	default y
+	imply TDK_HAL
+	depends on ZEPHYR_HAL_TDK_MODULE
+	depends on DT_HAS_INVENSENSE_ICM56622_ENABLED
+
+config USE_EMD_ICM56686
+	bool "ICM56686 High Performance 6-Axis MotionTracking IMU"
+	default y
+	imply TDK_HAL
+	depends on ZEPHYR_HAL_TDK_MODULE
+	depends on DT_HAS_INVENSENSE_ICM56686_ENABLED
 endmenu
