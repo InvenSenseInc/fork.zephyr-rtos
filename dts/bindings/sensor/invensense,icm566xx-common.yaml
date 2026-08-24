@@ -113,10 +113,11 @@ properties:
   fifo-watermark:
     type: int
     default: 0
+#    min: 0
+#    max: 104
     description: |
       Specify the FIFO watermark level in frame count.
       Default is power-up configuration (disabled).
-      Valid range: 0 - 104
 
   fifo-watermark-equals:
     type: boolean
@@ -126,14 +127,3 @@ properties:
 
       Otherwise, it will generate interrupts when the level is greater or equals the FIFO Watermark
       Threshold (count >= watermark).
-
-  apex:
-    type: string
-    default: "none"
-    enum:
-      - "none"
-      - "pedometer"
-      - "tilt"
-      - "smd"
-      - "wom"
-    description: "APEX features selection"
