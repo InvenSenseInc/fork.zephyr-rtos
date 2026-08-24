@@ -30,26 +30,40 @@
 #include <zephyr/logging/log.h>
 LOG_MODULE_REGISTER(ICM566XX, CONFIG_SENSOR_LOG_LEVEL);
 
-static const struct device *g_icm566xx_dev = NULL;
+#ifndef SENSOR_CHANNEL_IS_ACCEL
+#define SENSOR_CHANNEL_IS_ACCEL(chan) \
+	((chan) == SENSOR_CHAN_ACCEL_XYZ || \
+	 (chan) == SENSOR_CHAN_ACCEL_X || \
+	 (chan) == SENSOR_CHAN_ACCEL_Y || \
+	 (chan) == SENSOR_CHAN_ACCEL_Z)
+#endif
 
-static inline int inv_io_hal_read_reg(uint8_t reg, uint8_t *rbuffer, uint32_t rlen)
+#ifndef SENSOR_CHANNEL_IS_GYRO
+#define SENSOR_CHANNEL_IS_GYRO(chan) \
+	((chan) == SENSOR_CHAN_GYRO_XYZ || \
+	 (chan) == SENSOR_CHAN_GYRO_X || \
+	 (chan) == SENSOR_CHAN_GYRO_Y || \
+	 (chan) == SENSOR_CHAN_GYRO_Z)
+#endif
+
+static inline int inv_io_hal_read_reg(void *context, uint8_t reg, uint8_t *rbuffer, uint32_t rlen)
 {
-	const struct device *dev = g_icm566xx_dev;
+	const struct device *dev = context;
 	struct icm566xx_data *data = dev->data;
 
 	return icm566xx_reg_read_rtio(&data->bus, reg | REG_READ_BIT, rbuffer, rlen);
 }
 
-static inline int inv_io_hal_write_reg(uint8_t reg, const uint8_t *wbuffer,
-					uint32_t wlen)
+static inline int inv_io_hal_write_reg(void *context, uint8_t reg, const uint8_t *wbuffer,
+				       uint32_t wlen)
 {
-	const struct device *dev = g_icm566xx_dev;
+	const struct device *dev = context;
 	struct icm566xx_data *data = dev->data;
 
 	return icm566xx_reg_write_rtio(&data->bus, reg, wbuffer, wlen);
 }
 
-void inv_sleep_us(uint32_t us)
+void icm566xx_inv_sleep_us(uint32_t us)
 {
 	k_usleep(us);
 }
@@ -218,6 +232,8 @@ static int icm566xx_accel_config(struct icm566xx_data *drv_data, enum sensor_att
 			}
 		} else if (val->val1 == 0) {
 			icm566xx_set_accel_mode(&drv_data->driver, PWR_MGMT0_ACCEL_MODE_OFF);
+		} else {
+			LOG_ERR("Wrong config with accel mode");
 		}
 	} else if (attr == SENSOR_ATTR_FULL_SCALE) {
 		icm566xx_set_accel_fsr(&drv_data->driver, val->val1);
@@ -250,6 +266,8 @@ static int icm566xx_gyro_config(struct icm566xx_data *drv_data, enum sensor_attr
 			}
 		} else if (val->val1 == 0) {
 			icm566xx_set_gyro_mode(&drv_data->driver, PWR_MGMT0_GYRO_MODE_OFF);
+		} else {
+			LOG_ERR("Wrong config with gyro mode");
 		}
 	} else if (attr == SENSOR_ATTR_FULL_SCALE) {
 		icm566xx_set_gyro_fsr(&drv_data->driver, val->val1);
@@ -282,7 +300,10 @@ static int icm566xx_attr_set(const struct device *dev, enum sensor_channel chan,
 				icm566xx_apex_enable(&drv_data->driver);
 				icm566xx_apex_enable_smd(&drv_data->driver);
 			} else if (val->val1 == TDK_APEX_WOM) {
-				icm566xx_apex_enable_wom(&drv_data->driver);
+				LOG_ERR("Not supported ATTR");
+			} else if (val->val1 == TDK_APEX_TAP) {
+				icm566xx_apex_enable(&drv_data->driver);
+				icm566xx_apex_enable_tap(&drv_data->driver);
 			} else if (val->val1 == TDK_APEX_DISABLE) {
 				icm566xx_edmp_disable_pedometer(&drv_data->driver);
 				icm566xx_edmp_disable_tilt(&drv_data->driver);
@@ -325,7 +346,6 @@ static int icm566xx_attr_get(const struct device *dev, enum sensor_channel chan,
 		}
 		break;
 	default:
-		LOG_ERR("Unsupported channel");
 		res = -EINVAL;
 		break;
 	}
@@ -341,6 +361,11 @@ static int icm566xx_channel_get(const struct device *dev, enum sensor_channel ch
 	const struct icm566xx_config *cfg = dev->config;
 #endif
 	bool is_high_res = false;
+
+	if ((chan >= SENSOR_CHAN_AMBIENT_TEMP && chan <= SENSOR_CHAN_ALL) ||
+		(chan >= SENSOR_CHAN_MAGN_X && chan <= SENSOR_CHAN_MAGN_XYZ)) {
+		return -ENOTSUP;
+	}
 
 #if INV_IMU_20BIT_REG_DATA_SUPPORTED
 	is_high_res = true;
@@ -402,8 +427,12 @@ static int icm566xx_channel_get(const struct device *dev, enum sensor_channel ch
 			val[0].val1 = (data->apex_status & ICM566XX_APEX_STATUS_MASK_WOM_X) ? 1 : 0;
 			val[1].val1 = (data->apex_status & ICM566XX_APEX_STATUS_MASK_WOM_Y) ? 1 : 0;
 			val[2].val1 = (data->apex_status & ICM566XX_APEX_STATUS_MASK_WOM_Z) ? 1 : 0;
-		} else if ((cfg->apex == TDK_APEX_TILT) || (cfg->apex == TDK_APEX_SMD)) {
+		} else if ((cfg->apex == TDK_APEX_TILT) ||
+					(cfg->apex == TDK_APEX_SMD) ||
+					(cfg->apex == TDK_APEX_TAP)) {
 			val[0].val1 = data->apex_status;
+		} else {
+			LOG_ERR("Unsupported apex feature");
 		}
 #endif
 		break;
@@ -549,10 +578,10 @@ static int icm566xx_init(const struct device *dev)
 	int err;
 
 	/* Initialize serial interface and device */
-	g_icm566xx_dev = dev;
+	data->driver.transport.context = (struct device *)dev;
 	data->driver.transport.read_reg = inv_io_hal_read_reg;
 	data->driver.transport.write_reg = inv_io_hal_write_reg;
-	data->driver.transport.sleep_us = inv_sleep_us;
+	data->driver.transport.sleep_us = icm566xx_inv_sleep_us;
 
 	switch (data->bus.rtio.type) {
 	case ICM566XX_BUS_SPI:
@@ -587,7 +616,7 @@ static int icm566xx_init(const struct device *dev)
 		drive_config0.pads_spi_slew = DRIVE_CONFIG0_PADS_SPI_SLEW_TYP_10NS;
 		err = icm566xx_write_reg(&data->driver, DRIVE_CONFIG0, 1,
 								(uint8_t *)&drive_config0);
-		inv_sleep_us(2); /* Takes effect 1.5 us after the register is programmed */
+		icm566xx_inv_sleep_us(2); /* Takes effect 1.5 us after the register is programmed */
 	}
 
 	/** Soft-reset sensor to restore config to defaults,
@@ -677,6 +706,11 @@ static int icm566xx_init(const struct device *dev)
 			LOG_ERR("Failed to initialize streaming: %d", err);
 			return err;
 		}
+	} else {
+		/*
+		 * Compliant with MISRA C - No trigger or stream mode enabled,
+		 * intentional fall-through
+		 */
 	}
 
 #ifdef CONFIG_TDK_APEX
@@ -687,9 +721,9 @@ static int icm566xx_init(const struct device *dev)
 		LOG_ERR("APEX Disable failed");
 		return err;
 	}
-#endif
 
 	k_sleep(K_MSEC(100));
+#endif
 
 	inv_imu_int_state_t int_config;
 
@@ -705,6 +739,7 @@ static int icm566xx_init(const struct device *dev)
 		return err;
 	}
 #endif
+
 	LOG_DBG("Init OK");
 
 	return 0;

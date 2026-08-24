@@ -127,10 +127,14 @@ int icm566xx_trigger_init(const struct device *dev)
 	err = k_sem_init(&data->triggers.sem, 0, 1);
 	__ASSERT_NO_MSG(!err);
 
-	(void)k_thread_create(&data->triggers.thread, data->triggers.thread_stack,
+	k_tid_t tid = k_thread_create(&data->triggers.thread, data->triggers.thread_stack,
 			      K_KERNEL_STACK_SIZEOF(data->triggers.thread_stack), icm566xx_thread,
 			      data, NULL, NULL, K_PRIO_COOP(CONFIG_ICM566XX_THREAD_PRIORITY), 0,
 			      K_NO_WAIT);
+
+#ifdef CONFIG_THREAD_NAME
+	k_thread_name_set(tid, "icm566xx_thread");
+#endif
 
 #elif defined(CONFIG_ICM566XX_TRIGGER_GLOBAL_THREAD)
 	k_work_init(&data->triggers.work, icm566xx_work_handler);
