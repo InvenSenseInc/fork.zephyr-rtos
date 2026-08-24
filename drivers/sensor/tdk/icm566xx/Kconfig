@@ -38,19 +38,21 @@ config ICM566XX_TRIGGER_NONE
 
 config ICM566XX_TRIGGER_GLOBAL_THREAD
 	bool "Use global thread"
-	depends on GPIO
+	select GPIO
 	depends on $(dt_compat_any_has_prop,$(DT_COMPAT_INVENSENSE_ICM56622),int-gpios) || \
-		   $(dt_compat_any_has_prop,$(DT_COMPAT_INVENSENSE_ICM56686),int-gpios)
+			$(dt_compat_any_has_prop,$(DT_COMPAT_INVENSENSE_ICM56686),int-gpios)
 	depends on !ICM566XX_STREAM
 	select ICM566XX_TRIGGER
+	select TDK_APEX
 
 config ICM566XX_TRIGGER_OWN_THREAD
 	bool "Use own thread"
-	depends on GPIO
+	select GPIO
 	depends on $(dt_compat_any_has_prop,$(DT_COMPAT_INVENSENSE_ICM56622),int-gpios) || \
-		   $(dt_compat_any_has_prop,$(DT_COMPAT_INVENSENSE_ICM56686),int-gpios)
+			$(dt_compat_any_has_prop,$(DT_COMPAT_INVENSENSE_ICM56686),int-gpios)
 	depends on !ICM566XX_STREAM
 	select ICM566XX_TRIGGER
+	select TDK_APEX
 
 endchoice
 
@@ -77,9 +79,9 @@ config ICM566XX_THREAD_STACK_SIZE
 config ICM566XX_STREAM
 	bool "Streaming mode"
 	depends on $(dt_compat_any_has_prop,$(DT_COMPAT_INVENSENSE_ICM56622),int-gpios) || \
-		   $(dt_compat_any_has_prop,$(DT_COMPAT_INVENSENSE_ICM56686),int-gpios) || \
-		   $(dt_compat_on_bus,$(DT_COMPAT_INVENSENSE_ICM56622),i3c) || \
-		   $(dt_compat_on_bus,$(DT_COMPAT_INVENSENSE_ICM56686),i3c)
+			$(dt_compat_any_has_prop,$(DT_COMPAT_INVENSENSE_ICM56686),int-gpios) || \
+			$(dt_compat_on_bus,$(DT_COMPAT_INVENSENSE_ICM56622),i3c) || \
+			$(dt_compat_on_bus,$(DT_COMPAT_INVENSENSE_ICM56686),i3c)
 	help
 	  Enable streaming of sensor data.
 

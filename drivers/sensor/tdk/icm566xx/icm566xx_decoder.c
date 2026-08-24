@@ -17,9 +17,9 @@ LOG_MODULE_REGISTER(ICM566XX_DECODER, CONFIG_SENSOR_LOG_LEVEL);
 
 #define DT_DRV_COMPAT invensense_icm566xx
 
+#if defined(CONFIG_DT_HAS_INVENSENSE_ICM56686_ENABLED)
 static int32_t get_raw_reading_by_position(struct icm566xx_encoded_data *edata, int pos)
 {
-#if defined(CONFIG_DT_HAS_INVENSENSE_ICM56686_ENABLED)
 	int32_t high_16 = (int32_t)edata->payload.readings[pos];
 	int32_t low_4 = 0;
 
@@ -27,6 +27,8 @@ static int32_t get_raw_reading_by_position(struct icm566xx_encoded_data *edata, 
 		low_4 = edata->payload.ext_data[pos] & 0x0F;
 	} else if (pos >= 3 && pos <= 5) {
 		low_4 = edata->payload.ext_data[pos - 3] >> 4;
+	} else {
+		return -EINVAL;
 	}
 
 	int32_t raw_val = (high_16 << 4) | low_4;
@@ -36,11 +38,8 @@ static int32_t get_raw_reading_by_position(struct icm566xx_encoded_data *edata, 
 	}
 
 	return raw_val;
-#else
-	uint8_t *high_ptr = &edata->payload.buf[pos * 2];
-	return (int16_t)((high_ptr[0] << 8) | high_ptr[1]);
-#endif
 }
+#endif
 
 static int icm566xx_get_shift(enum sensor_channel channel, int accel_fs, int gyro_fs, int8_t *shift)
 {
@@ -168,6 +167,7 @@ int icm566xx_convert_raw_to_q31(struct icm566xx_encoded_data *edata, enum sensor
 	} else {
 		int64_t w_q31 = ((int64_t)whole * ((int64_t)INT32_MAX + 1)) >> shift;
 		int64_t f_q31 = ((int64_t)fraction * ((int64_t)INT32_MAX + 1)) / INT64_C(1000000);
+
 		f_q31 = f_q31 >> shift;
 		intermediate = w_q31 + f_q31;
 	}
@@ -379,6 +379,7 @@ static int icm566xx_one_shot_decode(const uint8_t *buffer, struct sensor_chan_sp
 		int32_t raw_reading;
 #if defined(CONFIG_DT_HAS_INVENSENSE_ICM56686_ENABLED)
 		int pos = icm566xx_get_channel_position(chan_spec.chan_type);
+
 		raw_reading = get_raw_reading_by_position(edata, pos);
 #else
 		raw_reading =
