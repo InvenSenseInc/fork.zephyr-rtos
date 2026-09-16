@@ -1260,7 +1260,7 @@ static int i2s_esp32_configure(const struct device *dev, enum i2s_dir dir,
 
 	slot_cfg.data_bit_width = i2s_cfg->word_size;
 	slot_cfg.slot_mode = I2S_SLOT_MODE_STEREO;
-	slot_cfg.slot_bit_width = i2s_cfg->word_size > 16 ? 32 : 16;
+	slot_cfg.slot_bit_width = i2s_cfg->word_size > 8 ? i2s_cfg->word_size : 16;
 	if (data_format == I2S_FMT_DATA_FORMAT_I2S) {
 		slot_cfg.std.ws_pol = i2s_cfg->format & I2S_FMT_FRAME_CLK_INV ? true : false;
 		slot_cfg.std.bit_shift = true;
