@@ -383,18 +383,29 @@ static void IRAM_ATTR i2s_esp32_rx_stop_transfer(const struct device *dev)
 {
 	const struct i2s_esp32_cfg *dev_cfg = dev->config;
 	const struct i2s_esp32_stream *stream = &dev_cfg->rx;
+	const i2s_hal_context_t *hal = &(dev_cfg->hal);
 
 #if SOC_GDMA_SUPPORTED
 	dma_stop(stream->conf->dma_dev, stream->conf->dma_channel);
 #else
-	const i2s_hal_context_t *hal = &(dev_cfg->hal);
-
 	esp_intr_disable(stream->data->irq_handle);
 	i2s_hal_rx_stop_link(hal);
 	i2s_hal_rx_disable_intr(hal);
 	i2s_hal_rx_disable_dma(hal);
 	i2s_hal_clear_intr_status(hal, I2S_INTR_MAX);
 #endif /* SOC_GDMA_SUPPORTED */
+
+	/* Disable the RX unit itself, otherwise it keeps generating BCLK/WS forever in
+	 * master mode even though the DMA link is stopped.
+	 */
+	i2s_hal_rx_stop(hal);
+
+	/* The block currently being DMA'd into was never queued, so it must be freed here
+	 * or it leaks from the mem_slab on every stop.
+	 */
+	if (stream->data->mem_block != NULL) {
+		k_mem_slab_free(stream->data->i2s_cfg.mem_slab, stream->data->mem_block);
+	}
 
 	stream->data->mem_block = NULL;
 	stream->data->mem_block_len = 0;
@@ -599,20 +610,31 @@ static void IRAM_ATTR i2s_esp32_tx_stop_transfer(const struct device *dev)
 	const struct i2s_esp32_cfg *dev_cfg = dev->config;
 	const struct i2s_esp32_stream *stream = &dev_cfg->tx;
 	struct i2s_esp32_data *dev_data = dev->data;
+	const i2s_hal_context_t *hal = &(dev_cfg->hal);
 
 	k_timer_stop(&dev_data->tx_deferred_transfer_timer);
 
 #if SOC_GDMA_SUPPORTED
 	dma_stop(stream->conf->dma_dev, stream->conf->dma_channel);
 #else
-	const i2s_hal_context_t *hal = &(dev_cfg->hal);
-
 	esp_intr_disable(stream->data->irq_handle);
 	i2s_hal_tx_stop_link(hal);
 	i2s_hal_tx_disable_intr(hal);
 	i2s_hal_tx_disable_dma(hal);
 	i2s_hal_clear_intr_status(hal, I2S_INTR_MAX);
 #endif /* SOC_GDMA_SUPPORTED */
+
+	/* Disable the TX unit itself, otherwise it keeps generating BCLK/WS forever in
+	 * master mode even though the DMA link is stopped.
+	 */
+	i2s_hal_tx_stop(hal);
+
+	/* The block currently being DMA'd out was already dequeued, so it must be freed here
+	 * or it leaks from the mem_slab on every stop.
+	 */
+	if (stream->data->mem_block != NULL) {
+		k_mem_slab_free(stream->data->i2s_cfg.mem_slab, stream->data->mem_block);
+	}
 
 	stream->data->mem_block = NULL;
 	stream->data->mem_block_len = 0;
