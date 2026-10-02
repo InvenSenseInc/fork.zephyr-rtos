@@ -43,6 +43,18 @@ static int inv_io_hal_write_reg(void *context, uint8_t reg, const uint8_t *wbuff
 static int ictx53xx_attr_set(const struct device *dev, enum sensor_channel chan,
 			     enum sensor_attribute attr, const struct sensor_value *val)
 {
+	struct ictx53xx_data *data = dev->data;
+
+	__ASSERT_NO_MSG(val != NULL);
+	
+	if (attr == SENSOR_ATTR_CONFIGURATION) {
+			
+	} else {
+		LOG_ERR("Unsupported attribute");
+		(void)data;
+		return -EINVAL;
+	}
+	
 	return 0;
 }
 
@@ -58,17 +70,23 @@ static int ictx53xx_sample_fetch(const struct device *dev,
 	struct ictx53xx_data *data = (struct ictx53xx_data *)dev->data;
 	int drdy_status;
 	int16_t mag_data[3];
+	int8_t trials = 6;
 	int ret = 0;
 
 	switch (chan) {
 	case SENSOR_CHAN_ALL:
 	case SENSOR_CHAN_MAGN_XYZ:
-	case SENSOR_CHAN_DIE_TEMP:
-		ret |= inv_ict_get_data_ready_status(&data->driver, &drdy_status);
-		if (drdy_status == 1)
-			ret |= inv_ict_poll_data(&data->driver, mag_data, &data->temp);
-		else 
-			ret = 1;
+	case SENSOR_CHAN_AMBIENT_TEMP:
+		ret |= inv_ict_set_mode(&data->driver, INV_ICT_MODE_CTRL_REG_MODE_SINGLE_SHOT);
+		
+		/* Initial sleep waiting the sensor proceeds with the measure = 3050us */
+		k_sleep(K_USEC(3050));
+		do {
+			k_sleep(K_USEC(51));
+			ret |= inv_ict_get_data_ready_status(&data->driver, &drdy_status);
+		} while ((drdy_status != 1) && (trials-- > 0));
+	
+		ret |= inv_ict_poll_data(&data->driver, mag_data, &data->temp);
 		data->x = mag_data[0];
 		data->y = mag_data[1];
 		data->z = mag_data[2];
@@ -80,50 +98,50 @@ static int ictx53xx_sample_fetch(const struct device *dev,
 	return ret;
 }
 
-static void ictx53xx_convert_mag(struct ictx53xx_data *data, struct sensor_value *val, int16_t sample)
+static void ictx53xx_convert_mag(uint32_t sensitivity, struct sensor_value *val, int16_t sample)
 {
-	uint32_t sensitivity;
-	int64_t conv_val;
-	
-	inv_ict_get_sensitivity_nt_per_lsb(&data->driver, &sensitivity);
-	/* Convert nT/LSB to µG/LSB */
-	conv_val = sample * (sensitivity * 10);
+	/* ICTx53xx magnetometer sensitivity */
+	int32_t conv_val = (int32_t)sample * sensitivity;
 
-	val->val1 = conv_val / 1000000;
-	val->val2 = conv_val - (val->val1 * 1000000);
+	/* Magnetic field is expressed in Gauss 1Gs = 10^-4 Tesla = 10^5 nT */
+	val->val1 = conv_val / 100000;
+	val->val2 = (conv_val % 100000) * 10;
 }
 
 static void ictx53xx_convert_temp(struct sensor_value *val, int16_t sample)
 {
 	/* Convert temp to C (degC = lsb * 6.25 / 1000 + 25) */
-	int64_t conv_val = (int64_t)sample * 625 / 100000 + 25;
+	int32_t conv_val = (int32_t)sample * 625 / 100 + 25000;
 
-	val->val1 = conv_val / 1000000;
-	val->val2 = conv_val - (val->val1 * 1000000);
+	val->val1 = conv_val / 1000;
+	val->val2 = (conv_val % 1000) * 1000;
 }
 
 static int ictx53xx_channel_get(const struct device *dev, enum sensor_channel chan,
 				struct sensor_value *val)
 {
 	struct ictx53xx_data *data = (struct ictx53xx_data *)dev->data;
+	const struct ictx53xx_config *cfg = dev->config;
+
 
 	switch (chan) {
 	case SENSOR_CHAN_MAGN_XYZ:
-		ictx53xx_convert_mag(data, val, data->x);
-		ictx53xx_convert_mag(data, val + 1, data->y);
-		ictx53xx_convert_mag(data, val + 2, data->z);
+		ictx53xx_convert_mag(cfg->sens, val, data->x);
+		ictx53xx_convert_mag(cfg->sens, val + 1, data->y);
+		ictx53xx_convert_mag(cfg->sens, val + 2, data->z);
 		break;
 	case SENSOR_CHAN_MAGN_X:
-		ictx53xx_convert_mag(data, val, data->x);
+		ictx53xx_convert_mag(cfg->sens, val, data->x);
 		break;
 	case SENSOR_CHAN_MAGN_Y:
-		ictx53xx_convert_mag(data, val, data->y);
+		ictx53xx_convert_mag(cfg->sens, val, data->y);
 		break;
 	case SENSOR_CHAN_MAGN_Z:
-		ictx53xx_convert_mag(data, val, data->z);
+		ictx53xx_convert_mag(cfg->sens, val, data->z);
 		break;
-	case SENSOR_CHAN_DIE_TEMP:
+	case SENSOR_CHAN_AMBIENT_TEMP:
 		ictx53xx_convert_temp(val, data->temp);
+		break;
 	default:
 		return ENOTSUP;
 	}
@@ -141,6 +159,8 @@ static int ictx53xx_init(const struct device *dev)
 	ict_serif.read_reg = inv_io_hal_read_reg;
 	ict_serif.write_reg = inv_io_hal_write_reg;
 	ict_serif.sleep_us = inv_ictx53xx_sleep_us;
+	ict_serif.max_read  = 21;
+	ict_serif.max_write = 6;
 
 	/* Init ICT */
 	rc |= inv_ict_init(&data->driver, &ict_serif);
@@ -192,12 +212,12 @@ static DEVICE_API(sensor, ictx53xx_api_funcs) = {
 /*
  * Main instantiation macro
  */
-#define ICTX53XX_DEFINE(inst)          \
+#define ICTX53XX_DEFINE(inst, sensitivity)          \
 	I2C_DT_IODEV_DEFINE(ictx53xx_bus_##inst, DT_DRV_INST(inst));   \
 	RTIO_DEFINE(ictx53xx_rtio_ctx_##inst, 32, 32);          \
 																	\
 	static const struct ictx53xx_config	ictx53xx_config_##inst = {  \
-		.op_mode = INV_ICT_MODE_CTRL_REG_MODE_SINGLE_SHOT,           \
+		.sens = sensitivity,                                 \
 	};                                                            \
 	static struct ictx53xx_data ictx53xx_drv_##inst = {          \
 		.bus = {                                                  \
@@ -210,4 +230,4 @@ static DEVICE_API(sensor, ictx53xx_api_funcs) = {
 		&ictx53xx_api_funcs);
 
 #define DT_DRV_COMPAT invensense_ictx53xx
-DT_INST_FOREACH_STATUS_OKAY(ICTX53XX_DEFINE)
+DT_INST_FOREACH_STATUS_OKAY_VARGS(ICTX53XX_DEFINE, INV_ICT_2_4MT_SENSITIVITY)

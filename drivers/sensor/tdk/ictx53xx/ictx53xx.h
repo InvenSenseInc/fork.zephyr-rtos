@@ -22,7 +22,7 @@ struct ictx53xx_bus {
 };
 
 struct ictx53xx_config {
-	inv_ict_mode_t op_mode;
+	uint32_t sens;
 };
 
 struct ictx53xx_data {
