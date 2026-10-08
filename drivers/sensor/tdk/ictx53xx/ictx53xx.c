@@ -47,20 +47,75 @@ static int ictx53xx_attr_set(const struct device *dev, enum sensor_channel chan,
 
 	__ASSERT_NO_MSG(val != NULL);
 	
-	if (attr == SENSOR_ATTR_CONFIGURATION) {
+	switch (chan) {
+	case SENSOR_CHAN_MAGN_X:
+	case SENSOR_CHAN_MAGN_Y:
+	case SENSOR_CHAN_MAGN_Z:
+	case SENSOR_CHAN_MAGN_XYZ:
+		if (attr == SENSOR_ATTR_CONFIGURATION) {
+			if ((val->val1 == INV_ICT_MODE_CTRL_REG_MODE_SLEEP) || (val->val1 == INV_ICT_MODE_CTRL_REG_MODE_PULSED)
+					|| (val->val1 == INV_ICT_MODE_CTRL_REG_MODE_SINGLE_SHOT) || (val->val1 == INV_ICT_MODE_CTRL_REG_MODE_MRM)) {
+			data->mode = val->val1;
+			inv_ict_set_mode(&data->driver, data->mode);
 			
-	} else {
-		LOG_ERR("Unsupported attribute");
+			if (data->mode == INV_ICT_MODE_CTRL_REG_MODE_MRM) {
+				inv_ict_set_mrm(&data->driver);
+				/* Force sleep mode at the end of MRN operation */
+				data->mode = INV_ICT_MODE_CTRL_REG_MODE_SLEEP;
+			}
+			/* No sampling frequency attribute for non-pulsed mode */
+			if (data->mode != INV_ICT_MODE_CTRL_REG_MODE_PULSED)
+				data->odr = 0;
+			} else {
+				LOG_ERR("Not supported ATTR value");
+				return -EINVAL;
+			}
+		} else if ((attr == SENSOR_ATTR_SAMPLING_FREQUENCY) && (data->mode == INV_ICT_MODE_CTRL_REG_MODE_PULSED)) {
+			data->odr = ictx53xx_hz_to_reg(val);
+			inv_ict_set_odr(&data->driver, data->odr);
+		} else {
+			LOG_ERR("Invalid attribute %d", attr);
+			return -EINVAL;
+		}
+		break;
+	default:
+		LOG_ERR("Invalid channel %d", chan);
 		(void)data;
 		return -EINVAL;
 	}
-	
 	return 0;
 }
 
 static int ictx53xx_attr_get(const struct device *dev, enum sensor_channel chan,
 			      enum sensor_attribute attr, struct sensor_value *val)
 {
+	struct ictx53xx_data *data = dev->data;
+
+	switch (chan) {
+	case SENSOR_CHAN_MAGN_X:
+	case SENSOR_CHAN_MAGN_Y:
+	case SENSOR_CHAN_MAGN_Z:
+	case SENSOR_CHAN_MAGN_XYZ:
+		if (attr == SENSOR_ATTR_CONFIGURATION) {
+			val->val1 = data->mode;
+			val->val2 = 0;
+		} else if (attr == SENSOR_ATTR_SAMPLING_FREQUENCY) {
+			if (data->mode == INV_ICT_MODE_CTRL_REG_MODE_PULSED) {
+				ictx53xx_reg_to_hz(data->odr, val);
+			} else {
+				val->val1 = 0;
+				val->val2 = 0;
+			}
+		} else {
+			LOG_ERR("Invalid attribute %d", attr);
+			return -EINVAL;
+		}
+		break;
+	default:
+		LOG_ERR("Invalid channel %d", chan);
+		(void)data;
+		return -EINVAL;
+	}
 	return 0;
 }
 
@@ -80,9 +135,9 @@ static int ictx53xx_sample_fetch(const struct device *dev,
 		ret |= inv_ict_set_mode(&data->driver, INV_ICT_MODE_CTRL_REG_MODE_SINGLE_SHOT);
 		
 		/* Initial sleep waiting the sensor proceeds with the measure = 3050us */
-		k_sleep(K_USEC(3050));
+		k_sleep(K_USEC(ICTX53XX_MEASUREMENT_TIME_US));
 		do {
-			k_sleep(K_USEC(51));
+			k_sleep(K_USEC(ICTX53XX_MEASUREMENT_EXTRA_TIME_US));
 			ret |= inv_ict_get_data_ready_status(&data->driver, &drdy_status);
 		} while ((drdy_status != 1) && (trials-- > 0));
 	
@@ -219,7 +274,9 @@ static DEVICE_API(sensor, ictx53xx_api_funcs) = {
 	static const struct ictx53xx_config	ictx53xx_config_##inst = {  \
 		.sens = sensitivity,                                 \
 	};                                                            \
-	static struct ictx53xx_data ictx53xx_drv_##inst = {          \
+	static struct ictx53xx_data ictx53xx_drv_##inst = {         	 \
+		.mode = INV_ICT_MODE_CTRL_REG_MODE_SLEEP,					\
+		.odr = 0,					\
 		.bus = {                                                  \
 				.rtio_ctx = &ictx53xx_rtio_ctx_##inst,          \
 				.iodev = &ictx53xx_bus_##inst,  },              \
