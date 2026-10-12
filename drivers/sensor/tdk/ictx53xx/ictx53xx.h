@@ -29,6 +29,8 @@ struct ictx53xx_bus {
 };
 
 struct ictx53xx_config {
+	inv_ict_mode_t mode;
+	int odr_hz;
 };
 
 struct ictx53xx_data {
@@ -50,21 +52,21 @@ struct ictx53xx_data {
 };
 
 
-static inline uint8_t ictx53xx_hz_to_reg(const struct sensor_value *val)
+static inline uint8_t ictx53xx_hz_to_reg(int val)
 {
-	if (val->val1 >= 320) {
+	if (val >= 320) {
 		return INV_ICT_MODE_CTRL_REG_ODR_320_HZ;
-	} else if (val->val1 >= 200) {
+	} else if (val >= 200) {
 		return INV_ICT_MODE_CTRL_REG_ODR_200_HZ;
-	} else if (val->val1 >= 100) {
+	} else if (val >= 100) {
 		return INV_ICT_MODE_CTRL_REG_ODR_100_HZ;
-	} else if (val->val1 >= 50) {
+	} else if (val >= 50) {
 		return INV_ICT_MODE_CTRL_REG_ODR_50_HZ;
-	} else if (val->val1 >= 20) {
+	} else if (val >= 20) {
 		return INV_ICT_MODE_CTRL_REG_ODR_20_HZ;
-	} else if (val->val1 >= 10) {
+	} else if (val >= 10) {
 		return INV_ICT_MODE_CTRL_REG_ODR_10_HZ;
-	} else if (val->val1 > 0) {
+	} else if (val > 0) {
 		return INV_ICT_MODE_CTRL_REG_ODR_5_HZ;
 	} else {
 		return 0;

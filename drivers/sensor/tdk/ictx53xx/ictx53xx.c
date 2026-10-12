@@ -60,25 +60,15 @@ static int ictx53xx_attr_set(const struct device *dev, enum sensor_channel chan,
 			
 			if (data->mode == INV_ICT_MODE_CTRL_REG_MODE_MRM) {
 				inv_ict_set_mrm(&data->driver);
-					// inv_ict_set_mode(&data->driver, INV_ICT_MODE_CTRL_REG_MODE_SLEEP);
-					// inv_ict_set_temperature_mode(&data->driver, INV_ICT_CHIP_CONFIG_REG_TEMP_SEL_RAW);
-					// uint8_t rbuffer, wbuffer = 0;
-					// inv_ict_write_reg(&data->driver.serif, 0, &wbuffer, 1);
-					// k_usleep(5000);
-					// inv_ict_read_reg(&data->driver.serif, INV_ICT_CHIP_CONFIG_REG, &rbuffer, 1);
-					// LOG_INF("> Read INV_ICT_CHIP_CONFIG_REG = 0x%x", rbuffer);
 				/* Force sleep mode at the end of MRN operation */
 				data->mode = INV_ICT_MODE_CTRL_REG_MODE_SLEEP;
 			}
-			/* No sampling frequency attribute for non-pulsed mode */
-			if (data->mode != INV_ICT_MODE_CTRL_REG_MODE_PULSED)
-				data->odr = 0;
 			} else {
 				LOG_ERR("Not supported ATTR value");
 				return -EINVAL;
 			}
-		} else if ((attr == SENSOR_ATTR_SAMPLING_FREQUENCY) && (data->mode == INV_ICT_MODE_CTRL_REG_MODE_PULSED)) {
-			data->odr = ictx53xx_hz_to_reg(val);
+		} else if (attr == SENSOR_ATTR_SAMPLING_FREQUENCY) {
+			data->odr = ictx53xx_hz_to_reg(val->val1);
 			inv_ict_set_odr(&data->driver, data->odr);
 		} else {
 			LOG_ERR("Invalid attribute %d", attr);
@@ -139,24 +129,29 @@ static int ictx53xx_sample_fetch(const struct device *dev,
 	case SENSOR_CHAN_ALL:
 	case SENSOR_CHAN_MAGN_XYZ:
 	case SENSOR_CHAN_AMBIENT_TEMP:
-		ret |= inv_ict_set_mode(&data->driver, INV_ICT_MODE_CTRL_REG_MODE_SINGLE_SHOT);
-		
-		/* Initial sleep waiting the sensor proceeds with the measure = 3050us */
-		k_sleep(K_USEC(ICTX53XX_MEASUREMENT_TIME_US));
-		do {
-			k_sleep(K_USEC(ICTX53XX_MEASUREMENT_EXTRA_TIME_US));
+		if (data->mode == INV_ICT_MODE_CTRL_REG_MODE_PULSED) {
 			ret |= inv_ict_get_data_ready_status(&data->driver, &drdy_status);
-		} while ((drdy_status != 1) && (trials-- > 0));
-	
-		ret |= inv_ict_poll_data(&data->driver, mag_data, &data->temp);
-		data->x = mag_data[0];
-		data->y = mag_data[1];
-		data->z = mag_data[2];
+		} else {
+			ret |= inv_ict_set_mode(&data->driver, INV_ICT_MODE_CTRL_REG_MODE_SINGLE_SHOT);
+			
+			/* Initial sleep waiting the sensor proceeds with the measure = 3050us */
+			k_sleep(K_USEC(ICTX53XX_MEASUREMENT_TIME_US));
+			do {
+				k_sleep(K_USEC(ICTX53XX_MEASUREMENT_EXTRA_TIME_US));
+				ret |= inv_ict_get_data_ready_status(&data->driver, &drdy_status);
+			} while ((drdy_status != 1) && (trials-- > 0));
+		}
 		break;
 	default:
 		return -ENOTSUP;
 	}
 
+	if (drdy_status) {
+		ret |= inv_ict_poll_data(&data->driver, mag_data, &data->temp);
+		data->x = mag_data[0];
+		data->y = mag_data[1];
+		data->z = mag_data[2];
+	}
 	return ret;
 }
 
@@ -205,6 +200,7 @@ static int ictx53xx_channel_get(const struct device *dev, enum sensor_channel ch
 static int ictx53xx_init(const struct device *dev)
 {
 	struct ictx53xx_data *data = (struct ictx53xx_data *)dev->data;
+	const struct ictx53xx_config *cfg = dev->config;
 	inv_ict_serif_t ict_serif;
 	inv_ict_id_t id;
 	int rc = 0;
@@ -246,6 +242,18 @@ static int ictx53xx_init(const struct device *dev)
 		break;
 	}
 
+	/* Apply dt-binding settings */
+	data->odr = ictx53xx_hz_to_reg(cfg->odr_hz);
+	inv_ict_set_odr(&data->driver, data->odr);
+ 
+	data->mode = cfg->mode;
+	inv_ict_set_mode(&data->driver, data->mode);
+	if (data->mode == INV_ICT_MODE_CTRL_REG_MODE_MRM) {
+		inv_ict_set_mrm(&data->driver);
+		/* Force sleep mode at the end of MRN operation */
+		data->mode = INV_ICT_MODE_CTRL_REG_MODE_SLEEP;
+	}
+	
 	LOG_INF("Magnetometer successfully initialized");
 
 	/* successful init, return 0 */
@@ -271,6 +279,8 @@ static DEVICE_API(sensor, ictx53xx_api_funcs) = {
 	RTIO_DEFINE(ictx53xx_rtio_ctx_##inst, 32, 32);          \
 																	\
 	static const struct ictx53xx_config	ictx53xx_config_##inst = {  \
+			.mode = DT_INST_ENUM_IDX(inst, mode),                 \
+			.odr_hz = DT_INST_ENUM_IDX(inst, odr_hz),                 \
 	};                                                            \
 	static struct ictx53xx_data ictx53xx_drv_##inst = {         	 \
 		.mode = INV_ICT_MODE_CTRL_REG_MODE_SLEEP,					\
