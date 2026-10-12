@@ -67,7 +67,7 @@ static void ictx53xx_submit_one_shot(const struct device *dev, struct rtio_iodev
 	uint8_t *buf;
 	uint32_t buf_len;
 	struct ictx53xx_encoded_data *edata;
-	const struct ictx53xx_config *conf = dev->config;
+	struct ictx53xx_data *data = (struct ictx53xx_data *)dev->data;
 
 	err = rtio_sqe_rx_buf(iodev_sqe, min_buf_len, min_buf_len, &buf, &buf_len);
 	if (err < 0 || buf_len < min_buf_len || !buf) {
@@ -87,7 +87,7 @@ static void ictx53xx_submit_one_shot(const struct device *dev, struct rtio_iodev
 
 	struct rtio_sqe *read_sqe;
 
-	err = ictx53xx_i2c_prep_reg_read_rtio_async(&conf->bus, INV_ICT_TEMP_DATA_LSB, edata->readings,
+	err = ictx53xx_i2c_prep_reg_read_rtio_async(&data->bus, INV_ICT_TEMP_DATA_LSB, edata->readings,
 					   sizeof(edata->readings), &read_sqe);
 	if (err < 0) {
 		LOG_ERR("Failed to prepare async read operation");
@@ -96,19 +96,19 @@ static void ictx53xx_submit_one_shot(const struct device *dev, struct rtio_iodev
 	}
 	read_sqe->flags |= RTIO_SQE_CHAINED;
 
-	struct rtio_sqe *complete_sqe = rtio_sqe_acquire(conf->bus.rtio_ctx);
+	struct rtio_sqe *complete_sqe = rtio_sqe_acquire(data->bus.rtio_ctx);
 
 	if (!complete_sqe) {
 		LOG_ERR("Failed to acquire completion SQE");
 		rtio_iodev_sqe_err(iodev_sqe, -ENOMEM);
-		rtio_sqe_drop_all(conf->bus.rtio_ctx);
+		rtio_sqe_drop_all(data->bus.rtio_ctx);
 		return;
 	}
 
 	rtio_sqe_prep_callback_no_cqe(complete_sqe, &ictx53xx_complete_result, (void *)dev,
 				      iodev_sqe);
 
-	rtio_submit(conf->bus.rtio_ctx, 0);
+	rtio_submit(data->bus.rtio_ctx, 0);
 }
 
 void ictx53xx_submit(const struct device *dev, struct rtio_iodev_sqe *iodev_sqe)

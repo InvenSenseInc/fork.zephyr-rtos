@@ -27,7 +27,7 @@
 #define ICTX53XX_MEASUREMENT_EXTRA_TIME_US  51
 
 /* RTIO-specific constants */
-#define ICTX53XX_SHIFT 16 /* Q31 shift for sensor field values */
+#define ICTX53XX_SHIFT 5 /* Q31 shift for sensor field values */
 
 struct ictx53xx_bus {
 	/* for communication to the bus controller */
@@ -35,16 +35,28 @@ struct ictx53xx_bus {
 	struct rtio_iodev *iodev;
 };
 
-struct ictx53xx_config {
-	inv_ict_mode_t mode;
-	int odr_hz;
+struct ictx53xx_decoder_header {
+	uint64_t timestamp;
+	uint8_t drdy;
+} __packed;
+
+struct ictx53xx_encoded_data {
+	struct ictx53xx_decoder_header header;
+	union {
+		uint8_t readings[8]; /* Raw I2C data from registers 0x08-0x0F */
+		struct {
+			int16_t temp;
+			struct {
+				int16_t x;
+				int16_t y;
+				int16_t z;
+			} mag;
+		} __attribute__((__packed__));	
+	};
 };
 
 struct ictx53xx_data {
-	uint16_t x;
-	uint16_t y;
-	uint16_t z;
-	int16_t temp;
+	struct ictx53xx_encoded_data edata;
 	inv_ict_device_t driver;
 	inv_ict_mode_t mode;
 	inv_ict_odr_t odr;
@@ -58,6 +70,10 @@ struct ictx53xx_data {
 	struct ictx53xx_bus bus;
 };
 
+struct ictx53xx_config {
+	inv_ict_mode_t mode;
+	int odr_hz;
+};
 
 static inline uint8_t ictx53xx_hz_to_reg(int val)
 {
@@ -119,29 +135,7 @@ int ictx53xx_reg_write_rtio(const struct ictx53xx_bus *bus, uint8_t reg, const u
 int32_t ictx53xx_convert_mag(int16_t sample);
 int32_t ictx53xx_convert_temp(int16_t sample);
 
-/*
- * RTIO types
- */
-
-struct ictx53xx_decoder_header {
-	uint64_t timestamp;
-} __packed;
-
-struct ictx53xx_encoded_data {
-	struct ictx53xx_decoder_header header;
-	union {
-		uint8_t readings[8]; /* Raw I2C data from registers 0x08-0x0F */
-		struct {
-			int16_t temp;
-			struct {
-				int16_t x;
-				int16_t y;
-				int16_t z;
-			} mag;
-		} __attribute__((__packed__));	
-	};
-};
-
 int ictx53xx_get_decoder(const struct device *dev, const struct sensor_decoder_api **decoder);
+void ictx53xx_submit(const struct device *dev, struct rtio_iodev_sqe *iodev_sqe);
 
 #endif /* ZEPHYR_DRIVERS_SENSOR_ICTX53XX_H_*/

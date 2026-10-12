@@ -9,9 +9,16 @@ static int ictx53xx_decoder_get_frame_count(const uint8_t *buffer,
 					     struct sensor_chan_spec chan_spec,
 					     uint16_t *frame_count)
 {
+	const struct ictx53xx_encoded_data *data = (const struct ictx53xx_encoded_data *)buffer;
+	const struct ictx53xx_decoder_header *header = &data->header;
+	
 	ARG_UNUSED(buffer);
 	if (chan_spec.chan_idx != 0) {
 		return -ENOTSUP;
+	}
+	
+	if (!header->drdy) {
+		return -ENODATA;
 	}
 
 	/* This sensor lacks a FIFO; there will always only be one frame at a time. */
@@ -69,6 +76,9 @@ static int ictx53xx_decoder_decode(const uint8_t *buffer, struct sensor_chan_spe
 
 	if (*fit != 0) {
 		return 0;
+	}
+	if (max_count == 0 || chan_spec.chan_idx != 0) {
+		return -EINVAL;
 	}
 	
 	switch (chan_spec.chan_type) {

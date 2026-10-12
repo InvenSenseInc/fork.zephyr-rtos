@@ -122,6 +122,7 @@ static int ictx53xx_sample_fetch(const struct device *dev,
 	struct ictx53xx_data *data = (struct ictx53xx_data *)dev->data;
 	int drdy_status;
 	int16_t mag_data[3];
+	int16_t temp_data;
 	int8_t trials = 6;
 	int ret = 0;
 
@@ -147,10 +148,12 @@ static int ictx53xx_sample_fetch(const struct device *dev,
 	}
 
 	if (drdy_status) {
-		ret |= inv_ict_poll_data(&data->driver, mag_data, &data->temp);
-		data->x = mag_data[0];
-		data->y = mag_data[1];
-		data->z = mag_data[2];
+		ret |= inv_ict_poll_data(&data->driver, mag_data, &temp_data);
+		data->edata.header.drdy = drdy_status;
+		data->edata.mag.x = mag_data[0];
+		data->edata.mag.y = mag_data[1];
+		data->edata.mag.z = mag_data[2];
+		data->edata.temp = temp_data;
 	}
 	return ret;
 }
@@ -170,26 +173,26 @@ int32_t ictx53xx_convert_temp(int16_t sample)
 static int ictx53xx_channel_get(const struct device *dev, enum sensor_channel chan,
 				struct sensor_value *val)
 {
-	struct ictx53xx_data *data = (struct ictx53xx_data *)dev->data;
+	struct ictx53xx_encoded_data *edata = (struct ictx53xx_encoded_data *)dev->data;
 
 	switch (chan) {
 	case SENSOR_CHAN_MAGN_XYZ:
 		/* Convert raw magnetic data to gauss */
-		sensor_value_from_micro(val, ictx53xx_convert_mag(data->x));
-		sensor_value_from_micro(val + 1, ictx53xx_convert_mag(data->y));
-		sensor_value_from_micro(val + 2, ictx53xx_convert_mag(data->z));
+		sensor_value_from_micro(val, ictx53xx_convert_mag(edata->mag.x));
+		sensor_value_from_micro(val + 1, ictx53xx_convert_mag(edata->mag.y));
+		sensor_value_from_micro(val + 2, ictx53xx_convert_mag(edata->mag.z));
 		break;
 	case SENSOR_CHAN_MAGN_X:
-		sensor_value_from_micro(val, ictx53xx_convert_mag(data->x));
+		sensor_value_from_micro(val, ictx53xx_convert_mag(edata->mag.x));
 		break;
 	case SENSOR_CHAN_MAGN_Y:
-		sensor_value_from_micro(val, ictx53xx_convert_mag(data->y));
+		sensor_value_from_micro(val, ictx53xx_convert_mag(edata->mag.y));
 		break;
 	case SENSOR_CHAN_MAGN_Z:
-		sensor_value_from_micro(val, ictx53xx_convert_mag(data->z));
+		sensor_value_from_micro(val, ictx53xx_convert_mag(edata->mag.z));
 		break;
 	case SENSOR_CHAN_AMBIENT_TEMP:
-		sensor_value_from_micro(val, ictx53xx_convert_temp(data->temp));
+		sensor_value_from_micro(val, ictx53xx_convert_temp(edata->temp));
 		return 0;
 	default:
 		return ENOTSUP;
