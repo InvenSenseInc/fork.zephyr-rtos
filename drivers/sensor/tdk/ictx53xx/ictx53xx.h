@@ -15,6 +15,13 @@
 /* Address value has a read bit */
 #define REG_READ_BIT BIT(7)
 
+/* Sensitivity in nT per LSB */
+#if DT_HAS_INVENSENSE_ICT25349_ENABLED
+  #define ICTX53XX_SENSITIVITY INV_ICT_4_9MT_SENSITIVITY
+#else
+  #define ICTX53XX_SENSITIVITY INV_ICT_2_4MT_SENSITIVITY
+#endif
+
 /* Measurement time */
 #define ICTX53XX_MEASUREMENT_TIME_US        3050
 #define ICTX53XX_MEASUREMENT_EXTRA_TIME_US  51

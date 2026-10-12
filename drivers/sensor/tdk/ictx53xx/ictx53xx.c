@@ -60,7 +60,7 @@ static int ictx53xx_attr_set(const struct device *dev, enum sensor_channel chan,
 			
 			if (data->mode == INV_ICT_MODE_CTRL_REG_MODE_MRM) {
 				inv_ict_set_mrm(&data->driver);
-				/* Force sleep mode at the end of MRN operation */
+				/* Sleep mode is forced at the end of MRN operation */
 				data->mode = INV_ICT_MODE_CTRL_REG_MODE_SLEEP;
 			}
 			} else {
@@ -158,7 +158,7 @@ static int ictx53xx_sample_fetch(const struct device *dev,
 int32_t ictx53xx_convert_mag(int16_t sample)
 {
 	/* ICTx53xx magnetometer sensitivity in nT converted in µG */
-	return ((int32_t)sample * INV_ICT_2_4MT_SENSITIVITY * 10);
+	return ((int32_t)sample * ICTX53XX_SENSITIVITY * 10);
 }
 
 int32_t ictx53xx_convert_temp(int16_t sample)
@@ -250,7 +250,7 @@ static int ictx53xx_init(const struct device *dev)
 	inv_ict_set_mode(&data->driver, data->mode);
 	if (data->mode == INV_ICT_MODE_CTRL_REG_MODE_MRM) {
 		inv_ict_set_mrm(&data->driver);
-		/* Force sleep mode at the end of MRN operation */
+		/* Sleep mode is forced at the end of MRN operation */
 		data->mode = INV_ICT_MODE_CTRL_REG_MODE_SLEEP;
 	}
 	
@@ -295,4 +295,13 @@ static DEVICE_API(sensor, ictx53xx_api_funcs) = {
 		&ictx53xx_api_funcs);
 
 #define DT_DRV_COMPAT invensense_ictx53xx
+#if DT_HAS_COMPAT_STATUS_OKAY(DT_DRV_COMPAT)
 DT_INST_FOREACH_STATUS_OKAY(ICTX53XX_DEFINE)
+#endif
+#undef DT_DRV_COMPAT
+
+#define DT_DRV_COMPAT invensense_ict25349
+#if DT_HAS_COMPAT_STATUS_OKAY(DT_DRV_COMPAT)
+DT_INST_FOREACH_STATUS_OKAY(ICTX53XX_DEFINE)
+#endif
+#undef DT_DRV_COMPAT
