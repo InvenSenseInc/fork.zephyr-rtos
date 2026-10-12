@@ -18,6 +18,10 @@
 /* Measurement time */
 #define ICTX53XX_MEASUREMENT_TIME_US        3050
 #define ICTX53XX_MEASUREMENT_EXTRA_TIME_US  51
+
+/* RTIO-specific constants */
+#define ICTX53XX_SHIFT 16 /* Q31 shift for sensor field values */
+
 struct ictx53xx_bus {
 	/* for communication to the bus controller */
 	struct rtio *rtio_ctx;
@@ -25,7 +29,6 @@ struct ictx53xx_bus {
 };
 
 struct ictx53xx_config {
-	uint32_t sens;
 };
 
 struct ictx53xx_data {
@@ -46,11 +49,7 @@ struct ictx53xx_data {
 	struct ictx53xx_bus bus;
 };
 
-int ictx53xx_prep_reg_read_rtio_async(const struct ictx53xx_bus *bus, uint8_t reg, uint8_t *buf,
-				      size_t size, struct rtio_sqe **out);
 
-int ictx53xx_prep_reg_write_rtio_async(const struct ictx53xx_bus *bus, uint8_t reg, const uint8_t *buf,
-				      size_t size, struct rtio_sqe **out);
 static inline uint8_t ictx53xx_hz_to_reg(const struct sensor_value *val)
 {
 	if (val->val1 >= 320) {
@@ -72,7 +71,6 @@ static inline uint8_t ictx53xx_hz_to_reg(const struct sensor_value *val)
 	}
 }
 
-int ictx53xx_reg_read_rtio(const struct ictx53xx_bus *bus, uint8_t start, uint8_t *buf, int size);
 static inline void ictx53xx_reg_to_hz(uint8_t reg, struct sensor_value *val)
 {
 	val->val1 = 0;
@@ -102,6 +100,39 @@ static inline void ictx53xx_reg_to_hz(uint8_t reg, struct sensor_value *val)
 	}
 }
 
+int ictx53xx_i2c_prep_reg_read_rtio_async(const struct ictx53xx_bus *bus, uint8_t reg, uint8_t *buf,
+				      size_t size, struct rtio_sqe **out);
+int ictx53xx_i2c_prep_reg_write_rtio_async(const struct ictx53xx_bus *bus, uint8_t reg, const uint8_t *buf,
+				       size_t size, struct rtio_sqe **out);
+int ictx53xx_reg_read_rtio(const struct ictx53xx_bus *bus, uint8_t start, uint8_t *buf, int size);
 int ictx53xx_reg_write_rtio(const struct ictx53xx_bus *bus, uint8_t reg, const uint8_t *buf, int size);
+
+int32_t ictx53xx_convert_mag(int16_t sample);
+int32_t ictx53xx_convert_temp(int16_t sample);
+
+/*
+ * RTIO types
+ */
+
+struct ictx53xx_decoder_header {
+	uint64_t timestamp;
+} __packed;
+
+struct ictx53xx_encoded_data {
+	struct ictx53xx_decoder_header header;
+	union {
+		uint8_t readings[8]; /* Raw I2C data from registers 0x08-0x0F */
+		struct {
+			int16_t temp;
+			struct {
+				int16_t x;
+				int16_t y;
+				int16_t z;
+			} mag;
+		} __attribute__((__packed__));	
+	};
+};
+
+int ictx53xx_get_decoder(const struct device *dev, const struct sensor_decoder_api **decoder);
 
 #endif /* ZEPHYR_DRIVERS_SENSOR_ICTX53XX_H_*/

@@ -60,6 +60,13 @@ static int ictx53xx_attr_set(const struct device *dev, enum sensor_channel chan,
 			
 			if (data->mode == INV_ICT_MODE_CTRL_REG_MODE_MRM) {
 				inv_ict_set_mrm(&data->driver);
+					// inv_ict_set_mode(&data->driver, INV_ICT_MODE_CTRL_REG_MODE_SLEEP);
+					// inv_ict_set_temperature_mode(&data->driver, INV_ICT_CHIP_CONFIG_REG_TEMP_SEL_RAW);
+					// uint8_t rbuffer, wbuffer = 0;
+					// inv_ict_write_reg(&data->driver.serif, 0, &wbuffer, 1);
+					// k_usleep(5000);
+					// inv_ict_read_reg(&data->driver.serif, INV_ICT_CHIP_CONFIG_REG, &rbuffer, 1);
+					// LOG_INF("> Read INV_ICT_CHIP_CONFIG_REG = 0x%x", rbuffer);
 				/* Force sleep mode at the end of MRN operation */
 				data->mode = INV_ICT_MODE_CTRL_REG_MODE_SLEEP;
 			}
@@ -153,50 +160,42 @@ static int ictx53xx_sample_fetch(const struct device *dev,
 	return ret;
 }
 
-static void ictx53xx_convert_mag(uint32_t sensitivity, struct sensor_value *val, int16_t sample)
+int32_t ictx53xx_convert_mag(int16_t sample)
 {
-	/* ICTx53xx magnetometer sensitivity */
-	int32_t conv_val = (int32_t)sample * sensitivity;
-
-	/* Magnetic field is expressed in Gauss 1Gs = 10^-4 Tesla = 10^5 nT */
-	val->val1 = conv_val / 100000;
-	val->val2 = (conv_val % 100000) * 10;
+	/* ICTx53xx magnetometer sensitivity in nT converted in µG */
+	return ((int32_t)sample * INV_ICT_2_4MT_SENSITIVITY * 10);
 }
 
-static void ictx53xx_convert_temp(struct sensor_value *val, int16_t sample)
+int32_t ictx53xx_convert_temp(int16_t sample)
 {
-	/* Convert temp to C (degC = lsb * 6.25 / 1000 + 25) */
-	int32_t conv_val = (int32_t)sample * 625 / 100 + 25000;
-
-	val->val1 = conv_val / 1000;
-	val->val2 = (conv_val % 1000) * 1000;
+	/* Convert to microcelsius */
+	return ((int32_t)sample * 6250 + 25000000);
 }
 
 static int ictx53xx_channel_get(const struct device *dev, enum sensor_channel chan,
 				struct sensor_value *val)
 {
 	struct ictx53xx_data *data = (struct ictx53xx_data *)dev->data;
-	const struct ictx53xx_config *cfg = dev->config;
-
 
 	switch (chan) {
 	case SENSOR_CHAN_MAGN_XYZ:
-		ictx53xx_convert_mag(cfg->sens, val, data->x);
-		ictx53xx_convert_mag(cfg->sens, val + 1, data->y);
-		ictx53xx_convert_mag(cfg->sens, val + 2, data->z);
+		/* Convert raw magnetic data to gauss */
+		sensor_value_from_micro(val, ictx53xx_convert_mag(data->x));
+		sensor_value_from_micro(val + 1, ictx53xx_convert_mag(data->y));
+		sensor_value_from_micro(val + 2, ictx53xx_convert_mag(data->z));
 		break;
 	case SENSOR_CHAN_MAGN_X:
-		ictx53xx_convert_mag(cfg->sens, val, data->x);
+		sensor_value_from_micro(val, ictx53xx_convert_mag(data->x));
 		break;
 	case SENSOR_CHAN_MAGN_Y:
-		ictx53xx_convert_mag(cfg->sens, val, data->y);
+		sensor_value_from_micro(val, ictx53xx_convert_mag(data->y));
 		break;
 	case SENSOR_CHAN_MAGN_Z:
-		ictx53xx_convert_mag(cfg->sens, val, data->z);
+		sensor_value_from_micro(val, ictx53xx_convert_mag(data->z));
 		break;
 	case SENSOR_CHAN_AMBIENT_TEMP:
-		ictx53xx_convert_temp(val, data->temp);
-		break;
+		sensor_value_from_micro(val, ictx53xx_convert_temp(data->temp));
+		return 0;
 	default:
 		return ENOTSUP;
 	}
@@ -267,12 +266,11 @@ static DEVICE_API(sensor, ictx53xx_api_funcs) = {
 /*
  * Main instantiation macro
  */
-#define ICTX53XX_DEFINE(inst, sensitivity)          \
+#define ICTX53XX_DEFINE(inst)          \
 	I2C_DT_IODEV_DEFINE(ictx53xx_bus_##inst, DT_DRV_INST(inst));   \
 	RTIO_DEFINE(ictx53xx_rtio_ctx_##inst, 32, 32);          \
 																	\
 	static const struct ictx53xx_config	ictx53xx_config_##inst = {  \
-		.sens = sensitivity,                                 \
 	};                                                            \
 	static struct ictx53xx_data ictx53xx_drv_##inst = {         	 \
 		.mode = INV_ICT_MODE_CTRL_REG_MODE_SLEEP,					\
@@ -287,4 +285,4 @@ static DEVICE_API(sensor, ictx53xx_api_funcs) = {
 		&ictx53xx_api_funcs);
 
 #define DT_DRV_COMPAT invensense_ictx53xx
-DT_INST_FOREACH_STATUS_OKAY_VARGS(ICTX53XX_DEFINE, INV_ICT_2_4MT_SENSITIVITY)
+DT_INST_FOREACH_STATUS_OKAY(ICTX53XX_DEFINE)
