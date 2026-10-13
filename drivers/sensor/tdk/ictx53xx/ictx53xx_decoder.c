@@ -82,7 +82,10 @@ static int ictx53xx_decoder_decode(const uint8_t *buffer, struct sensor_chan_spe
 	if (max_count == 0 || chan_spec.chan_idx != 0) {
 		return -EINVAL;
 	}
-	
+	if (!edata->header.has_data) {
+		return -ENODATA;
+	}
+
 	switch (chan_spec.chan_type) {
 	case SENSOR_CHAN_MAGN_X: {
 		struct sensor_q31_data *out = data_out;

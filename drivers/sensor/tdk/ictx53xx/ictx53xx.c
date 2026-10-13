@@ -54,15 +54,16 @@ static int ictx53xx_attr_set(const struct device *dev, enum sensor_channel chan,
 	case SENSOR_CHAN_MAGN_XYZ:
 		if (attr == SENSOR_ATTR_CONFIGURATION) {
 			if ((val->val1 == INV_ICT_MODE_CTRL_REG_MODE_SLEEP) || (val->val1 == INV_ICT_MODE_CTRL_REG_MODE_PULSED)
-					|| (val->val1 == INV_ICT_MODE_CTRL_REG_MODE_SINGLE_SHOT) || (val->val1 == INV_ICT_MODE_CTRL_REG_MODE_MRM)) {
-			data->mode = val->val1;
-			inv_ict_set_mode(&data->driver, data->mode);
-			
-			if (data->mode == INV_ICT_MODE_CTRL_REG_MODE_MRM) {
+						|| (val->val1 == INV_ICT_MODE_CTRL_REG_MODE_SINGLE_SHOT)) {
+				data->mode = val->val1;
+				inv_ict_set_mode(&data->driver, data->mode);
+			} else if (data->mode == INV_ICT_MODE_CTRL_REG_MODE_MRM) {
+				/* Ensure Sleep mode before setting MRM */
+				inv_ict_set_mode(&data->driver, INV_ICT_MODE_CTRL_REG_MODE_SLEEP);
+				/* MRM enables magnetic reset of TMR sensor element with a pulsed current. */
 				inv_ict_set_mrm(&data->driver);
 				/* Sleep mode is forced at the end of MRN operation */
 				data->mode = INV_ICT_MODE_CTRL_REG_MODE_SLEEP;
-			}
 			} else {
 				LOG_ERR("Not supported ATTR value");
 				return -EINVAL;

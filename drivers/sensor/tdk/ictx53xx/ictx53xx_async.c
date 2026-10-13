@@ -40,6 +40,8 @@ void ictx53xx_complete_cb(struct rtio *rtio_ctx, const struct rtio_sqe *sqe, int
 
 	struct rtio_iodev_sqe *parent_iodev_sqe = (struct rtio_iodev_sqe *)arg0;
 	struct rtio_sqe *parent_sqe = &parent_iodev_sqe->sqe;
+	struct ictx53xx_encoded_data *edata =
+		(struct ictx53xx_encoded_data *)(parent_sqe->rx.buf);
 
 	int rc = ictx53xx_flush_cqes(rtio_ctx);
 	if (rc != 0) {
@@ -47,6 +49,7 @@ void ictx53xx_complete_cb(struct rtio *rtio_ctx, const struct rtio_sqe *sqe, int
 		return;
 	}
 
+	edata->header.has_data = 1;
 	rtio_iodev_sqe_ok(parent_iodev_sqe, 0);
 }
 
@@ -144,6 +147,7 @@ void ictx53xx_after_start_cb(struct rtio *rtio_ctx, const struct rtio_sqe *sqe,
 	/* save information for the work item */
 	data->work_ctx.timestamp = sensor_clock_cycles_to_ns(cycles);
 	data->work_ctx.iodev_sqe = iodev_sqe;
+	data->edata.header.has_data = 0;
 
 	rc = ictx53xx_flush_cqes(data->bus.rtio_ctx);
 	if (rc != 0) {
@@ -172,7 +176,7 @@ static void ictx53xx_submit_one_shot(const struct device *dev, struct rtio_iodev
 	if (wait_count >= 0 && cb_sqe != NULL) {
 		rtio_sqe_prep_callback_no_cqe(cb_sqe, ictx53xx_after_start_cb, (void *)iodev_sqe,
 					      NULL);
-		/* The device returns to power-down mode after a single measurement */
+		/* The device returns to power-down mode after a single-shot measurement */
 		data->mode = INV_ICT_MODE_CTRL_REG_MODE_SLEEP;
 		rtio_submit(data->bus.rtio_ctx, wait_count);
 	} else {

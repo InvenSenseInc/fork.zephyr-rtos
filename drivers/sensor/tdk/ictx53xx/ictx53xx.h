@@ -38,6 +38,7 @@ struct ictx53xx_bus {
 struct ictx53xx_decoder_header {
 	uint64_t timestamp;
 	uint8_t channels;
+	uint8_t has_data;
 } __packed;
 
 struct ictx53xx_encoded_data {
@@ -135,9 +136,11 @@ int ictx53xx_reg_write_rtio(const struct ictx53xx_bus *bus, uint8_t reg, const u
 int32_t ictx53xx_convert_mag(int16_t sample);
 int32_t ictx53xx_convert_temp(int16_t sample);
 
+#ifdef CONFIG_SENSOR_ASYNC_API
 int ictx53xx_get_decoder(const struct device *dev, const struct sensor_decoder_api **decoder);
 void ictx53xx_submit(const struct device *dev, struct rtio_iodev_sqe *iodev_sqe);
 void ictx53xx_async_fetch(struct k_work *work);
 uint8_t ictx53xx_encode_channel(enum sensor_channel chan);
+#endif
 
 #endif /* ZEPHYR_DRIVERS_SENSOR_ICTX53XX_H_*/
