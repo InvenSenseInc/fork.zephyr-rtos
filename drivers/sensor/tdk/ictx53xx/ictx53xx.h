@@ -27,7 +27,7 @@
 #define ICTX53XX_MEASUREMENT_EXTRA_TIME_US  51
 
 /* RTIO-specific constants */
-#define ICTX53XX_SHIFT 5 /* Q31 shift for sensor field values */
+#define ICTX53XX_SHIFT 16 /* Q31 shift for sensor field values */
 
 struct ictx53xx_bus {
 	/* for communication to the bus controller */
@@ -37,7 +37,7 @@ struct ictx53xx_bus {
 
 struct ictx53xx_decoder_header {
 	uint64_t timestamp;
-	uint8_t drdy;
+	uint8_t channels;
 } __packed;
 
 struct ictx53xx_encoded_data {
@@ -138,5 +138,6 @@ int32_t ictx53xx_convert_temp(int16_t sample);
 int ictx53xx_get_decoder(const struct device *dev, const struct sensor_decoder_api **decoder);
 void ictx53xx_submit(const struct device *dev, struct rtio_iodev_sqe *iodev_sqe);
 void ictx53xx_async_fetch(struct k_work *work);
+uint8_t ictx53xx_encode_channel(enum sensor_channel chan);
 
 #endif /* ZEPHYR_DRIVERS_SENSOR_ICTX53XX_H_*/

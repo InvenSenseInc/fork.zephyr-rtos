@@ -40,8 +40,6 @@ void ictx53xx_complete_cb(struct rtio *rtio_ctx, const struct rtio_sqe *sqe, int
 
 	struct rtio_iodev_sqe *parent_iodev_sqe = (struct rtio_iodev_sqe *)arg0;
 	struct rtio_sqe *parent_sqe = &parent_iodev_sqe->sqe;
-	struct ictx53xx_encoded_data *edata =
-		(struct ictx53xx_encoded_data *)(parent_sqe->rx.buf);
 
 	int rc = ictx53xx_flush_cqes(rtio_ctx);
 	if (rc != 0) {
@@ -49,8 +47,34 @@ void ictx53xx_complete_cb(struct rtio *rtio_ctx, const struct rtio_sqe *sqe, int
 		return;
 	}
 
-	edata->header.drdy = 1;
 	rtio_iodev_sqe_ok(parent_iodev_sqe, 0);
+}
+
+uint8_t ictx53xx_encode_channel(enum sensor_channel chan)
+{
+	uint8_t encode_bmask = 0;
+
+	switch (chan) {
+	case SENSOR_CHAN_AMBIENT_TEMP:
+		encode_bmask = BIT(0);
+		break;
+	case SENSOR_CHAN_MAGN_X:
+		encode_bmask = BIT(1);
+		break;
+	case SENSOR_CHAN_MAGN_Y:
+		encode_bmask = BIT(2);
+		break;
+	case SENSOR_CHAN_MAGN_Z:
+		encode_bmask = BIT(3);
+		break;
+	case SENSOR_CHAN_MAGN_XYZ:
+		encode_bmask = BIT(1) | BIT(2) | BIT(3);
+		break;
+	default:
+		break;
+	}
+
+	return encode_bmask;
 }
 
 void ictx53xx_async_fetch(struct k_work *work)
@@ -59,6 +83,8 @@ void ictx53xx_async_fetch(struct k_work *work)
 	struct ictx53xx_async_fetch_ctx *ctx =
 		CONTAINER_OF(dwork, struct ictx53xx_async_fetch_ctx, async_fetch_work);
 	const struct sensor_read_config *cfg = ctx->iodev_sqe->sqe.iodev->data;
+	const struct sensor_chan_spec *const channels = cfg->channels;
+	const size_t num_channels = cfg->count;
 	const struct device *dev = cfg->sensor;
 	struct ictx53xx_data *data = dev->data;
 	uint32_t req_buf_len = sizeof(struct ictx53xx_encoded_data);
@@ -76,6 +102,10 @@ void ictx53xx_async_fetch(struct k_work *work)
 	}
 	edata = (struct ictx53xx_encoded_data *)buf;
 	edata->header.timestamp = ctx->timestamp;
+	edata->header.channels = 0;
+	for (size_t i = 0; i < num_channels; i++) {
+		edata->header.channels |= ictx53xx_encode_channel(channels[i].chan_type);
+	}
 
 	wait_count = ictx53xx_i2c_prep_reg_read_rtio_async(&data->bus, INV_ICT_TEMP_DATA_LSB,
 					     edata->readings, sizeof(edata->readings), NULL);
@@ -122,7 +152,7 @@ void ictx53xx_after_start_cb(struct rtio *rtio_ctx, const struct rtio_sqe *sqe,
 	}
 
 	rc = k_work_schedule(&data->work_ctx.async_fetch_work, 
-			K_USEC(ICTX53XX_MEASUREMENT_TIME_US + ICTX53XX_MEASUREMENT_EXTRA_TIME_US));
+			K_USEC(ICTX53XX_MEASUREMENT_TIME_US + 6*ICTX53XX_MEASUREMENT_EXTRA_TIME_US));
 	if (rc == 0) {
 		LOG_ERR("The last fetch has not finished yet. "
 			"Try again later when the last sensor read operation has finished.");

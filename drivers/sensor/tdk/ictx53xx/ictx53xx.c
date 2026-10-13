@@ -149,7 +149,6 @@ static int ictx53xx_sample_fetch(const struct device *dev,
 
 	if (drdy_status) {
 		ret |= inv_ict_poll_data(&data->driver, mag_data, &temp_data);
-		data->edata.header.drdy = drdy_status;
 		data->edata.mag.x = mag_data[0];
 		data->edata.mag.y = mag_data[1];
 		data->edata.mag.z = mag_data[2];
