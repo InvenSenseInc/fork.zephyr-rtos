@@ -256,6 +256,11 @@ static int ictx53xx_init(const struct device *dev)
 		/* Sleep mode is forced at the end of MRN operation */
 		data->mode = INV_ICT_MODE_CTRL_REG_MODE_SLEEP;
 	}
+
+#ifdef CONFIG_SENSOR_ASYNC_API
+	/* init work for fetching after measurement has completed */
+	k_work_init_delayable(&data->work_ctx.async_fetch_work, ictx53xx_async_fetch);
+#endif
 	
 	LOG_INF("Magnetometer successfully initialized");
 
@@ -269,8 +274,8 @@ static DEVICE_API(sensor, ictx53xx_api_funcs) = {
 	.attr_set = ictx53xx_attr_set,
 	.attr_get = ictx53xx_attr_get,
 #if defined(CONFIG_SENSOR_ASYNC_API)
-	// .get_decoder = ictx53xx_get_decoder,
-	// .submit = ictx53xx_submit,
+	.get_decoder = ictx53xx_get_decoder,
+	.submit = ictx53xx_submit,
 #endif /* CONFIG_SENSOR_ASYNC_API */
 };
 

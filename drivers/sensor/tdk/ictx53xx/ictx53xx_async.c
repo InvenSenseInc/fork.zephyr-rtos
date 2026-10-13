@@ -8,107 +8,147 @@
 
 #include <zephyr/drivers/sensor_clock.h>
 #include <zephyr/sys/check.h>
+#include <zephyr/rtio/rtio.h>
 
 #include "ictx53xx.h"
 
 #include <zephyr/logging/log.h>
 LOG_MODULE_REGISTER(ICTX53XX_ASYNC, CONFIG_SENSOR_LOG_LEVEL);
 
-static void ictx53xx_complete_result(struct rtio *ctx, const struct rtio_sqe *sqe, int result,
-				     void *arg)
+static int ictx53xx_flush_cqes(struct rtio *rtio_ctx)
 {
-	ARG_UNUSED(result);
-	struct rtio_iodev_sqe *iodev_sqe = (struct rtio_iodev_sqe *)sqe->userdata;
+	/* Flush completions */
 	struct rtio_cqe *cqe;
-	int err = 0;
+	int res = 0;
 
 	do {
-		cqe = rtio_cqe_consume(ctx);
+		cqe = rtio_cqe_consume(rtio_ctx);
 		if (cqe != NULL) {
-			err = cqe->result;
-			rtio_cqe_release(ctx, cqe);
+			if ((cqe->result < 0 && res == 0)) {
+				LOG_ERR("Bus error: %d", cqe->result);
+				res = cqe->result;
+			}
+			rtio_cqe_release(rtio_ctx, cqe);
 		}
 	} while (cqe != NULL);
-
-	if (err != 0) {
-		rtio_iodev_sqe_err(iodev_sqe, err);
-	} else {
-		rtio_iodev_sqe_ok(iodev_sqe, 0);
-	}
+	return res;
 }
 
-int ictx53xx_encode(const struct device *dev, const struct sensor_read_config *read_config,
-		    uint8_t trigger_status, uint8_t *buf)
+void ictx53xx_complete_cb(struct rtio *rtio_ctx, const struct rtio_sqe *sqe, int result, void *arg0)
 {
-	struct ictx53xx_encoded_data *edata = (struct ictx53xx_encoded_data *)buf;
-	uint64_t cycles;
-	int err;
+	ARG_UNUSED(result);
 
-	ARG_UNUSED(dev);
-	ARG_UNUSED(trigger_status);
+	struct rtio_iodev_sqe *parent_iodev_sqe = (struct rtio_iodev_sqe *)arg0;
+	struct rtio_sqe *parent_sqe = &parent_iodev_sqe->sqe;
+	struct ictx53xx_encoded_data *edata =
+		(struct ictx53xx_encoded_data *)(parent_sqe->rx.buf);
 
-	/* Get timestamp */
-	err = sensor_clock_get_cycles(&cycles);
-	if (err != 0) {
-		return err;
+	int rc = ictx53xx_flush_cqes(rtio_ctx);
+	if (rc != 0) {
+		rtio_iodev_sqe_err(parent_iodev_sqe, rc);
+		return;
 	}
 
-	edata->header.timestamp = sensor_clock_cycles_to_ns(cycles);
-
-	return 0;
+	edata->header.drdy = 1;
+	rtio_iodev_sqe_ok(parent_iodev_sqe, 0);
 }
 
+void ictx53xx_async_fetch(struct k_work *work)
+{
+	struct k_work_delayable *dwork = k_work_delayable_from_work(work);
+	struct ictx53xx_async_fetch_ctx *ctx =
+		CONTAINER_OF(dwork, struct ictx53xx_async_fetch_ctx, async_fetch_work);
+	const struct sensor_read_config *cfg = ctx->iodev_sqe->sqe.iodev->data;
+	const struct device *dev = cfg->sensor;
+	struct ictx53xx_data *data = dev->data;
+	uint32_t req_buf_len = sizeof(struct ictx53xx_encoded_data);
+	uint32_t buf_len;
+	uint8_t *buf;
+	struct ictx53xx_encoded_data *edata;
+	int rc, wait_count;
+
+	/* Get the buffer for the frame, it may be allocated dynamically by the rtio context */
+	rc = rtio_sqe_rx_buf(ctx->iodev_sqe, req_buf_len, req_buf_len, &buf, &buf_len);
+	if (rc != 0) {
+		LOG_ERR("Failed to get a read buffer of size %u bytes", req_buf_len);
+		rtio_iodev_sqe_err(ctx->iodev_sqe, rc);
+		return;
+	}
+	edata = (struct ictx53xx_encoded_data *)buf;
+	edata->header.timestamp = ctx->timestamp;
+
+	wait_count = ictx53xx_i2c_prep_reg_read_rtio_async(&data->bus, INV_ICT_TEMP_DATA_LSB,
+					     edata->readings, sizeof(edata->readings), NULL);
+						 
+	struct rtio_sqe *cb_sqe = rtio_sqe_acquire(data->bus.rtio_ctx);
+	if (wait_count < 0 || cb_sqe == NULL) {
+		rtio_sqe_drop_all(data->bus.rtio_ctx);
+		rtio_iodev_sqe_err(ctx->iodev_sqe, -ENOMEM);
+		return;
+	}
+
+	rtio_sqe_prep_callback_no_cqe(cb_sqe, ictx53xx_complete_cb, (void *)ctx->iodev_sqe, NULL);
+	rtio_submit(data->bus.rtio_ctx, wait_count);
+}
+
+void ictx53xx_after_start_cb(struct rtio *rtio_ctx, const struct rtio_sqe *sqe,
+			     int result, void *arg0)
+{
+	ARG_UNUSED(result);
+
+	const struct rtio_iodev_sqe *parent_iodev_sqe = (struct rtio_iodev_sqe *)arg0;
+	const struct sensor_read_config *cfg = parent_iodev_sqe->sqe.iodev->data;
+	const struct device *dev = cfg->sensor;
+	struct ictx53xx_data *data = dev->data;
+	struct rtio_iodev_sqe *iodev_sqe = (struct rtio_iodev_sqe *)arg0;
+	uint64_t cycles;
+	int rc;
+
+	rc = sensor_clock_get_cycles(&cycles);
+	if (rc != 0) {
+		LOG_ERR("Failed to get sensor clock cycles");
+		rtio_iodev_sqe_err(iodev_sqe, rc);
+		return;
+	}
+
+	/* save information for the work item */
+	data->work_ctx.timestamp = sensor_clock_cycles_to_ns(cycles);
+	data->work_ctx.iodev_sqe = iodev_sqe;
+
+	rc = ictx53xx_flush_cqes(data->bus.rtio_ctx);
+	if (rc != 0) {
+		rtio_iodev_sqe_err(iodev_sqe, rc);
+		return;
+	}
+
+	rc = k_work_schedule(&data->work_ctx.async_fetch_work, 
+			K_USEC(ICTX53XX_MEASUREMENT_TIME_US + ICTX53XX_MEASUREMENT_EXTRA_TIME_US));
+	if (rc == 0) {
+		LOG_ERR("The last fetch has not finished yet. "
+			"Try again later when the last sensor read operation has finished.");
+		rtio_iodev_sqe_err(iodev_sqe, -EBUSY);
+	}
+	return;
+}
 
 static void ictx53xx_submit_one_shot(const struct device *dev, struct rtio_iodev_sqe *iodev_sqe)
 {
-	const struct sensor_read_config *cfg = iodev_sqe->sqe.iodev->data;
-	uint32_t min_buf_len = sizeof(struct ictx53xx_encoded_data);
-	int err;
-	uint8_t *buf;
-	uint32_t buf_len;
-	struct ictx53xx_encoded_data *edata;
 	struct ictx53xx_data *data = (struct ictx53xx_data *)dev->data;
-
-	err = rtio_sqe_rx_buf(iodev_sqe, min_buf_len, min_buf_len, &buf, &buf_len);
-	if (err < 0 || buf_len < min_buf_len || !buf) {
-		LOG_ERR("Failed to get a read buffer of size %u bytes", min_buf_len);
-		rtio_iodev_sqe_err(iodev_sqe, err);
-		return;
-	}
-
-	edata = (struct ictx53xx_encoded_data *)buf;
-
-	err = ictx53xx_encode(dev, cfg, 0, buf);
-	if (err != 0) {
-		LOG_ERR("Failed to encode sensor data");
-		rtio_iodev_sqe_err(iodev_sqe, err);
-		return;
-	}
-
-	struct rtio_sqe *read_sqe;
-
-	err = ictx53xx_i2c_prep_reg_read_rtio_async(&data->bus, INV_ICT_TEMP_DATA_LSB, edata->readings,
-					   sizeof(edata->readings), &read_sqe);
-	if (err < 0) {
-		LOG_ERR("Failed to prepare async read operation");
-		rtio_iodev_sqe_err(iodev_sqe, err);
-		return;
-	}
-	read_sqe->flags |= RTIO_SQE_CHAINED;
-
-	struct rtio_sqe *complete_sqe = rtio_sqe_acquire(data->bus.rtio_ctx);
-
-	if (!complete_sqe) {
-		LOG_ERR("Failed to acquire completion SQE");
-		rtio_iodev_sqe_err(iodev_sqe, -ENOMEM);
+	uint8_t val = INV_ICT_MODE_CTRL_REG_MODE_SINGLE_SHOT;
+	
+	int wait_count = ictx53xx_i2c_prep_reg_write_rtio_async(&data->bus, INV_ICT_MODE_CTRL_REG,
+			&val, sizeof(val), NULL);
+	struct rtio_sqe *cb_sqe = rtio_sqe_acquire(data->bus.rtio_ctx);
+	if (wait_count >= 0 && cb_sqe != NULL) {
+		rtio_sqe_prep_callback_no_cqe(cb_sqe, ictx53xx_after_start_cb, (void *)iodev_sqe,
+					      NULL);
+		/* The device returns to power-down mode after a single measurement */
+		data->mode = INV_ICT_MODE_CTRL_REG_MODE_SLEEP;
+		rtio_submit(data->bus.rtio_ctx, wait_count);
+	} else {
 		rtio_sqe_drop_all(data->bus.rtio_ctx);
-		return;
+		rtio_iodev_sqe_err(iodev_sqe, -ENOMEM);
 	}
-
-	rtio_sqe_prep_callback_no_cqe(complete_sqe, &ictx53xx_complete_result, (void *)dev,
-				      iodev_sqe);
-
-	rtio_submit(data->bus.rtio_ctx, 0);
 }
 
 void ictx53xx_submit(const struct device *dev, struct rtio_iodev_sqe *iodev_sqe)

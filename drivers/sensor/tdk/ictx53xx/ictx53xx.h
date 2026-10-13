@@ -137,5 +137,6 @@ int32_t ictx53xx_convert_temp(int16_t sample);
 
 int ictx53xx_get_decoder(const struct device *dev, const struct sensor_decoder_api **decoder);
 void ictx53xx_submit(const struct device *dev, struct rtio_iodev_sqe *iodev_sqe);
+void ictx53xx_async_fetch(struct k_work *work);
 
 #endif /* ZEPHYR_DRIVERS_SENSOR_ICTX53XX_H_*/
