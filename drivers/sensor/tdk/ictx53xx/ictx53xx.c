@@ -158,10 +158,10 @@ static int ictx53xx_sample_fetch(const struct device *dev,
 	return ret;
 }
 
-int32_t ictx53xx_convert_mag(int16_t sample)
+int32_t ictx53xx_convert_mag(uint8_t sensitivity_nt_per_lsb, int16_t sample)
 {
 	/* ICTx53xx magnetometer sensitivity in nT converted in µG */
-	return ((int32_t)sample * ICTX53XX_SENSITIVITY * 10);
+	return ((int32_t)sample * sensitivity_nt_per_lsb * 10);
 }
 
 int32_t ictx53xx_convert_temp(int16_t sample)
@@ -178,18 +178,18 @@ static int ictx53xx_channel_get(const struct device *dev, enum sensor_channel ch
 	switch (chan) {
 	case SENSOR_CHAN_MAGN_XYZ:
 		/* Convert raw magnetic data to gauss */
-		sensor_value_from_micro(val, ictx53xx_convert_mag(edata->mag.x));
-		sensor_value_from_micro(val + 1, ictx53xx_convert_mag(edata->mag.y));
-		sensor_value_from_micro(val + 2, ictx53xx_convert_mag(edata->mag.z));
+		sensor_value_from_micro(val, ictx53xx_convert_mag(edata->header.sensitivity, edata->mag.x));
+		sensor_value_from_micro(val + 1, ictx53xx_convert_mag(edata->header.sensitivity, edata->mag.y));
+		sensor_value_from_micro(val + 2, ictx53xx_convert_mag(edata->header.sensitivity, edata->mag.z));
 		break;
 	case SENSOR_CHAN_MAGN_X:
-		sensor_value_from_micro(val, ictx53xx_convert_mag(edata->mag.x));
+		sensor_value_from_micro(val, ictx53xx_convert_mag(edata->header.sensitivity, edata->mag.x));
 		break;
 	case SENSOR_CHAN_MAGN_Y:
-		sensor_value_from_micro(val, ictx53xx_convert_mag(edata->mag.y));
+		sensor_value_from_micro(val, ictx53xx_convert_mag(edata->header.sensitivity, edata->mag.y));
 		break;
 	case SENSOR_CHAN_MAGN_Z:
-		sensor_value_from_micro(val, ictx53xx_convert_mag(edata->mag.z));
+		sensor_value_from_micro(val, ictx53xx_convert_mag(edata->header.sensitivity, edata->mag.z));
 		break;
 	case SENSOR_CHAN_AMBIENT_TEMP:
 		sensor_value_from_micro(val, ictx53xx_convert_temp(edata->temp));
@@ -231,12 +231,15 @@ static int ictx53xx_init(const struct device *dev)
 
 	switch (id) {
 	case ICT1531X:
+		data->edata.header.sensitivity = INV_ICT_2_4MT_SENSITIVITY;
 		LOG_INF("> ICT1531X detected");
 		break;
 	case ICT25324:
+		data->edata.header.sensitivity = INV_ICT_2_4MT_SENSITIVITY;
 		LOG_INF("> ICT25324 detected");
 		break;
 	case ICT25349:
+		data->edata.header.sensitivity = INV_ICT_4_9MT_SENSITIVITY;
 		LOG_INF("> ICT25349 detected");
 		break;
 	default:
@@ -303,13 +306,6 @@ static DEVICE_API(sensor, ictx53xx_api_funcs) = {
 		&ictx53xx_api_funcs);
 
 #define DT_DRV_COMPAT invensense_ictx53xx
-#if DT_HAS_COMPAT_STATUS_OKAY(DT_DRV_COMPAT)
 DT_INST_FOREACH_STATUS_OKAY(ICTX53XX_DEFINE)
-#endif
-#undef DT_DRV_COMPAT
 
-#define DT_DRV_COMPAT invensense_ict25349
-#if DT_HAS_COMPAT_STATUS_OKAY(DT_DRV_COMPAT)
-DT_INST_FOREACH_STATUS_OKAY(ICTX53XX_DEFINE)
-#endif
-#undef DT_DRV_COMPAT
+

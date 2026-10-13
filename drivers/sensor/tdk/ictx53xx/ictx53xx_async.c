@@ -109,6 +109,11 @@ void ictx53xx_async_fetch(struct k_work *work)
 	for (size_t i = 0; i < num_channels; i++) {
 		edata->header.channels |= ictx53xx_encode_channel(channels[i].chan_type);
 	}
+	if (data->driver.id == ICT25349) {
+		edata->header.sensitivity = INV_ICT_4_9MT_SENSITIVITY;
+	} else {
+		edata->header.sensitivity = INV_ICT_2_4MT_SENSITIVITY;
+	}
 
 	wait_count = ictx53xx_i2c_prep_reg_read_rtio_async(&data->bus, INV_ICT_TEMP_DATA_LSB,
 					     edata->readings, sizeof(edata->readings), NULL);

@@ -48,9 +48,9 @@ static int ictx53xx_decoder_get_size_info(struct sensor_chan_spec chan_spec, siz
 	}
 }
 
-static int ictx53xx_convert_raw_to_q31(int16_t reading, q31_t *q31_out)
+static int ictx53xx_convert_raw_to_q31(uint8_t sensitivity, int16_t reading, q31_t *q31_out)
 {
-	int32_t microgauss = ictx53xx_convert_mag(reading);
+	int32_t microgauss = ictx53xx_convert_mag(sensitivity, reading);
 
 	/* Convert to Q31 format: Q31 = (value * 2^(31 - shift)) / 1000000
 	 * For magnetic field, we use shift=16, so the full scale is ±2^16 = ±65536 gauss
@@ -93,7 +93,7 @@ static int ictx53xx_decoder_decode(const uint8_t *buffer, struct sensor_chan_spe
 		out->header.base_timestamp_ns = edata->header.timestamp;
 		out->header.reading_count = 1;
 		out->shift = ICTX53XX_SHIFT;
-		ictx53xx_convert_raw_to_q31(edata->mag.x, &out->readings[0].value);
+		ictx53xx_convert_raw_to_q31(edata->header.sensitivity, edata->mag.x, &out->readings[0].value);
 		break;
 	}
 	case SENSOR_CHAN_MAGN_Y: {
@@ -102,7 +102,7 @@ static int ictx53xx_decoder_decode(const uint8_t *buffer, struct sensor_chan_spe
 		out->header.base_timestamp_ns = edata->header.timestamp;
 		out->header.reading_count = 1;
 		out->shift = ICTX53XX_SHIFT;
-		ictx53xx_convert_raw_to_q31(edata->mag.y, &out->readings[0].value);
+		ictx53xx_convert_raw_to_q31(edata->header.sensitivity, edata->mag.y, &out->readings[0].value);
 		break;
 	}
 	case SENSOR_CHAN_MAGN_Z: {
@@ -111,7 +111,7 @@ static int ictx53xx_decoder_decode(const uint8_t *buffer, struct sensor_chan_spe
 		out->header.base_timestamp_ns = edata->header.timestamp;
 		out->header.reading_count = 1;
 		out->shift = ICTX53XX_SHIFT;
-		ictx53xx_convert_raw_to_q31(edata->mag.z, &out->readings[0].value);
+		ictx53xx_convert_raw_to_q31(edata->header.sensitivity, edata->mag.z, &out->readings[0].value);
 		break;
 	}
 	case SENSOR_CHAN_AMBIENT_TEMP: {
@@ -129,9 +129,9 @@ static int ictx53xx_decoder_decode(const uint8_t *buffer, struct sensor_chan_spe
 		out->header.base_timestamp_ns = edata->header.timestamp;
 		out->header.reading_count = 1;
 		out->shift = ICTX53XX_SHIFT;
-		ictx53xx_convert_raw_to_q31(edata->mag.x, &out->readings[0].x);
-		ictx53xx_convert_raw_to_q31(edata->mag.y, &out->readings[0].y);
-		ictx53xx_convert_raw_to_q31(edata->mag.z, &out->readings[0].z);
+		ictx53xx_convert_raw_to_q31(edata->header.sensitivity, edata->mag.x, &out->readings[0].x);
+		ictx53xx_convert_raw_to_q31(edata->header.sensitivity, edata->mag.y, &out->readings[0].y);
+		ictx53xx_convert_raw_to_q31(edata->header.sensitivity, edata->mag.z, &out->readings[0].z);
 		break;
 	}
 

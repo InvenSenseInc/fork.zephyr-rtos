@@ -15,13 +15,6 @@
 /* Address value has a read bit */
 #define REG_READ_BIT BIT(7)
 
-/* Sensitivity in nT per LSB */
-#if DT_HAS_INVENSENSE_ICT25349_ENABLED
-  #define ICTX53XX_SENSITIVITY INV_ICT_4_9MT_SENSITIVITY
-#else
-  #define ICTX53XX_SENSITIVITY INV_ICT_2_4MT_SENSITIVITY
-#endif
-
 /* Measurement time */
 #define ICTX53XX_MEASUREMENT_TIME_US        3050
 #define ICTX53XX_MEASUREMENT_EXTRA_TIME_US  51
@@ -39,6 +32,7 @@ struct ictx53xx_decoder_header {
 	uint64_t timestamp;
 	uint8_t channels;
 	uint8_t has_data;
+	uint8_t sensitivity;
 } __packed;
 
 struct ictx53xx_encoded_data {
@@ -133,7 +127,7 @@ int ictx53xx_i2c_prep_reg_write_rtio_async(const struct ictx53xx_bus *bus, uint8
 int ictx53xx_reg_read_rtio(const struct ictx53xx_bus *bus, uint8_t start, uint8_t *buf, int size);
 int ictx53xx_reg_write_rtio(const struct ictx53xx_bus *bus, uint8_t reg, const uint8_t *buf, int size);
 
-int32_t ictx53xx_convert_mag(int16_t sample);
+int32_t ictx53xx_convert_mag(uint8_t sensitivity_nt_per_lsb, int16_t sample);
 int32_t ictx53xx_convert_temp(int16_t sample);
 
 #ifdef CONFIG_SENSOR_ASYNC_API
