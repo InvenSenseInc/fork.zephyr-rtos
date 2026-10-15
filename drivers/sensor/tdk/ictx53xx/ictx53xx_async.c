@@ -190,7 +190,38 @@ static void ictx53xx_submit_one_shot(const struct device *dev, struct rtio_iodev
 	}
 }
 
+static void ictx53xx_submit_pulsed(const struct device *dev, struct rtio_iodev_sqe *iodev_sqe)
+{
+	struct ictx53xx_data *data = (struct ictx53xx_data *)dev->data;
+	uint64_t cycles;
+	int rc;
+
+	rc = sensor_clock_get_cycles(&cycles);
+	if (rc != 0) {
+		LOG_ERR("Failed to get sensor clock cycles");
+		rtio_iodev_sqe_err(iodev_sqe, rc);
+		return;
+	}
+
+	/* save information for the work item */
+	data->work_ctx.timestamp = sensor_clock_cycles_to_ns(cycles);
+	data->work_ctx.iodev_sqe = iodev_sqe;
+	data->edata.header.has_data = 0;
+
+	rc = k_work_schedule(&data->work_ctx.async_fetch_work, K_USEC(ictx53xx_reg_to_us(data->odr)));
+	if (rc == 0) {
+		LOG_ERR("The last fetch has not finished yet. "
+			"Try again later when the last sensor read operation has finished.");
+		rtio_iodev_sqe_err(iodev_sqe, -EBUSY);
+	}
+}
+
 void ictx53xx_submit(const struct device *dev, struct rtio_iodev_sqe *iodev_sqe)
 {
-	ictx53xx_submit_one_shot(dev, iodev_sqe);
+	struct ictx53xx_data *data = (struct ictx53xx_data *)dev->data;
+	
+	if (data->mode == INV_ICT_MODE_CTRL_REG_MODE_PULSED)
+		ictx53xx_submit_pulsed(dev, iodev_sqe);
+	else
+		ictx53xx_submit_one_shot(dev, iodev_sqe);
 }

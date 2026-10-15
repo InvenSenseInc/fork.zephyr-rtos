@@ -19,6 +19,10 @@
 #define ICTX53XX_MEASUREMENT_TIME_US        3050
 #define ICTX53XX_MEASUREMENT_EXTRA_TIME_US  51
 
+/* Temperature */
+#define ICTX53XX_TEMPERATURE_OFFSET_UC       25000000 /* 25 C in µC */
+#define ICTX53XX_TEMPERATURE_SENSITIVITY_UC  6250 /* 6.25 mC/LSB, in µC */
+
 /* RTIO-specific constants */
 #define ICTX53XX_SHIFT 16 /* Q31 shift for sensor field values */
 
@@ -118,6 +122,27 @@ static inline void ictx53xx_reg_to_hz(uint8_t reg, struct sensor_value *val)
 		val->val1 = 5;
 		break;
 	}
+}
+
+static inline uint32_t ictx53xx_reg_to_us(uint8_t reg)
+{
+	switch (reg) {
+	case INV_ICT_MODE_CTRL_REG_ODR_320_HZ:
+		return 3125;
+	case INV_ICT_MODE_CTRL_REG_ODR_200_HZ:
+		return  5000;
+	case INV_ICT_MODE_CTRL_REG_ODR_100_HZ:
+		return 10000;
+	case INV_ICT_MODE_CTRL_REG_ODR_50_HZ:
+		return 20000;
+	case INV_ICT_MODE_CTRL_REG_ODR_20_HZ:
+		return 50000;
+	case INV_ICT_MODE_CTRL_REG_ODR_10_HZ:
+		return 100000;
+	case INV_ICT_MODE_CTRL_REG_ODR_5_HZ:
+		return 200000;
+	}
+	return -EINVAL;
 }
 
 int ictx53xx_i2c_prep_reg_read_rtio_async(const struct ictx53xx_bus *bus, uint8_t reg, uint8_t *buf,

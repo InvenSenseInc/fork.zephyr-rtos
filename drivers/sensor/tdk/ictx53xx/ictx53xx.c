@@ -57,7 +57,7 @@ static int ictx53xx_attr_set(const struct device *dev, enum sensor_channel chan,
 						|| (val->val1 == INV_ICT_MODE_CTRL_REG_MODE_SINGLE_SHOT)) {
 				data->mode = val->val1;
 				inv_ict_set_mode(&data->driver, data->mode);
-			} else if (data->mode == INV_ICT_MODE_CTRL_REG_MODE_MRM) {
+			} else if (val->val1 == INV_ICT_MODE_CTRL_REG_MODE_MRM) {
 				/* Ensure Sleep mode before setting MRM */
 				inv_ict_set_mode(&data->driver, INV_ICT_MODE_CTRL_REG_MODE_SLEEP);
 				/* MRM enables magnetic reset of TMR sensor element with a pulsed current. */
@@ -167,7 +167,7 @@ int32_t ictx53xx_convert_mag(uint8_t sensitivity_nt_per_lsb, int16_t sample)
 int32_t ictx53xx_convert_temp(int16_t sample)
 {
 	/* Convert to microcelsius */
-	return ((int32_t)sample * 6250 + 25000000);
+	return ((int32_t)sample * ICTX53XX_TEMPERATURE_SENSITIVITY_UC + ICTX53XX_TEMPERATURE_OFFSET_UC);
 }
 
 static int ictx53xx_channel_get(const struct device *dev, enum sensor_channel chan,
@@ -250,14 +250,18 @@ static int ictx53xx_init(const struct device *dev)
 
 	/* Apply dt-binding settings */
 	data->odr = ictx53xx_hz_to_reg(cfg->odr_hz);
-	inv_ict_set_odr(&data->driver, data->odr);
+	rc |= inv_ict_set_odr(&data->driver, data->odr);
  
 	data->mode = cfg->mode;
-	inv_ict_set_mode(&data->driver, data->mode);
+	rc |= inv_ict_set_mode(&data->driver, data->mode);
 	if (data->mode == INV_ICT_MODE_CTRL_REG_MODE_MRM) {
-		inv_ict_set_mrm(&data->driver);
+		rc |= inv_ict_set_mrm(&data->driver);
 		/* Sleep mode is forced at the end of MRN operation */
 		data->mode = INV_ICT_MODE_CTRL_REG_MODE_SLEEP;
+	}
+	if (rc != 0) {
+		LOG_ERR("Failed to configure ICT settings.");
+		return rc;
 	}
 
 #ifdef CONFIG_SENSOR_ASYNC_API
