@@ -15,25 +15,6 @@
 #include <zephyr/logging/log.h>
 LOG_MODULE_REGISTER(ICTX53XX_ASYNC, CONFIG_SENSOR_LOG_LEVEL);
 
-static int ictx53xx_flush_cqes(struct rtio *rtio_ctx)
-{
-	/* Flush completions */
-	struct rtio_cqe *cqe;
-	int res = 0;
-
-	do {
-		cqe = rtio_cqe_consume(rtio_ctx);
-		if (cqe != NULL) {
-			if ((cqe->result < 0 && res == 0)) {
-				LOG_ERR("Bus error: %d", cqe->result);
-				res = cqe->result;
-			}
-			rtio_cqe_release(rtio_ctx, cqe);
-		}
-	} while (cqe != NULL);
-	return res;
-}
-
 void ictx53xx_complete_cb(struct rtio *rtio_ctx, const struct rtio_sqe *sqe, int result, void *arg0)
 {
 	ARG_UNUSED(result);
@@ -43,7 +24,7 @@ void ictx53xx_complete_cb(struct rtio *rtio_ctx, const struct rtio_sqe *sqe, int
 	struct ictx53xx_encoded_data *edata =
 		(struct ictx53xx_encoded_data *)(parent_sqe->rx.buf);
 
-	int rc = ictx53xx_flush_cqes(rtio_ctx);
+	int rc = rtio_flush_completion_queue(rtio_ctx);
 	if (rc != 0) {
 		rtio_iodev_sqe_err(parent_iodev_sqe, rc);
 		return;
@@ -154,7 +135,7 @@ void ictx53xx_after_start_cb(struct rtio *rtio_ctx, const struct rtio_sqe *sqe,
 	data->work_ctx.iodev_sqe = iodev_sqe;
 	data->edata.header.has_data = 0;
 
-	rc = ictx53xx_flush_cqes(data->bus.rtio_ctx);
+	rc = rtio_flush_completion_queue(data->bus.rtio_ctx);
 	if (rc != 0) {
 		rtio_iodev_sqe_err(iodev_sqe, rc);
 		return;
