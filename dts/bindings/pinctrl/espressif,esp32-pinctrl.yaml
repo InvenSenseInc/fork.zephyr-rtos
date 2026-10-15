@@ -167,6 +167,13 @@ child-binding:
           pin. The array elements are pre-declared macros taken from Espressif's
           HAL.
 
+      espressif,drive-mode:
+        type: int
+        default: 0
+        description: |
+          GPIO output drive strength. Use ESP32_GPIO_DS_DFLT for the highest
+          strength or ESP32_GPIO_DS_ALT for the lowest strength.
+
       sleep-hold-en:
         type: boolean
         description: |

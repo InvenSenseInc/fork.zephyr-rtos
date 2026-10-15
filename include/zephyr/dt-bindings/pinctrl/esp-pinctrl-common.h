@@ -87,9 +87,10 @@
  * - output level [ 4 : 5 ]
  * - input/output enable override [ 6 : 7 ]
  * - sleep hold   [ 8 ]
+ * - drive mode   [ 9 : 10 ]
  *
  * These values are combined into a single integer and later
- * translated into GPIO configuration flags by the driver.
+ * translated into GPIO configuration by the driver.
  */
 
 /**

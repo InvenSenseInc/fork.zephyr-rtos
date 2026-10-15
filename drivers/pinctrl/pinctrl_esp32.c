@@ -15,6 +15,7 @@
 #include <zephyr/kernel.h>
 #include <zephyr/drivers/pinctrl.h>
 #include <zephyr/drivers/pinctrl/pinctrl_esp32_common.h>
+#include <zephyr/dt-bindings/gpio/espressif-esp32-gpio.h>
 
 #ifdef CONFIG_SOC_SERIES_ESP32C2
 #define out	out.val
@@ -76,9 +77,10 @@ static inline bool esp32_pin_is_output_capable(uint32_t pin)
 	return ((BIT64(pin) & SOC_GPIO_VALID_OUTPUT_GPIO_MASK) != 0);
 }
 
-static int esp32_pin_apply_config(uint32_t pin, uint32_t flags)
+static int esp32_pin_apply_config(uint32_t pin, uint32_t flags, uint32_t drive_mode)
 {
 	gpio_dev_t *const gpio_base = (gpio_dev_t *)DT_REG_ADDR(DT_NODELABEL(gpio0));
+	uint32_t drive_capability;
 	int ret = 0;
 
 	if (!esp32_pin_is_valid(pin)) {
@@ -116,6 +118,27 @@ static int esp32_pin_apply_config(uint32_t pin, uint32_t flags)
 		if (!esp32_pin_is_output_capable(pin)) {
 			ret = -EINVAL;
 			goto end;
+		}
+
+		switch (drive_mode) {
+		case ESP32_GPIO_DS_DFLT:
+			drive_capability = GPIO_DRIVE_CAP_3;
+			break;
+		case ESP32_GPIO_DS_ALT:
+			drive_capability = GPIO_DRIVE_CAP_0;
+			break;
+		default:
+			ret = -EINVAL;
+			goto end;
+		}
+
+#if defined(CONFIG_SOC_SERIES_ESP32) && SOC_RTCIO_INPUT_OUTPUT_SUPPORTED
+		if (rtc_gpio_is_valid_gpio(pin)) {
+			rtcio_hal_set_drive_capability(rtc_io_num_map[pin], drive_capability);
+		} else
+#endif
+		{
+			gpio_ll_set_drive_capability(gpio_base, pin, drive_capability);
 		}
 
 		if (flags & ESP32_OPEN_DRAIN_FLAG) {
@@ -157,7 +180,13 @@ static int esp32_pin_configure(const uint32_t pin_mux, const uint32_t pin_cfg)
 	uint32_t pin_num = ESP32_PIN_NUM(pin_mux);
 	uint32_t sig_in = ESP32_PIN_SIGI(pin_mux);
 	uint32_t sig_out = ESP32_PIN_SIGO(pin_mux);
+	uint32_t drive_mode = pin_cfg & ESP32_GPIO_DS_MASK;
 	uint32_t flags = 0;
+	int ret;
+
+	if ((drive_mode != ESP32_GPIO_DS_DFLT) && (drive_mode != ESP32_GPIO_DS_ALT)) {
+		return -EINVAL;
+	}
 
 	if (esp_gpio_pad_port(pin_num) >= esp32_gpio_ports_cnt) {
 		return -EINVAL;
@@ -250,7 +279,10 @@ static int esp32_pin_configure(const uint32_t pin_mux, const uint32_t pin_cfg)
 		}
 	}
 
-	esp32_pin_apply_config(pin_num, flags);
+	ret = esp32_pin_apply_config(pin_num, flags, drive_mode);
+	if (ret != 0) {
+		return ret;
+	}
 
 	if (flags & ESP32_DIR_OUT_FLAG) {
 		esp_rom_gpio_matrix_out(pin_num, sig_out, 0, 0);
