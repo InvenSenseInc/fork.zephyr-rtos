@@ -118,6 +118,23 @@ uint32_t i2s_esp32_get_source_clk_freq(i2s_clock_src_t clk_src)
 	return clk_freq;
 }
 
+#if SOC_GDMA_SUPPORTED
+/* Largest multiple of the sample frame size (all channels of one sample) that still fits in
+ * I2S_ESP32_DMA_BUFFER_MAX_SIZE. Splitting a mem_block on any other boundary shifts the L/R
+ * phase of every sample transferred after the split point.
+ */
+static uint32_t i2s_esp32_rx_dma_chunk_max_size(const struct i2s_esp32_stream_data *data)
+{
+	uint32_t frame_size = DIV_ROUND_UP(data->i2s_cfg.word_size, 8) * data->i2s_cfg.channels;
+
+	if (frame_size == 0 || frame_size > I2S_ESP32_DMA_BUFFER_MAX_SIZE) {
+		return I2S_ESP32_DMA_BUFFER_MAX_SIZE;
+	}
+
+	return (I2S_ESP32_DMA_BUFFER_MAX_SIZE / frame_size) * frame_size;
+}
+#endif /* SOC_GDMA_SUPPORTED */
+
 static esp_err_t i2s_esp32_calculate_clock(const struct i2s_config *i2s_cfg, uint8_t channel_length,
 					   i2s_hal_clock_info_t *i2s_hal_clock_info)
 {
@@ -230,6 +247,7 @@ static void IRAM_ATTR i2s_esp32_rx_callback(void *arg, int status)
 #if SOC_GDMA_SUPPORTED
 	const i2s_hal_context_t *hal = &(dev_cfg->hal);
 	uint16_t chunk_len;
+	uint32_t chunk_max_size = i2s_esp32_rx_dma_chunk_max_size(stream->data);
 
 	if (stream->data->chunks_rem) {
 		uint32_t dst;
@@ -237,16 +255,16 @@ static void IRAM_ATTR i2s_esp32_rx_callback(void *arg, int status)
 		stream->data->chunk_idx++;
 		stream->data->chunks_rem--;
 		if (stream->data->chunks_rem) {
-			chunk_len = I2S_ESP32_DMA_BUFFER_MAX_SIZE;
+			chunk_len = chunk_max_size;
 		} else {
-			chunk_len = stream->data->mem_block_len % I2S_ESP32_DMA_BUFFER_MAX_SIZE;
+			chunk_len = stream->data->mem_block_len % chunk_max_size;
 			if (chunk_len == 0) {
-				chunk_len = I2S_ESP32_DMA_BUFFER_MAX_SIZE;
+				chunk_len = chunk_max_size;
 			}
 		}
 
-		dst = (uint32_t)stream->data->mem_block + (stream->data->chunk_idx *
-							   I2S_ESP32_DMA_BUFFER_MAX_SIZE);
+		dst = (uint32_t)stream->data->mem_block +
+							   (stream->data->chunk_idx * chunk_max_size);
 		err = dma_reload(stream->conf->dma_dev, stream->conf->dma_channel, (uint32_t)NULL,
 				(uint32_t)dst, chunk_len);
 		if (err < 0) {
@@ -383,18 +401,29 @@ static void IRAM_ATTR i2s_esp32_rx_stop_transfer(const struct device *dev)
 {
 	const struct i2s_esp32_cfg *dev_cfg = dev->config;
 	const struct i2s_esp32_stream *stream = &dev_cfg->rx;
+	const i2s_hal_context_t *hal = &(dev_cfg->hal);
 
 #if SOC_GDMA_SUPPORTED
 	dma_stop(stream->conf->dma_dev, stream->conf->dma_channel);
 #else
-	const i2s_hal_context_t *hal = &(dev_cfg->hal);
-
 	esp_intr_disable(stream->data->irq_handle);
 	i2s_hal_rx_stop_link(hal);
 	i2s_hal_rx_disable_intr(hal);
 	i2s_hal_rx_disable_dma(hal);
 	i2s_hal_clear_intr_status(hal, I2S_INTR_MAX);
 #endif /* SOC_GDMA_SUPPORTED */
+
+	/* Disable the RX unit itself, otherwise it keeps generating BCLK/WS forever in
+	 * master mode even though the DMA link is stopped.
+	 */
+	i2s_hal_rx_stop(hal);
+
+	/* The block currently being DMA'd into was never queued, so it must be freed here
+	 * or it leaks from the mem_slab on every stop.
+	 */
+	if (stream->data->mem_block != NULL) {
+		k_mem_slab_free(stream->data->i2s_cfg.mem_slab, stream->data->mem_block);
+	}
 
 	stream->data->mem_block = NULL;
 	stream->data->mem_block_len = 0;
@@ -599,20 +628,31 @@ static void IRAM_ATTR i2s_esp32_tx_stop_transfer(const struct device *dev)
 	const struct i2s_esp32_cfg *dev_cfg = dev->config;
 	const struct i2s_esp32_stream *stream = &dev_cfg->tx;
 	struct i2s_esp32_data *dev_data = dev->data;
+	const i2s_hal_context_t *hal = &(dev_cfg->hal);
 
 	k_timer_stop(&dev_data->tx_deferred_transfer_timer);
 
 #if SOC_GDMA_SUPPORTED
 	dma_stop(stream->conf->dma_dev, stream->conf->dma_channel);
 #else
-	const i2s_hal_context_t *hal = &(dev_cfg->hal);
-
 	esp_intr_disable(stream->data->irq_handle);
 	i2s_hal_tx_stop_link(hal);
 	i2s_hal_tx_disable_intr(hal);
 	i2s_hal_tx_disable_dma(hal);
 	i2s_hal_clear_intr_status(hal, I2S_INTR_MAX);
 #endif /* SOC_GDMA_SUPPORTED */
+
+	/* Disable the TX unit itself, otherwise it keeps generating BCLK/WS forever in
+	 * master mode even though the DMA link is stopped.
+	 */
+	i2s_hal_tx_stop(hal);
+
+	/* The block currently being DMA'd out was already dequeued, so it must be freed here
+	 * or it leaks from the mem_slab on every stop.
+	 */
+	if (stream->data->mem_block != NULL) {
+		k_mem_slab_free(stream->data->i2s_cfg.mem_slab, stream->data->mem_block);
+	}
 
 	stream->data->mem_block = NULL;
 	stream->data->mem_block_len = 0;
@@ -839,14 +879,16 @@ static int i2s_esp32_start_dma(const struct device *dev, enum i2s_dir dir)
 		uint16_t chunk_len;
 
 #if SOC_GDMA_SUPPORTED
-		if (stream->data->mem_block_len < I2S_ESP32_DMA_BUFFER_MAX_SIZE) {
+		uint32_t chunk_max_size = i2s_esp32_rx_dma_chunk_max_size(stream->data);
+
+		if (stream->data->mem_block_len < chunk_max_size) {
 			chunk_len = stream->data->mem_block_len;
 			stream->data->chunks_rem = 0;
 		} else {
-			chunk_len = I2S_ESP32_DMA_BUFFER_MAX_SIZE;
+			chunk_len = chunk_max_size;
 			stream->data->chunks_rem = ((stream->data->mem_block_len +
-						     (I2S_ESP32_DMA_BUFFER_MAX_SIZE - 1)) /
-						    I2S_ESP32_DMA_BUFFER_MAX_SIZE) - 1;
+						     (chunk_max_size - 1)) /
+						    chunk_max_size) - 1;
 		}
 		stream->data->chunk_idx = 0;
 #else
@@ -912,16 +954,18 @@ static int IRAM_ATTR i2s_esp32_restart_dma(const struct device *dev, enum i2s_di
 
 #if I2S_ESP32_IS_DIR_EN(rx)
 	if (dir == I2S_DIR_RX) {
+		uint32_t chunk_max_size = i2s_esp32_rx_dma_chunk_max_size(stream->data);
+
 		dst = stream->data->mem_block;
 
-		if (stream->data->mem_block_len < I2S_ESP32_DMA_BUFFER_MAX_SIZE) {
+		if (stream->data->mem_block_len < chunk_max_size) {
 			chunk_len = stream->data->mem_block_len;
 			stream->data->chunks_rem = 0;
 		} else {
-			chunk_len = I2S_ESP32_DMA_BUFFER_MAX_SIZE;
+			chunk_len = chunk_max_size;
 			stream->data->chunks_rem = ((stream->data->mem_block_len +
-						     (I2S_ESP32_DMA_BUFFER_MAX_SIZE - 1)) /
-						    I2S_ESP32_DMA_BUFFER_MAX_SIZE) - 1;
+						     (chunk_max_size - 1)) /
+						    chunk_max_size) - 1;
 		}
 		stream->data->chunk_idx = 0;
 	}
@@ -1260,7 +1304,7 @@ static int i2s_esp32_configure(const struct device *dev, enum i2s_dir dir,
 
 	slot_cfg.data_bit_width = i2s_cfg->word_size;
 	slot_cfg.slot_mode = I2S_SLOT_MODE_STEREO;
-	slot_cfg.slot_bit_width = i2s_cfg->word_size > 16 ? 32 : 16;
+	slot_cfg.slot_bit_width = i2s_cfg->word_size > 8 ? i2s_cfg->word_size : 16;
 	if (data_format == I2S_FMT_DATA_FORMAT_I2S) {
 		slot_cfg.std.ws_pol = i2s_cfg->format & I2S_FMT_FRAME_CLK_INV ? true : false;
 		slot_cfg.std.bit_shift = true;
