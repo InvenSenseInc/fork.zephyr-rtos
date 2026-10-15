@@ -23,7 +23,7 @@
 typedef struct pinctrl_soc_pin {
 	/** Pinmux settings (pin, direction and signal). */
 	uint32_t pinmux;
-	/** Pincfg settings (bias). */
+	/** Pin configuration settings (bias and drive mode). */
 	uint32_t pincfg;
 } pinctrl_soc_pin_t;
 
@@ -50,7 +50,7 @@ typedef struct pinctrl_soc_pin {
 	 ((ESP32_PIN_OUT_EN * DT_PROP(node_id, output_enable)) << ESP32_PIN_EN_DIR_SHIFT) |        \
 	 ((ESP32_PIN_IN_EN * DT_PROP(node_id, input_enable)) << ESP32_PIN_EN_DIR_SHIFT) |          \
 	 ((ESP32_PIN_SLEEP_HOLD_EN * DT_PROP(node_id, sleep_hold_en))                              \
-	  << ESP32_PIN_SLEEP_HOLD_SHIFT))
+	  << ESP32_PIN_SLEEP_HOLD_SHIFT) | DT_PROP(node_id, espressif_drive_mode))
 
 /**
  * @brief Utility macro to initialize each pin.
