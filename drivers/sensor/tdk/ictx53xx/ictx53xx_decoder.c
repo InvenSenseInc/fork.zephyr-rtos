@@ -35,7 +35,7 @@ static int ictx53xx_decoder_get_size_info(struct sensor_chan_spec chan_spec, siz
 	case SENSOR_CHAN_MAGN_X:
 	case SENSOR_CHAN_MAGN_Y:
 	case SENSOR_CHAN_MAGN_Z:
-	case SENSOR_CHAN_AMBIENT_TEMP:
+	case SENSOR_CHAN_DIE_TEMP:
 		*base_size = sizeof(struct sensor_q31_data);
 		*frame_size = sizeof(struct sensor_q31_sample_data);
 		return 0;
@@ -114,7 +114,7 @@ static int ictx53xx_decoder_decode(const uint8_t *buffer, struct sensor_chan_spe
 		ictx53xx_convert_raw_to_q31(edata->header.sensitivity, edata->mag.z, &out->readings[0].value);
 		break;
 	}
-	case SENSOR_CHAN_AMBIENT_TEMP: {
+	case SENSOR_CHAN_DIE_TEMP: {
 		struct sensor_q31_data *out = data_out;
 		
 		out->header.base_timestamp_ns = edata->header.timestamp;

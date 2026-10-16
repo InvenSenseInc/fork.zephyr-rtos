@@ -39,7 +39,7 @@ uint8_t ictx53xx_encode_channel(enum sensor_channel chan)
 	uint8_t encode_bmask = 0;
 
 	switch (chan) {
-	case SENSOR_CHAN_AMBIENT_TEMP:
+	case SENSOR_CHAN_DIE_TEMP:
 		encode_bmask = BIT(0);
 		break;
 	case SENSOR_CHAN_MAGN_X:

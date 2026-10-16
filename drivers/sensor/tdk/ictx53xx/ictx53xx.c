@@ -130,7 +130,7 @@ static int ictx53xx_sample_fetch(const struct device *dev,
 	switch (chan) {
 	case SENSOR_CHAN_ALL:
 	case SENSOR_CHAN_MAGN_XYZ:
-	case SENSOR_CHAN_AMBIENT_TEMP:
+	case SENSOR_CHAN_DIE_TEMP:
 		if (data->mode == INV_ICT_MODE_CTRL_REG_MODE_PULSED) {
 			ret |= inv_ict_get_data_ready_status(&data->driver, &drdy_status);
 		} else {
@@ -191,7 +191,7 @@ static int ictx53xx_channel_get(const struct device *dev, enum sensor_channel ch
 	case SENSOR_CHAN_MAGN_Z:
 		sensor_value_from_micro(val, ictx53xx_convert_mag(edata->header.sensitivity, edata->mag.z));
 		break;
-	case SENSOR_CHAN_AMBIENT_TEMP:
+	case SENSOR_CHAN_DIE_TEMP:
 		sensor_value_from_micro(val, ictx53xx_convert_temp(edata->temp));
 		return 0;
 	default:
