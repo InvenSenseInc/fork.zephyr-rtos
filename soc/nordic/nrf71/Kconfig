@@ -8,7 +8,6 @@ config SOC_SERIES_NRF71
 	select HAS_NRFX
 	select HAS_NORDIC_DRIVERS
 	select HAS_SEGGER_RTT if ZEPHYR_SEGGER_MODULE
-	select SOC_EARLY_INIT_HOOK
 	select SOC_RESET_HOOK
 
 config SOC_NRF7120_ENGA_CPUAPP
@@ -43,6 +42,14 @@ config SOC_NRF7120E_ENGA_CPUFLPR
 	select RISCV_CORE_NORDIC_VPR
 
 if SOC_SERIES_NRF71
+
+config SOC_NRF7120_APPROTECT_BOOT_WORKAROUND
+	bool
+	default y if (SOC_NRF7120_ENGA_CPUAPP || SOC_NRF7120E_ENGA_CPUAPP)
+	help
+	  Enable the APPROTECT boot workaround when using
+	  either nRF7120 or nRF7120E application core.
+
 
 config SOC_NRF7120_WICR_SETUP
 	bool

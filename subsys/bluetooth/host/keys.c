@@ -104,6 +104,17 @@ void bt_keys_reset(void)
 	memset(key_pool, 0, sizeof(key_pool));
 }
 
+bool bt_keys_has_bond(uint8_t id)
+{
+	for (size_t i = 0U; i < ARRAY_SIZE(key_pool); i++) {
+		if ((key_pool[i].keys != 0U) && (key_pool[i].id == id)) {
+			return true;
+		}
+	}
+
+	return false;
+}
+
 struct bt_keys *bt_keys_get_addr(uint8_t id, const bt_addr_le_t *addr)
 {
 	struct bt_keys *keys;
@@ -543,6 +554,10 @@ static int keys_set(const char *name, size_t len_rd, settings_read_cb read_cb,
 static void id_add(struct bt_keys *keys, void *user_data)
 {
 	__ASSERT_NO_MSG(keys != NULL);
+
+	if ((keys->state & BT_KEYS_ID_ADDED) != 0U) {
+		return;
+	}
 
 	/* Only mark as pending here. Keys are added to the controller RL on
 	 * demand when advertising or scanning starts, avoiding bt_id_add()

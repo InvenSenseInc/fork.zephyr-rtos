@@ -36,6 +36,8 @@
 		rtc = &rtc;
 		sw0 = &user_button;
 		watchdog0 = &iwdg;
+		volt-sensor0 = &vbat;
+		volt-sensor1 = &vddcore;
 	};
 
 	psram: memory@90000000 {
@@ -81,7 +83,11 @@
 		gpio-map-mask = <0xffffffff 0xffffffc0>;
 		gpio-map-pass-thru = <0 0x3f>;
 		gpio-map = <CSI_IO0 0 &gpioc 8 0>,
-			   <CSI_IO1 0 &gpiod 2 0>;
+			   <CSI_IO1 0 &gpiod 2 0>,
+			   <11 0 &gpioq 5 0>,
+			   <12 0 &gpioq 0 0>,
+			   <14 0 &gpioq 1 0>,
+			   <15 0 &gpioq 2 0>;
 	};
 };
 
@@ -294,13 +300,29 @@
 	};
 };
 
-&adc1 {
+&adc12_common {
 	clocks = <&rcc STM32_CLOCK(AHB1, 5)>,
 		 <&rcc STM32_SRC_CKPER ADC12_SEL(1)>;
 	clock-names = "adcx", "adc_ker";
+	vref-mv = <1800>;
+	status = "okay";
+};
+
+&adc1 {
 	pinctrl-0 = <&adc1_inp10_pa9 &adc1_inp11_pa10>; /* Arduino A1 & A2 */
 	pinctrl-names = "default";
-	vref-mv = <1800>;
+	status = "okay";
+};
+
+&adc2 {
+	status = "okay";
+};
+
+&vbat {
+	status = "okay";
+};
+
+&vddcore {
 	status = "okay";
 };
 
@@ -639,6 +661,14 @@ zephyr_jpegenc: &jpeg {
 	status = "okay";
 };
 
+&cryp {
+	status = "okay";
+};
+
+&hash {
+	status = "okay";
+};
+
 &iwdg {
 	status = "okay";
 };
@@ -650,6 +680,10 @@ zephyr_jpegenc: &jpeg {
 &rtc {
 	clocks = <&rcc STM32_CLOCK(APB4, 16)>,
 		 <&rcc STM32_SRC_LSE RTC_SEL(1)>;
+	status = "okay";
+};
+
+&dma2d {
 	status = "okay";
 };
 
