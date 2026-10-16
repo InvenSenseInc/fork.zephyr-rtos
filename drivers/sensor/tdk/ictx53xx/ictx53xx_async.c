@@ -76,6 +76,7 @@ void ictx53xx_async_fetch(struct k_work *work)
 	uint8_t *buf;
 	struct ictx53xx_encoded_data *edata;
 	int rc, wait_count;
+	struct rtio_sqe *out_data_sqe;
 
 	/* Get the buffer for the frame, it may be allocated dynamically by the rtio context */
 	rc = rtio_sqe_rx_buf(ctx->iodev_sqe, req_buf_len, req_buf_len, &buf, &buf_len);
@@ -97,7 +98,9 @@ void ictx53xx_async_fetch(struct k_work *work)
 	}
 
 	wait_count = ictx53xx_i2c_prep_reg_read_rtio_async(&data->bus, INV_ICT_TEMP_DATA_LSB,
-					     edata->readings, sizeof(edata->readings), NULL);
+					     edata->readings, sizeof(edata->readings), &out_data_sqe);
+						 
+	out_data_sqe->flags |= RTIO_SQE_CHAINED;
 						 
 	struct rtio_sqe *cb_sqe = rtio_sqe_acquire(data->bus.rtio_ctx);
 	if (wait_count < 0 || cb_sqe == NULL) {
