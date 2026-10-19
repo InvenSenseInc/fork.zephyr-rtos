@@ -40,6 +40,56 @@ static int inv_io_hal_write_reg(void *context, uint8_t reg, const uint8_t *wbuff
 	return ictx53xx_reg_write_rtio(&data->bus, reg, wbuffer, wlen);
 }
 
+static uint8_t ictx53xx_hz_to_reg(int val)
+{
+	if (val >= 320) {
+		return INV_ICT_MODE_CTRL_REG_ODR_320_HZ;
+	} else if (val >= 200) {
+		return INV_ICT_MODE_CTRL_REG_ODR_200_HZ;
+	} else if (val >= 100) {
+		return INV_ICT_MODE_CTRL_REG_ODR_100_HZ;
+	} else if (val >= 50) {
+		return INV_ICT_MODE_CTRL_REG_ODR_50_HZ;
+	} else if (val >= 20) {
+		return INV_ICT_MODE_CTRL_REG_ODR_20_HZ;
+	} else if (val >= 10) {
+		return INV_ICT_MODE_CTRL_REG_ODR_10_HZ;
+	} else if (val > 0) {
+		return INV_ICT_MODE_CTRL_REG_ODR_5_HZ;
+	} else {
+		return 0;
+	}
+}
+
+static void ictx53xx_reg_to_hz(uint8_t reg, struct sensor_value *val)
+{
+	val->val1 = 0;
+	val->val2 = 0;
+	switch (reg) {
+	case INV_ICT_MODE_CTRL_REG_ODR_320_HZ:
+		val->val1 = 320;
+		break;
+	case INV_ICT_MODE_CTRL_REG_ODR_200_HZ:
+		val->val1 = 200;
+		break;
+	case INV_ICT_MODE_CTRL_REG_ODR_100_HZ:
+		val->val1 = 100;
+		break;
+	case INV_ICT_MODE_CTRL_REG_ODR_50_HZ:
+		val->val1 = 50;
+		break;
+	case INV_ICT_MODE_CTRL_REG_ODR_20_HZ:
+		val->val1 = 20;
+		break;
+	case INV_ICT_MODE_CTRL_REG_ODR_10_HZ:
+		val->val1 = 10;
+		break;
+	case INV_ICT_MODE_CTRL_REG_ODR_5_HZ:
+		val->val1 = 5;
+		break;
+	}
+}
+
 static int ictx53xx_attr_set(const struct device *dev, enum sensor_channel chan,
 			     enum sensor_attribute attr, const struct sensor_value *val)
 {
@@ -62,7 +112,7 @@ static int ictx53xx_attr_set(const struct device *dev, enum sensor_channel chan,
 				inv_ict_set_mode(&data->driver, INV_ICT_MODE_CTRL_REG_MODE_SLEEP);
 				/* MRM enables magnetic reset of TMR sensor element with a pulsed current. */
 				inv_ict_set_mrm(&data->driver);
-				/* Sleep mode is forced at the end of MRN operation */
+				/* Sleep mode is forced at the end of MRM operation */
 				data->mode = INV_ICT_MODE_CTRL_REG_MODE_SLEEP;
 			} else {
 				LOG_ERR("Not supported ATTR value");
@@ -256,7 +306,7 @@ static int ictx53xx_init(const struct device *dev)
 	rc |= inv_ict_set_mode(&data->driver, data->mode);
 	if (data->mode == INV_ICT_MODE_CTRL_REG_MODE_MRM) {
 		rc |= inv_ict_set_mrm(&data->driver);
-		/* Sleep mode is forced at the end of MRN operation */
+		/* Sleep mode is forced at the end of MRM operation */
 		data->mode = INV_ICT_MODE_CTRL_REG_MODE_SLEEP;
 	}
 	if (rc != 0) {

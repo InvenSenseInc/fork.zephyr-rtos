@@ -15,14 +15,33 @@
 #include <zephyr/logging/log.h>
 LOG_MODULE_REGISTER(ICTX53XX_ASYNC, CONFIG_SENSOR_LOG_LEVEL);
 
+static uint32_t ictx53xx_reg_to_us(uint8_t reg)
+{
+	switch (reg) {
+	case INV_ICT_MODE_CTRL_REG_ODR_320_HZ:
+		return 3125;
+	case INV_ICT_MODE_CTRL_REG_ODR_200_HZ:
+		return  5000;
+	case INV_ICT_MODE_CTRL_REG_ODR_100_HZ:
+		return 10000;
+	case INV_ICT_MODE_CTRL_REG_ODR_50_HZ:
+		return 20000;
+	case INV_ICT_MODE_CTRL_REG_ODR_20_HZ:
+		return 50000;
+	case INV_ICT_MODE_CTRL_REG_ODR_10_HZ:
+		return 100000;
+	case INV_ICT_MODE_CTRL_REG_ODR_5_HZ:
+		return 200000;
+	}
+	return -EINVAL;
+}
+
 void ictx53xx_complete_cb(struct rtio *rtio_ctx, const struct rtio_sqe *sqe, int result, void *arg0)
 {
 	ARG_UNUSED(result);
 
 	struct rtio_iodev_sqe *parent_iodev_sqe = (struct rtio_iodev_sqe *)arg0;
 	struct rtio_sqe *parent_sqe = &parent_iodev_sqe->sqe;
-	struct ictx53xx_encoded_data *edata =
-		(struct ictx53xx_encoded_data *)(parent_sqe->rx.buf);
 
 	int rc = rtio_flush_completion_queue(rtio_ctx);
 	if (rc != 0) {
@@ -30,7 +49,6 @@ void ictx53xx_complete_cb(struct rtio *rtio_ctx, const struct rtio_sqe *sqe, int
 		return;
 	}
 
-	edata->header.has_data = 1;
 	rtio_iodev_sqe_ok(parent_iodev_sqe, 0);
 }
 
@@ -136,7 +154,6 @@ void ictx53xx_after_start_cb(struct rtio *rtio_ctx, const struct rtio_sqe *sqe,
 	/* save information for the work item */
 	data->work_ctx.timestamp = sensor_clock_cycles_to_ns(cycles);
 	data->work_ctx.iodev_sqe = iodev_sqe;
-	data->edata.header.has_data = 0;
 
 	rc = rtio_flush_completion_queue(data->bus.rtio_ctx);
 	if (rc != 0) {
@@ -190,7 +207,6 @@ static void ictx53xx_submit_pulsed(const struct device *dev, struct rtio_iodev_s
 	/* save information for the work item */
 	data->work_ctx.timestamp = sensor_clock_cycles_to_ns(cycles);
 	data->work_ctx.iodev_sqe = iodev_sqe;
-	data->edata.header.has_data = 0;
 
 	rc = k_work_schedule(&data->work_ctx.async_fetch_work, K_USEC(ictx53xx_reg_to_us(data->odr)));
 	if (rc == 0) {

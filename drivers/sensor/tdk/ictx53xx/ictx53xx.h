@@ -35,7 +35,6 @@ struct ictx53xx_bus {
 struct ictx53xx_decoder_header {
 	uint64_t timestamp;
 	uint8_t channels;
-	uint8_t has_data;
 	uint8_t sensitivity;
 } __packed;
 
@@ -73,77 +72,6 @@ struct ictx53xx_config {
 	inv_ict_mode_t mode;
 	int odr_hz;
 };
-
-static inline uint8_t ictx53xx_hz_to_reg(int val)
-{
-	if (val >= 320) {
-		return INV_ICT_MODE_CTRL_REG_ODR_320_HZ;
-	} else if (val >= 200) {
-		return INV_ICT_MODE_CTRL_REG_ODR_200_HZ;
-	} else if (val >= 100) {
-		return INV_ICT_MODE_CTRL_REG_ODR_100_HZ;
-	} else if (val >= 50) {
-		return INV_ICT_MODE_CTRL_REG_ODR_50_HZ;
-	} else if (val >= 20) {
-		return INV_ICT_MODE_CTRL_REG_ODR_20_HZ;
-	} else if (val >= 10) {
-		return INV_ICT_MODE_CTRL_REG_ODR_10_HZ;
-	} else if (val > 0) {
-		return INV_ICT_MODE_CTRL_REG_ODR_5_HZ;
-	} else {
-		return 0;
-	}
-}
-
-static inline void ictx53xx_reg_to_hz(uint8_t reg, struct sensor_value *val)
-{
-	val->val1 = 0;
-	val->val2 = 0;
-	switch (reg) {
-	case INV_ICT_MODE_CTRL_REG_ODR_320_HZ:
-		val->val1 = 320;
-		break;
-	case INV_ICT_MODE_CTRL_REG_ODR_200_HZ:
-		val->val1 = 200;
-		break;
-	case INV_ICT_MODE_CTRL_REG_ODR_100_HZ:
-		val->val1 = 100;
-		break;
-	case INV_ICT_MODE_CTRL_REG_ODR_50_HZ:
-		val->val1 = 50;
-		break;
-	case INV_ICT_MODE_CTRL_REG_ODR_20_HZ:
-		val->val1 = 20;
-		break;
-	case INV_ICT_MODE_CTRL_REG_ODR_10_HZ:
-		val->val1 = 10;
-		break;
-	case INV_ICT_MODE_CTRL_REG_ODR_5_HZ:
-		val->val1 = 5;
-		break;
-	}
-}
-
-static inline uint32_t ictx53xx_reg_to_us(uint8_t reg)
-{
-	switch (reg) {
-	case INV_ICT_MODE_CTRL_REG_ODR_320_HZ:
-		return 3125;
-	case INV_ICT_MODE_CTRL_REG_ODR_200_HZ:
-		return  5000;
-	case INV_ICT_MODE_CTRL_REG_ODR_100_HZ:
-		return 10000;
-	case INV_ICT_MODE_CTRL_REG_ODR_50_HZ:
-		return 20000;
-	case INV_ICT_MODE_CTRL_REG_ODR_20_HZ:
-		return 50000;
-	case INV_ICT_MODE_CTRL_REG_ODR_10_HZ:
-		return 100000;
-	case INV_ICT_MODE_CTRL_REG_ODR_5_HZ:
-		return 200000;
-	}
-	return -EINVAL;
-}
 
 int ictx53xx_i2c_prep_reg_read_rtio_async(const struct ictx53xx_bus *bus, uint8_t reg, uint8_t *buf,
 				      size_t size, struct rtio_sqe **out);
