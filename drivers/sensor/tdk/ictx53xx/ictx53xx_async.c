@@ -41,7 +41,6 @@ void ictx53xx_complete_cb(struct rtio *rtio_ctx, const struct rtio_sqe *sqe, int
 	ARG_UNUSED(result);
 
 	struct rtio_iodev_sqe *parent_iodev_sqe = (struct rtio_iodev_sqe *)arg0;
-	struct rtio_sqe *parent_sqe = &parent_iodev_sqe->sqe;
 
 	int rc = rtio_flush_completion_queue(rtio_ctx);
 	if (rc != 0) {
@@ -71,6 +70,9 @@ uint8_t ictx53xx_encode_channel(enum sensor_channel chan)
 		break;
 	case SENSOR_CHAN_MAGN_XYZ:
 		encode_bmask = BIT(1) | BIT(2) | BIT(3);
+		break;
+	case SENSOR_CHAN_ALL:
+		encode_bmask = BIT(0) | BIT(1) | BIT(2) | BIT(3);
 		break;
 	default:
 		break;

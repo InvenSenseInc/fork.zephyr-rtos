@@ -87,6 +87,8 @@ static void ictx53xx_reg_to_hz(uint8_t reg, struct sensor_value *val)
 	case INV_ICT_MODE_CTRL_REG_ODR_5_HZ:
 		val->val1 = 5;
 		break;
+	default:
+		break;
 	}
 }
 
@@ -128,7 +130,6 @@ static int ictx53xx_attr_set(const struct device *dev, enum sensor_channel chan,
 		break;
 	default:
 		LOG_ERR("Invalid channel %d", chan);
-		(void)data;
 		return -EINVAL;
 	}
 	return 0;
@@ -161,7 +162,6 @@ static int ictx53xx_attr_get(const struct device *dev, enum sensor_channel chan,
 		break;
 	default:
 		LOG_ERR("Invalid channel %d", chan);
-		(void)data;
 		return -EINVAL;
 	}
 	return 0;
@@ -171,7 +171,7 @@ static int ictx53xx_sample_fetch(const struct device *dev,
 				enum sensor_channel chan)
 {
 	struct ictx53xx_data *data = (struct ictx53xx_data *)dev->data;
-	int drdy_status;
+	int drdy_status = 0;
 	int16_t mag_data[3];
 	int16_t temp_data;
 	int8_t trials = 6;
@@ -223,7 +223,8 @@ int32_t ictx53xx_convert_temp(int16_t sample)
 static int ictx53xx_channel_get(const struct device *dev, enum sensor_channel chan,
 				struct sensor_value *val)
 {
-	struct ictx53xx_encoded_data *edata = (struct ictx53xx_encoded_data *)dev->data;
+	struct ictx53xx_data *data = (struct ictx53xx_data *)dev->data;
+	struct ictx53xx_encoded_data *edata = &data->edata;
 
 	switch (chan) {
 	case SENSOR_CHAN_MAGN_XYZ:
@@ -245,7 +246,7 @@ static int ictx53xx_channel_get(const struct device *dev, enum sensor_channel ch
 		sensor_value_from_micro(val, ictx53xx_convert_temp(edata->temp));
 		return 0;
 	default:
-		return ENOTSUP;
+		return -ENOTSUP;
 	}
 	return 0;
 }
