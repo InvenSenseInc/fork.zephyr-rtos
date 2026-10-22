@@ -1717,7 +1717,7 @@ test_i2c_vl53l5cx: vl53l5cx@de {
 	reg = <0xde>;
 };
 
-test_i2c_ictx53xx: ictx53xx@1e {
+test_i2c_ictx53xx: ictx53xx@df {
 	compatible = "invensense,ictx53xx";
-	reg = <0x1e>;
+	reg = <0xdf>;
 };
