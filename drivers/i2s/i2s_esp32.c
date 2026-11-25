@@ -46,6 +46,11 @@ LOG_MODULE_REGISTER(i2s_esp32, CONFIG_I2S_LOG_LEVEL);
 #define I2S_ESP32_CLK_SRC I2S_CLK_SRC_DEFAULT
 #endif
 #define I2S_ESP32_DMA_BUFFER_MAX_SIZE 4092
+/* Blocks kept armed in the RX DMA ring so that the DMA never stops between blocks. The GDMA
+ * fetches the next descriptor ahead of time, so the one just completed can only be re-armed
+ * safely if at least 3 blocks are in the ring.
+ */
+#define I2S_ESP32_RX_RING_BLOCKS      3
 
 #define I2S_ESP32_NUM_INST_OK          DT_NUM_INST_STATUS_OKAY(espressif_esp32_i2s)
 #define I2S_ESP32_IS_DIR_INST_EN(i, d) DT_INST_DMAS_HAS_NAME(i, d) || DT_INST_IRQ_HAS_NAME(i, d)
@@ -68,8 +73,14 @@ struct i2s_esp32_stream_data {
 	struct intr_handle_data_t *irq_handle;
 #endif
 	bool dma_pending;
-	uint8_t chunks_rem;
-	uint8_t chunk_idx;
+#if SOC_GDMA_SUPPORTED
+	/* RX blocks currently owned by the cyclic DMA ring, oldest first from ring_head */
+	void *ring_blk[I2S_ESP32_RX_RING_BLOCKS];
+	uint32_t ring_chunk_len;
+	uint8_t ring_chunks;
+	uint8_t ring_chunks_done;
+	uint8_t ring_head;
+#endif /* SOC_GDMA_SUPPORTED */
 };
 
 struct i2s_esp32_stream_conf {
@@ -119,19 +130,33 @@ uint32_t i2s_esp32_get_source_clk_freq(i2s_clock_src_t clk_src)
 }
 
 #if SOC_GDMA_SUPPORTED
-/* Largest multiple of the sample frame size (all channels of one sample) that still fits in
- * I2S_ESP32_DMA_BUFFER_MAX_SIZE. Splitting a mem_block on any other boundary shifts the L/R
- * phase of every sample transferred after the split point.
+/* Split an RX block in the smallest number of equal chunks that are a multiple of the sample
+ * frame size (all channels of one sample) and fit in one DMA descriptor. All chunks must have
+ * the same length because the I2S EOF counter is a single value, and splitting on any other
+ * boundary shifts the L/R phase of every sample transferred after the split point.
  */
-static uint32_t i2s_esp32_rx_dma_chunk_max_size(const struct i2s_esp32_stream_data *data)
+static int i2s_esp32_rx_chunk_split(const struct i2s_config *cfg, uint32_t *chunk_len,
+				    uint8_t *chunks)
 {
-	uint32_t frame_size = DIV_ROUND_UP(data->i2s_cfg.word_size, 8) * data->i2s_cfg.channels;
+	const uint32_t frame_size = DIV_ROUND_UP(cfg->word_size, 8) * cfg->channels;
+	const uint32_t max_chunks = CONFIG_DMA_ESP32_MAX_DESCRIPTOR_NUM / I2S_ESP32_RX_RING_BLOCKS;
 
-	if (frame_size == 0 || frame_size > I2S_ESP32_DMA_BUFFER_MAX_SIZE) {
-		return I2S_ESP32_DMA_BUFFER_MAX_SIZE;
+	if (frame_size == 0 || cfg->block_size == 0) {
+		return -EINVAL;
 	}
 
-	return (I2S_ESP32_DMA_BUFFER_MAX_SIZE / frame_size) * frame_size;
+	for (uint32_t n = 1; n <= max_chunks; n++) {
+		uint32_t len = cfg->block_size / n;
+
+		if (len * n == cfg->block_size && len % frame_size == 0 && len % 4 == 0 &&
+		    len <= I2S_ESP32_DMA_BUFFER_MAX_SIZE) {
+			*chunk_len = len;
+			*chunks = n;
+			return 0;
+		}
+	}
+
+	return -EINVAL;
 }
 #endif /* SOC_GDMA_SUPPORTED */
 
@@ -210,11 +235,85 @@ static int i2s_esp32_start_dma(const struct device *dev, enum i2s_dir dir);
 static void i2s_esp32_rx_stop_transfer(const struct device *dev);
 
 #if SOC_GDMA_SUPPORTED
+/* Called once per completed RX chunk. The DMA keeps running on the next armed chunks, so
+ * nothing is lost between blocks: a finished block is queued, then its descriptors are
+ * re-armed with a fresh block.
+ */
 static void IRAM_ATTR i2s_esp32_rx_callback(const struct device *dma_dev, void *arg,
 					    uint32_t channel, int status)
+{
+	const struct device *dev = (const struct device *)arg;
+	struct i2s_esp32_data *dev_data = dev->data;
+	const struct i2s_esp32_cfg *dev_cfg = dev->config;
+	const struct i2s_esp32_stream *stream = &dev_cfg->rx;
+	struct i2s_esp32_stream_data *sd = stream->data;
+	void *new_blk;
+	int err;
+
+	if (!sd->dma_pending) {
+		return;
+	}
+
+	if (status < 0) {
+		dev_data->state = I2S_STATE_ERROR;
+		LOG_DBG("RX status bad: %d", status);
+		goto rx_disable;
+	}
+
+	if (++sd->ring_chunks_done < sd->ring_chunks) {
+		return;
+	}
+	sd->ring_chunks_done = 0;
+
+	struct queue_item item = {
+		.buffer = sd->ring_blk[sd->ring_head],
+		.size = sd->i2s_cfg.block_size,
+	};
+
+	err = k_msgq_put(&sd->queue, &item, K_NO_WAIT);
+	if (err < 0) {
+		LOG_DBG("RX queue full");
+		dev_data->state = I2S_STATE_ERROR;
+		goto rx_disable;
+	}
+	sd->ring_blk[sd->ring_head] = NULL;
+
+	if (dev_data->state == I2S_STATE_STOPPING) {
+		if (dev_data->active_dir == I2S_DIR_RX ||
+		    (dev_data->active_dir == I2S_DIR_BOTH && !dev_cfg->tx.data->transferring)) {
+			dev_data->state = I2S_STATE_READY;
+			goto rx_disable;
+		}
+	}
+
+	err = k_mem_slab_alloc(sd->i2s_cfg.mem_slab, &new_blk, K_NO_WAIT);
+	if (err < 0) {
+		LOG_DBG("RX failed to allocate memory from slab: %i:", err);
+		dev_data->state = I2S_STATE_ERROR;
+		goto rx_disable;
+	}
+
+	for (uint8_t c = 0; c < sd->ring_chunks; c++) {
+		err = dma_reload(stream->conf->dma_dev, stream->conf->dma_channel, 0,
+				 (uint32_t)new_blk + c * sd->ring_chunk_len, sd->ring_chunk_len);
+		if (err < 0) {
+			LOG_DBG("Failed to re-arm RX DMA: %d", err);
+			k_mem_slab_free(sd->i2s_cfg.mem_slab, new_blk);
+			dev_data->state = I2S_STATE_ERROR;
+			goto rx_disable;
+		}
+	}
+
+	sd->ring_blk[sd->ring_head] = new_blk;
+	sd->ring_head = (sd->ring_head + 1) % I2S_ESP32_RX_RING_BLOCKS;
+
+	return;
+
+rx_disable:
+	i2s_esp32_rx_stop_transfer(dev);
+}
 #else
 static void IRAM_ATTR i2s_esp32_rx_callback(void *arg, int status)
-#endif /* SOC_GDMA_SUPPORTED */
 {
 	const struct device *dev = (const struct device *)arg;
 	struct i2s_esp32_data *dev_data = dev->data;
@@ -234,58 +333,11 @@ static void IRAM_ATTR i2s_esp32_rx_callback(void *arg, int status)
 		goto rx_disable;
 	}
 
-#if SOC_GDMA_SUPPORTED
-	if (status < 0) {
-#else
 	if (status & I2S_LL_EVENT_RX_DSCR_ERR) {
-#endif /* SOC_GDMA_SUPPORTED */
 		dev_data->state = I2S_STATE_ERROR;
 		LOG_DBG("RX status bad: %d", status);
 		goto rx_disable;
 	}
-
-#if SOC_GDMA_SUPPORTED
-	const i2s_hal_context_t *hal = &(dev_cfg->hal);
-	uint16_t chunk_len;
-	uint32_t chunk_max_size = i2s_esp32_rx_dma_chunk_max_size(stream->data);
-
-	if (stream->data->chunks_rem) {
-		uint32_t dst;
-
-		stream->data->chunk_idx++;
-		stream->data->chunks_rem--;
-		if (stream->data->chunks_rem) {
-			chunk_len = chunk_max_size;
-		} else {
-			chunk_len = stream->data->mem_block_len % chunk_max_size;
-			if (chunk_len == 0) {
-				chunk_len = chunk_max_size;
-			}
-		}
-
-		dst = (uint32_t)stream->data->mem_block +
-							   (stream->data->chunk_idx * chunk_max_size);
-		err = dma_reload(stream->conf->dma_dev, stream->conf->dma_channel, (uint32_t)NULL,
-				(uint32_t)dst, chunk_len);
-		if (err < 0) {
-			LOG_DBG("Failed to reload DMA channel: %" PRIu32,
-				stream->conf->dma_channel);
-			goto rx_disable;
-		}
-
-		i2s_ll_rx_set_eof_num(hal->dev, chunk_len);
-
-		err = dma_start(stream->conf->dma_dev, stream->conf->dma_channel);
-		if (err < 0) {
-			LOG_DBG("Failed to start DMA channel: %" PRIu32, stream->conf->dma_channel);
-			goto rx_disable;
-		}
-
-		stream->data->dma_pending = true;
-
-		return;
-	}
-#endif /* SOC_GDMA_SUPPORTED */
 
 	struct queue_item item = {
 		.buffer = stream->data->mem_block,
@@ -330,6 +382,7 @@ static void IRAM_ATTR i2s_esp32_rx_callback(void *arg, int status)
 rx_disable:
 	i2s_esp32_rx_stop_transfer(dev);
 }
+#endif /* SOC_GDMA_SUPPORTED */
 
 #if !SOC_GDMA_SUPPORTED
 
@@ -357,6 +410,89 @@ static void IRAM_ATTR i2s_esp32_rx_handler(void *arg)
 
 #endif /* !SOC_GDMA_SUPPORTED */
 
+#if SOC_GDMA_SUPPORTED
+/* Arms RX_RING_BLOCKS blocks as one cyclic descriptor ring so that the DMA, and thus the
+ * I2S FIFO drain, never stops between blocks.
+ */
+static int i2s_esp32_rx_ring_start(const struct device *dev)
+{
+	const struct i2s_esp32_cfg *dev_cfg = dev->config;
+	const struct i2s_esp32_stream *stream = &dev_cfg->rx;
+	struct i2s_esp32_stream_data *sd = stream->data;
+	struct dma_block_config blk[CONFIG_DMA_ESP32_MAX_DESCRIPTOR_NUM] = {0};
+	struct dma_config dma_cfg = {0};
+	uint32_t chunk_len;
+	uint8_t chunks;
+	uint8_t allocated = 0;
+	uint32_t n = 0;
+	int err;
+
+	err = i2s_esp32_rx_chunk_split(&sd->i2s_cfg, &chunk_len, &chunks);
+	if (err < 0) {
+		LOG_DBG("Block size %zu cannot be split in equal frame aligned DMA chunks",
+			sd->i2s_cfg.block_size);
+		return err;
+	}
+
+	for (uint8_t b = 0; b < I2S_ESP32_RX_RING_BLOCKS; b++) {
+		err = k_mem_slab_alloc(sd->i2s_cfg.mem_slab, &sd->ring_blk[b], K_NO_WAIT);
+		if (err < 0) {
+			err = -ENOMEM;
+			goto free_blocks;
+		}
+		allocated++;
+
+		for (uint8_t c = 0; c < chunks; c++, n++) {
+			blk[n].dest_address = (uint32_t)sd->ring_blk[b] + c * chunk_len;
+			blk[n].block_size = chunk_len;
+			if (n > 0) {
+				blk[n - 1].next_block = &blk[n];
+			}
+		}
+	}
+
+	sd->ring_chunk_len = chunk_len;
+	sd->ring_chunks = chunks;
+	sd->ring_chunks_done = 0;
+	sd->ring_head = 0;
+
+	dma_cfg.channel_direction = PERIPHERAL_TO_MEMORY;
+	dma_cfg.dma_callback = i2s_esp32_rx_callback;
+	dma_cfg.user_data = (void *)dev;
+	dma_cfg.dma_slot = ESP_GDMA_TRIG_PERIPH_I2S0 + dev_cfg->unit;
+	dma_cfg.cyclic = 1;
+	dma_cfg.block_count = n;
+	dma_cfg.head_block = &blk[0];
+
+	err = dma_config(stream->conf->dma_dev, stream->conf->dma_channel, &dma_cfg);
+	if (err < 0) {
+		LOG_DBG("Failed to configure DMA channel: %" PRIu32, stream->conf->dma_channel);
+		err = -EINVAL;
+		goto free_blocks;
+	}
+
+	i2s_ll_rx_set_eof_num(dev_cfg->hal.dev, chunk_len);
+
+	err = dma_start(stream->conf->dma_dev, stream->conf->dma_channel);
+	if (err < 0) {
+		LOG_DBG("Failed to start DMA channel: %" PRIu32, stream->conf->dma_channel);
+		goto free_blocks;
+	}
+
+	sd->dma_pending = true;
+
+	return 0;
+
+free_blocks:
+	for (uint8_t b = 0; b < allocated; b++) {
+		k_mem_slab_free(sd->i2s_cfg.mem_slab, sd->ring_blk[b]);
+		sd->ring_blk[b] = NULL;
+	}
+
+	return err;
+}
+#endif /* SOC_GDMA_SUPPORTED */
+
 static int i2s_esp32_rx_start_transfer(const struct device *dev)
 {
 	const struct i2s_esp32_cfg *dev_cfg = dev->config;
@@ -364,11 +500,13 @@ static int i2s_esp32_rx_start_transfer(const struct device *dev)
 	const i2s_hal_context_t *hal = &dev_cfg->hal;
 	int err;
 
+#if !SOC_GDMA_SUPPORTED
 	err = k_mem_slab_alloc(stream->data->i2s_cfg.mem_slab, &stream->data->mem_block, K_NO_WAIT);
 	if (err < 0) {
 		return -ENOMEM;
 	}
 	stream->data->mem_block_len = stream->data->i2s_cfg.block_size;
+#endif /* !SOC_GDMA_SUPPORTED */
 
 	i2s_hal_rx_stop(hal);
 	i2s_hal_rx_reset(hal);
@@ -377,6 +515,13 @@ static int i2s_esp32_rx_start_transfer(const struct device *dev)
 #endif /* !SOC_GDMA_SUPPORTED */
 	i2s_hal_rx_reset_fifo(hal);
 
+#if SOC_GDMA_SUPPORTED
+	err = i2s_esp32_rx_ring_start(dev);
+	if (err < 0) {
+		LOG_DBG("Failed to start RX DMA transfer: %d", err);
+		return err == -ENOMEM ? -ENOMEM : -EIO;
+	}
+#else
 	err = i2s_esp32_start_dma(dev, I2S_DIR_RX);
 	if (err < 0) {
 		LOG_DBG("Failed to start RX DMA transfer: %d", err);
@@ -385,6 +530,7 @@ static int i2s_esp32_rx_start_transfer(const struct device *dev)
 		stream->data->mem_block_len = 0;
 		return -EIO;
 	}
+#endif /* SOC_GDMA_SUPPORTED */
 
 	i2s_hal_rx_start(hal);
 
@@ -418,15 +564,25 @@ static void IRAM_ATTR i2s_esp32_rx_stop_transfer(const struct device *dev)
 	 */
 	i2s_hal_rx_stop(hal);
 
-	/* The block currently being DMA'd into was never queued, so it must be freed here
-	 * or it leaks from the mem_slab on every stop.
+	/* Blocks still armed in the DMA ring were never queued, so they must be freed here or
+	 * they leak from the mem_slab on every stop.
 	 */
+#if SOC_GDMA_SUPPORTED
+	stream->data->dma_pending = false;
+	for (uint8_t b = 0; b < I2S_ESP32_RX_RING_BLOCKS; b++) {
+		if (stream->data->ring_blk[b] != NULL) {
+			k_mem_slab_free(stream->data->i2s_cfg.mem_slab, stream->data->ring_blk[b]);
+			stream->data->ring_blk[b] = NULL;
+		}
+	}
+#else
 	if (stream->data->mem_block != NULL) {
 		k_mem_slab_free(stream->data->i2s_cfg.mem_slab, stream->data->mem_block);
 	}
 
 	stream->data->mem_block = NULL;
 	stream->data->mem_block_len = 0;
+#endif /* SOC_GDMA_SUPPORTED */
 
 	stream->data->transferring = false;
 }
@@ -765,19 +921,15 @@ int IRAM_ATTR i2s_esp32_config_dma(const struct device *dev, enum i2s_dir dir,
 	int err;
 
 	dma_blk.block_size = mem_block_size;
-	if (dir == I2S_DIR_RX) {
-#if I2S_ESP32_IS_DIR_EN(rx)
-		dma_blk.dest_address = mem_block;
-		dma_cfg.channel_direction = PERIPHERAL_TO_MEMORY;
-		dma_cfg.dma_callback = i2s_esp32_rx_callback;
-#endif /* I2S_ESP32_IS_DIR_EN(rx) */
-	} else {
 #if I2S_ESP32_IS_DIR_EN(tx)
-		dma_blk.source_address = mem_block;
-		dma_cfg.channel_direction = MEMORY_TO_PERIPHERAL;
-		dma_cfg.dma_callback = i2s_esp32_tx_callback;
-#endif /* I2S_ESP32_IS_DIR_EN(tx) */
+	if (dir != I2S_DIR_TX) {
+		/* GDMA RX uses the cyclic ring, see i2s_esp32_rx_ring_start() */
+		return -EINVAL;
 	}
+	dma_blk.source_address = mem_block;
+	dma_cfg.channel_direction = MEMORY_TO_PERIPHERAL;
+	dma_cfg.dma_callback = i2s_esp32_tx_callback;
+#endif /* I2S_ESP32_IS_DIR_EN(tx) */
 	dma_cfg.user_data = (void *)dev;
 	dma_cfg.dma_slot = ESP_GDMA_TRIG_PERIPH_I2S0 + dev_cfg->unit;
 	dma_cfg.block_count = 1;
@@ -853,9 +1005,9 @@ static int i2s_esp32_start_dma(const struct device *dev, enum i2s_dir dir)
 	unsigned int key;
 	int err = 0;
 
-#if !SOC_GDMA_SUPPORTED || I2S_ESP32_IS_DIR_EN(rx)
+#if !SOC_GDMA_SUPPORTED
 	const i2s_hal_context_t *hal = &(dev_cfg->hal);
-#endif /* SOC_GDMA_SUPPORTED || I2S_ESP32_IS_DIR_EN(rx) */
+#endif /* !SOC_GDMA_SUPPORTED */
 
 	if (dir == I2S_DIR_RX) {
 		stream = &dev_cfg->rx;
@@ -874,29 +1026,11 @@ static int i2s_esp32_start_dma(const struct device *dev, enum i2s_dir dir)
 		goto unlock;
 	}
 
-#if I2S_ESP32_IS_DIR_EN(rx)
+#if !SOC_GDMA_SUPPORTED && I2S_ESP32_IS_DIR_EN(rx)
 	if (dir == I2S_DIR_RX) {
-		uint16_t chunk_len;
-
-#if SOC_GDMA_SUPPORTED
-		uint32_t chunk_max_size = i2s_esp32_rx_dma_chunk_max_size(stream->data);
-
-		if (stream->data->mem_block_len < chunk_max_size) {
-			chunk_len = stream->data->mem_block_len;
-			stream->data->chunks_rem = 0;
-		} else {
-			chunk_len = chunk_max_size;
-			stream->data->chunks_rem = ((stream->data->mem_block_len +
-						     (chunk_max_size - 1)) /
-						    chunk_max_size) - 1;
-		}
-		stream->data->chunk_idx = 0;
-#else
-		chunk_len = stream->data->mem_block_len;
-#endif
-		i2s_ll_rx_set_eof_num(hal->dev, chunk_len);
+		i2s_ll_rx_set_eof_num(hal->dev, stream->data->mem_block_len);
 	}
-#endif /* I2S_ESP32_IS_DIR_EN(rx) */
+#endif /* !SOC_GDMA_SUPPORTED && I2S_ESP32_IS_DIR_EN(rx) */
 
 #if SOC_GDMA_SUPPORTED
 	err = dma_start(stream->conf->dma_dev, stream->conf->dma_channel);
@@ -935,9 +1069,9 @@ static int IRAM_ATTR i2s_esp32_restart_dma(const struct device *dev, enum i2s_di
 	const struct i2s_esp32_stream *stream;
 	int err = 0;
 
-#if !SOC_GDMA_SUPPORTED || I2S_ESP32_IS_DIR_EN(rx)
+#if !SOC_GDMA_SUPPORTED
 	const i2s_hal_context_t *hal = &(dev_cfg->hal);
-#endif /* SOC_GDMA_SUPPORTED || I2S_ESP32_IS_DIR_EN(rx) */
+#endif /* !SOC_GDMA_SUPPORTED */
 
 	if (dir == I2S_DIR_RX) {
 		stream = &dev_cfg->rx;
@@ -952,30 +1086,14 @@ static int IRAM_ATTR i2s_esp32_restart_dma(const struct device *dev, enum i2s_di
 	uint16_t chunk_len = 0;
 	void *src = NULL, *dst = NULL;
 
-#if I2S_ESP32_IS_DIR_EN(rx)
-	if (dir == I2S_DIR_RX) {
-		uint32_t chunk_max_size = i2s_esp32_rx_dma_chunk_max_size(stream->data);
-
-		dst = stream->data->mem_block;
-
-		if (stream->data->mem_block_len < chunk_max_size) {
-			chunk_len = stream->data->mem_block_len;
-			stream->data->chunks_rem = 0;
-		} else {
-			chunk_len = chunk_max_size;
-			stream->data->chunks_rem = ((stream->data->mem_block_len +
-						     (chunk_max_size - 1)) /
-						    chunk_max_size) - 1;
-		}
-		stream->data->chunk_idx = 0;
+	if (dir != I2S_DIR_TX) {
+		/* GDMA RX never restarts, see i2s_esp32_rx_ring_start() */
+		return -EINVAL;
 	}
-#endif /* I2S_ESP32_IS_DIR_EN(rx) */
 
 #if I2S_ESP32_IS_DIR_EN(tx)
-	if (dir == I2S_DIR_TX) {
-		src = stream->data->mem_block;
-		chunk_len = stream->data->mem_block_len;
-	}
+	src = stream->data->mem_block;
+	chunk_len = stream->data->mem_block_len;
 #endif /* I2S_ESP32_IS_DIR_EN(tx) */
 
 	err = dma_reload(stream->conf->dma_dev, stream->conf->dma_channel, (uint32_t)src,
@@ -984,12 +1102,6 @@ static int IRAM_ATTR i2s_esp32_restart_dma(const struct device *dev, enum i2s_di
 		LOG_DBG("Failed to reload DMA channel: %" PRIu32, stream->conf->dma_channel);
 		return -EIO;
 	}
-
-#if I2S_ESP32_IS_DIR_EN(rx)
-	if (dir == I2S_DIR_RX) {
-		i2s_ll_rx_set_eof_num(hal->dev, chunk_len);
-	}
-#endif /* I2S_ESP32_IS_DIR_EN(rx) */
 
 	err = dma_start(stream->conf->dma_dev, stream->conf->dma_channel);
 	if (err < 0) {
@@ -1234,6 +1346,19 @@ static int i2s_esp32_config_check(const struct device *dev, enum i2s_dir dir,
 		LOG_DBG("Currently only 2 channels are supported");
 		return -EINVAL;
 	}
+
+#if SOC_GDMA_SUPPORTED && I2S_ESP32_IS_DIR_EN(rx)
+	if (dir == I2S_DIR_RX || dir == I2S_DIR_BOTH) {
+		uint32_t chunk_len;
+		uint8_t chunks;
+
+		if (i2s_esp32_rx_chunk_split(i2s_cfg, &chunk_len, &chunks) < 0) {
+			LOG_DBG("RX block size %zu must split in equal DMA chunks of whole frames",
+				i2s_cfg->block_size);
+			return -EINVAL;
+		}
+	}
+#endif /* SOC_GDMA_SUPPORTED && I2S_ESP32_IS_DIR_EN(rx) */
 
 	if (i2s_cfg->options & I2S_OPT_LOOPBACK) {
 		LOG_DBG("Unsupported option: I2S_OPT_LOOPBACK");

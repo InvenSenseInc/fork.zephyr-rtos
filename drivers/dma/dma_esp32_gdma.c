@@ -121,6 +121,13 @@ struct dma_esp32_channel {
 	dma_callback_t cb;
 	void *user_data;
 	esp_dma_desc_t desc_list[CONFIG_DMA_ESP32_MAX_DESCRIPTOR_NUM];
+	/* Cyclic RX: descriptors form a ring that the GDMA never leaves. The callback is called
+	 * once per completed descriptor, and each dma_reload() re-arms the oldest completed one.
+	 */
+	bool cyclic;
+	uint16_t desc_cnt;
+	uint16_t done_idx;
+	uint16_t refill_idx;
 #if CONFIG_PM
 	bool pm_lock_held;
 #endif
@@ -250,6 +257,9 @@ static void dma_esp32_cache_flush_data(struct dma_esp32_channel *dma_channel)
 			sys_cache_data_flush_range(desc->buffer, desc->dw0.size);
 		}
 		desc = desc->next;
+		if (desc == dma_channel->desc_list) {
+			break;
+		}
 	}
 }
 
@@ -278,6 +288,9 @@ static void dma_esp32_cache_invd_data(struct dma_esp32_channel *dma_channel)
 			sys_cache_data_invd_range(desc->buffer, desc->dw0.size);
 		}
 		desc = desc->next;
+		if (desc == dma_channel->desc_list) {
+			break;
+		}
 	}
 }
 
@@ -289,6 +302,38 @@ static void IRAM_ATTR dma_esp32_isr_handle_rx(const struct device *dev,
 	bool pm_unlock = false;
 
 	gdma_hal_clear_intr(&data->hal, rx->channel_id, GDMA_CHANNEL_DIRECTION_RX, intr_status);
+
+	if (rx->cyclic && !(intr_status & GDMA_LL_EVENT_RX_SUC_EOF)) {
+		LOG_DBG("rx isr (no eof) st=0x%x", intr_status);
+		if (!(intr_status & ~(GDMA_LL_EVENT_RX_DONE))) {
+			return;
+		}
+	}
+
+	if (rx->cyclic && (intr_status & GDMA_LL_EVENT_RX_SUC_EOF) && rx->cb) {
+		/* Several descriptors may have completed since the last interrupt. A descriptor is
+		 * complete once the GDMA wrote back its received length. Hand it back to the CPU
+		 * so that the GDMA stops with a descriptor error instead of silently overwriting
+		 * a buffer that was not re-armed in time.
+		 */
+		for (uint16_t n = 0; n < rx->desc_cnt; n++) {
+			esp_dma_desc_t *desc = &rx->desc_list[rx->done_idx];
+
+			sys_cache_data_invd_range(desc, sizeof(*desc));
+			if (desc->dw0.length == 0) {
+				break;
+			}
+
+			sys_cache_data_invd_range(desc->buffer, desc->dw0.size);
+			desc->dw0.length = 0;
+			desc->dw0.owner = DMA_DESCRIPTOR_BUFFER_OWNER_CPU;
+			sys_cache_data_flush_range(desc, sizeof(*desc));
+
+			rx->done_idx = (rx->done_idx + 1) % rx->desc_cnt;
+			rx->cb(dev, rx->user_data, rx->channel_id * 2, DMA_STATUS_COMPLETE);
+		}
+		return;
+	}
 
 	if (intr_status & GDMA_LL_EVENT_RX_SUC_EOF) {
 		dma_esp32_cache_invd_data(rx);
@@ -354,7 +399,7 @@ static void IRAM_ATTR dma_esp32_isr_handle(const struct device *dev, uint8_t rx_
 #endif
 
 static int dma_esp32_config_descriptor(struct dma_esp32_channel *dma_channel,
-				       struct dma_block_config *block)
+				       struct dma_block_config *block, bool cyclic)
 {
 	if (!block) {
 		LOG_ERR("At least one dma block is required");
@@ -432,7 +477,7 @@ static int dma_esp32_config_descriptor(struct dma_esp32_channel *dma_channel,
 			if (block->next_block) {
 				block = block->next_block;
 			} else {
-				desc_iter->next = NULL;
+				desc_iter->next = cyclic ? dma_channel->desc_list : NULL;
 				if (dma_channel->dir == DMA_TX) {
 					desc_iter->dw0.suc_eof = 1;
 				}
@@ -449,6 +494,11 @@ static int dma_esp32_config_descriptor(struct dma_esp32_channel *dma_channel,
 		LOG_ERR("Run out of DMA descriptors. Increase CONFIG_DMA_ESP32_MAX_DESCRIPTOR_NUM");
 		return -EINVAL;
 	}
+
+	dma_channel->cyclic = cyclic;
+	dma_channel->desc_cnt = desc_iter - dma_channel->desc_list + 1;
+	dma_channel->done_idx = 0;
+	dma_channel->refill_idx = 0;
 
 	/* Write back cache so the GDMA hardware sees fresh descriptor values.
 	 * No-op when CACHE_MANAGEMENT is disabled (SoCs without a data cache).
@@ -500,7 +550,8 @@ static int dma_esp32_config_rx(const struct device *dev, struct dma_esp32_channe
 	gdma_hal_clear_intr(&data->hal, dma_channel->channel_id, GDMA_CHANNEL_DIRECTION_RX,
 			    GDMA_LL_RX_EVENT_MASK);
 
-	return dma_esp32_config_descriptor(dma_channel, config_dma->head_block);
+	return dma_esp32_config_descriptor(dma_channel, config_dma->head_block,
+					   config_dma->cyclic);
 }
 
 static int dma_esp32_config_tx(const struct device *dev, struct dma_esp32_channel *dma_channel,
@@ -534,7 +585,7 @@ static int dma_esp32_config_tx(const struct device *dev, struct dma_esp32_channe
 	gdma_hal_clear_intr(&data->hal, dma_channel->channel_id, GDMA_CHANNEL_DIRECTION_TX,
 			    GDMA_LL_TX_EVENT_MASK);
 
-	return dma_esp32_config_descriptor(dma_channel, config_dma->head_block);
+	return dma_esp32_config_descriptor(dma_channel, config_dma->head_block, false);
 }
 
 static int dma_esp32_config(const struct device *dev, uint32_t channel,
@@ -772,6 +823,28 @@ static int dma_esp32_reload(const struct device *dev, uint32_t channel, uint32_t
 		   DMA_DESCRIPTOR_BUFFER_MAX_SIZE_4B_ALIGNED) {
 		LOG_ERR("Not enough DMA descriptors. Increase CONFIG_DMA_ESP32_MAX_DESCRIPTOR_NUM");
 		return -EINVAL;
+	}
+
+	if (dma_channel->cyclic && dma_channel->dir == DMA_RX) {
+		/* Re-arm the oldest completed descriptor without touching the running channel */
+		esp_dma_desc_t *desc = &dma_channel->desc_list[dma_channel->refill_idx];
+
+		if (size > DMA_DESCRIPTOR_BUFFER_MAX_SIZE_4B_ALIGNED) {
+			LOG_ERR("Cyclic reload is limited to one descriptor");
+			return -EINVAL;
+		}
+
+		desc->buffer = (void *)dst;
+		desc->dw0.size = size;
+		desc->dw0.length = 0;
+		desc->dw0.suc_eof = 0;
+		__sync_synchronize();
+		desc->dw0.owner = DMA_DESCRIPTOR_BUFFER_OWNER_DMA;
+		sys_cache_data_flush_range(desc, sizeof(*desc));
+
+		dma_channel->refill_idx = (dma_channel->refill_idx + 1) % dma_channel->desc_cnt;
+
+		return 0;
 	}
 
 	if (dma_channel->dir == DMA_RX) {
